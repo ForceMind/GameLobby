@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Lobby Prototype</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header class="header">
+        <div class="user-info">
+            <div class="avatar">
+                <img src="https://ui-avatars.com/api/?name=User&background=random" alt="Avatar">
+            </div>
+            <div class="user-details">
+                <span class="username">Guest_001</span>
+                <div class="vip-badge">VIP 2</div>
+            </div>
+        </div>
+        
+        <div class="wallet-info">
+            <div class="balance-pill">
+                <i class="fas fa-coins coin-icon"></i>
+                <span id="user-balance">177,553</span>
+                <button class="btn-buy" id="btn-recharge-header">BUY</button>
+            </div>
+            <button class="btn-exit"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </header>
+
+    <!-- Main Game Grid -->
+    <main class="game-lobby">
+        <!-- Floating HUD Buttons -->
+        <div class="hud-left">
+            <button class="hud-btn" id="btn-giftpack">
+                <div class="icon-container gift-glow">
+                    <i class="fas fa-gift"></i>
+                </div>
+                <span>礼包</span>
+            </button>
+        </div>
+        
+        <div class="hud-right">
+            <button class="hud-btn" id="btn-recharge-event">
+                <div class="icon-container event-glow">
+                    <i class="fas fa-gem"></i>
+                </div>
+                <span>充值活动</span>
+            </button>
+        </div>
+
+        <div class="games-grid">
+            <!-- Game Card 1 -->
+            <div class="game-card">
+                <div class="game-image bg-shark">
+                    <span class="hot-badge">HOT</span>
+                    <i class="fas fa-fish game-icon"></i>
+                </div>
+                <div class="game-title">Shark Hunter</div>
+            </div>
+
+            <!-- Game Card 2 -->
+            <div class="game-card">
+                <div class="game-image bg-slots">
+                    <span class="hot-badge">HOT</span>
+                    <i class="fas fa-dice-seven game-icon"></i>
+                </div>
+                <div class="game-title">777 Deluxe</div>
+            </div>
+
+            <!-- Game Card 3 -->
+            <div class="game-card">
+                <div class="game-image bg-dragon">
+                    <span class="hot-badge">HOT</span>
+                    <i class="fas fa-dragon game-icon"></i>
+                </div>
+                <div class="game-title">Dragon Era</div>
+            </div>
+
+            <!-- Game Card 4 -->
+            <div class="game-card">
+                <div class="game-image bg-space">
+                    <i class="fas fa-rocket game-icon"></i>
+                </div>
+                <div class="game-title">Space Heist</div>
+            </div>
+
+            <!-- Game Card 5 -->
+            <div class="game-card">
+                <div class="game-image bg-pharaoh">
+                    <i class="fas fa-landmark game-icon"></i>
+                </div>
+                <div class="game-title">Pharaoh</div>
+            </div>
+
+            <!-- Game Card 6 -->
+            <div class="game-card">
+                <div class="game-image bg-pirate">
+                    <i class="fas fa-skull-crossbones game-icon"></i>
+                </div>
+                <div class="game-title">Pirates</div>
+            </div>
+
+             <!-- Game Card 7 -->
+             <div class="game-card">
+                <div class="game-image bg-buffalo">
+                    <i class="fas fa-hippo game-icon"></i> <!-- Closest to buffalo -->
+                </div>
+                <div class="game-title">Buffalo</div>
+            </div>
+
+             <!-- Game Card 8 -->
+             <div class="game-card">
+                <div class="game-image bg-zeus">
+                    <i class="fas fa-bolt game-icon"></i>
+                </div>
+                <div class="game-title">Fury of Zeus</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" data-tab="lobby">
+            <i class="fas fa-home"></i>
+            <span>大厅</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="activities">
+            <i class="fas fa-calendar-alt"></i>
+            <span>活动</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="tasks">
+            <i class="fas fa-clipboard-list"></i>
+            <span>任务</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="profile">
+            <i class="fas fa-user"></i>
+            <span>我的</span>
+        </a>
+    </nav>
+
+    <!-- Modals (Hidden by default) -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modal-title">Title</h2>
+            <p id="modal-body">Content goes here...</p>
+            <button class="btn-primary" id="modal-action">OK</button>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
