@@ -1,373 +1,907 @@
-import { useState, useEffect } from 'react';
-import Header from './components/Header';
-import BottomNav from './components/BottomNav';
-import GameGrid from './components/GameGrid';
-import HUD from './components/HUD';
-import translations from './i18n';
+﻿import { useEffect, useMemo, useState } from 'react';
+import {
+  FaBell,
+  FaBolt,
+  FaCalendarCheck,
+  FaChevronRight,
+  FaCrown,
+  FaFire,
+  FaFlag,
+  FaGamepad,
+  FaGift,
+  FaHistory,
+  FaHome,
+  FaMedal,
+  FaPlayCircle,
+  FaRocket,
+  FaShoppingBag,
+  FaStar,
+  FaTrophy,
+  FaUser,
+  FaUsers,
+  FaWallet,
+} from 'react-icons/fa';
 import './App.css';
-import { FaCog, FaArrowLeft, FaGift, FaUserFriends, FaVideo, FaCalendarAlt, FaTrophy, FaChevronRight } from 'react-icons/fa';
-import ActivityDetailView from './components/Activities';
-import VIPSystem from './components/VIPSystem';
-import Achievements from './components/Achievements';
 
-// Placeholder Views for new tabs
-const ActivityView = ({ t, onActivityClick }) => (
-  <div style={{ padding: '20px', textAlign: 'center' }}>
-    <h2 style={{ color: '#ffd700', marginBottom: '15px' }}>{t.activities}</h2>
-    <div onClick={() => onActivityClick('weekendParty')} style={{ background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '10px', marginBottom: '10px', cursor: 'pointer' }}>
-      <h3>{t.weekendParty}</h3>
-      <p style={{ fontSize: '0.8rem', color: '#ccc' }}>{t.weekendPartyDesc}</p>
-    </div>
-    <div onClick={() => onActivityClick('dailyCheckin')} style={{ background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '10px', marginBottom: '10px', cursor: 'pointer' }}>
-      <h3>{t.dailyCheckin}</h3>
-      <p style={{ fontSize: '0.8rem', color: '#ccc' }}>{t.dailyCheckinDesc}</p>
-    </div>
-    <div onClick={() => onActivityClick('luckyWheel')} style={{ background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '10px', marginBottom: '10px', cursor: 'pointer' }}>
-      <h3>{t.luckyWheel}</h3>
-      <p style={{ fontSize: '0.8rem', color: '#ccc' }}>{t.luckyWheelDesc}</p>
-    </div>
-    <div onClick={() => onActivityClick('inviteFriends')} style={{ background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '10px', cursor: 'pointer' }}>
-      <h3>{t.inviteFriends}</h3>
-      <p style={{ fontSize: '0.8rem', color: '#ccc' }}>{t.inviteFriendsDesc}</p>
-    </div>
-  </div>
-);
+const tabs = [
+  { id: 'lobby', label: '大厅', icon: FaHome },
+  { id: 'arena', label: '赛事', icon: FaTrophy },
+  { id: 'events', label: '活动', icon: FaCalendarCheck },
+  { id: 'store', label: '商城', icon: FaShoppingBag },
+  { id: 'profile', label: '我的', icon: FaUser },
+];
 
-const TaskView = ({ t }) => (
-  <div style={{ padding: '20px' }}>
-    <h2 style={{ color: '#ffd700', marginBottom: '15px', textAlign: 'center' }}>{t.dailyTasks}</h2>
-    <ul style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-      {[
-        { title: t.spin, progress: '20/50', status: t.inProgress, rewardValue: '100' },
-        { title: t.win, progress: '1000/1000', status: t.completed, rewardValue: '500' },
-        { title: t.playRounds, progress: '5/10', status: t.inProgress, rewardValue: '200' },
-        { title: t.rechargeTask, progress: '0/100', status: t.notStarted, rewardValue: '1000' },
-        { title: t.watchAds, progress: '1/5', status: t.inProgress, rewardValue: '50' },
-        { title: t.invite3, progress: '0/3', status: t.notStarted, rewardValue: '5000' },
-        { title: t.share, progress: '0/1', status: t.notStarted, rewardValue: '100' }
-      ].map((task, i) => (
-        <li key={i} style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontWeight: 'bold' }}>{task.title}</div>
-            <div style={{ fontSize: '0.8rem', color: '#888' }}>{task.progress}</div>
-            <div style={{ fontSize: '0.8rem', color: '#ffd700', marginTop: '4px' }}>
-                <FaGift style={{ marginRight: '4px' }} />
-                {t.reward}: {task.rewardValue} {t.coin}
-            </div>
-          </div>
-          <span style={{ 
-            padding: '4px 8px', 
-            borderRadius: '4px', 
-            fontSize: '0.8rem',
-            background: task.status === t.completed ? '#00e676' : '#444',
-            color: task.status === t.completed ? '#000' : '#fff'
-          }}>
-            {task.status}
-          </span>
-        </li>
-      ))}
-    </ul>
+const heroBanners = [
+  {
+    title: 'Lucky Spin 狂欢季',
+    subtitle: '主奖池 8,880,000 金币',
+    badge: '限时 Free Spin x20',
+    cta: '立即开转',
+    accent: 'var(--accent-orange)',
+  },
+  {
+    title: 'Classic Slot 周挑战',
+    subtitle: '经典三轴和五轴 Slot 同台冲榜',
+    badge: 'Jackpot 双倍时段',
+    cta: '去玩 Slot',
+    accent: 'var(--accent-cyan)',
+  },
+  {
+    title: '休闲轻松局',
+    subtitle: '捕鱼、消除、跑酷，轻松拿奖励',
+    badge: '放松专区上线',
+    cta: '马上体验',
+    accent: 'var(--accent-green)',
+  },
+];
 
-    <h2 style={{ color: '#ff9100', marginBottom: '15px', textAlign: 'center', marginTop: '30px' }}>{t.ladderTasks}</h2>
-    <ul style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {[
-            { title: t.ladderBronze, progress: '5000/5000', status: t.completed, rewardValue: '10k' },
-            { title: t.ladderSilver, progress: '12000/50000', status: t.inProgress, rewardValue: '100k' },
-            { title: t.ladderGold, progress: '0/500000', status: t.notStarted, rewardValue: '1M' }
-        ].map((task, i) => (
-            <li key={i} style={{ 
-                background: 'linear-gradient(90deg, rgba(255,215,0,0.1), rgba(0,0,0,0.3))', 
-                padding: '15px', 
-                borderRadius: '8px', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                borderLeft: '4px solid #ffd700'
-            }}>
-                <div>
-                    <div style={{ fontWeight: 'bold', color: '#ffd700' }}>{task.title}</div>
-                    <div style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 'bold', background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', margin: '5px 0' }}>{task.progress}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#fff', marginTop: '4px' }}>
-                        <FaTrophy style={{ marginRight: '4px', color: '#ffd700' }} />
-                        {t.reward}: {task.rewardValue} {t.coin}
-                    </div>
-                </div>
-                <span style={{ 
-                    padding: '4px 8px', 
-                    borderRadius: '4px', 
-                    fontSize: '0.8rem',
-                    background: task.status === t.completed ? '#00e676' : '#444',
-                    color: task.status === t.completed ? '#000' : '#fff'
-                }}>
-                    {task.status}
-                </span>
-            </li>
-        ))}
-    </ul>
-  </div>
-);
+const games = [
+  { id: 'golden-pharaoh', name: 'Golden Pharaoh', category: 'Slots', players: '4.8k', heat: 99, label: 'JACKPOT' },
+  { id: 'ocean-777', name: 'Ocean 777', category: 'Slots', players: '3.9k', heat: 96, label: 'HOT' },
+  { id: 'fruit-party', name: 'Fruit Party', category: 'Slots', players: '3.2k', heat: 93, label: 'TREND' },
+  { id: 'wild-west', name: 'Wild West Deluxe', category: 'Slots', players: '2.6k', heat: 90, label: 'NEW' },
+  { id: 'fish-hunter', name: 'Fish Hunter', category: '休闲', players: '2.1k', heat: 88, label: 'FUN' },
+  { id: 'bubble-pop', name: 'Bubble Pop', category: '休闲', players: '1.7k', heat: 84, label: 'EASY' },
+  { id: 'dice-merge', name: 'Dice Merge', category: '休闲', players: '1.4k', heat: 82, label: 'RELAX' },
+  { id: 'mini-golf', name: 'Mini Golf Rush', category: '休闲', players: '1.1k', heat: 80, label: 'COZY' },
+];
 
-const ProfileView = ({ t, onSettingsClick, onVIPClick, onAchievementsClick }) => (
-  <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', position: 'relative' }}>
-    <button 
-        onClick={onSettingsClick}
-        style={{
-            position: 'absolute',
-            top: '0',
-            right: '10px',
-            background: 'none',
-            border: 'none',
-            color: '#fff',
-            fontSize: '1.5rem',
-            cursor: 'pointer',
-            zIndex: 10,
-            padding: '10px'
-        }}
-    >
-        <FaCog />
-    </button>
+const quickActions = [
+  { id: 'freespin', title: '免费旋转', sub: '领取今日 Free Spin', icon: FaGift },
+  { id: 'jackpot', title: 'Jackpot 池', sub: '查看实时大奖金额', icon: FaBolt },
+  { id: 'mission', title: '新手任务', sub: '完成任务加速成长', icon: FaFlag },
+  { id: 'history', title: '最近中奖', sub: '查看最近 20 条记录', icon: FaHistory },
+];
 
-    <div style={{ 
-      width: '80px', height: '80px', borderRadius: '50%', 
-      border: '3px solid #ffd700', overflow: 'hidden' 
-    }}>
-      <img src="https://ui-avatars.com/api/?name=User&background=random&size=128" alt="User" style={{ width: '100%' }} />
-    </div>
-    <div style={{ textAlign: 'center' }}>
-      <h2 style={{ fontSize: '1.5rem' }}>Guest_001</h2>
-      <div 
-        onClick={onVIPClick}
-        style={{ 
-          background: 'linear-gradient(90deg, #ffd700, #ff8c00)', 
-          color: '#000', padding: '5px 15px', borderRadius: '15px',
-          fontWeight: 'bold', fontSize: '0.9rem', marginTop: '5px', display: 'inline-block',
-          cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
-        }}
-      >
-        {t.vip} 2 <FaChevronRight style={{ fontSize: '0.7rem', verticalAlign: 'middle' }} />
-      </div>
-    </div>
-    
-    <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-      <div style={{ background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '10px', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>{t.totalWinnings}</div>
-        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ffd700' }}>5,000,000</div>
-      </div>
-      <div style={{ background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '10px', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>{t.playTime}</div>
-        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>12h 30m</div>
-      </div>
-    </div>
+const arenaCards = [
+  {
+    id: 'slot-ladder',
+    title: 'Slot 冲榜赛',
+    mode: 'Mega Ways 模式',
+    prize: '￥ 88,888',
+    team: '1,122 / 2,000 名玩家',
+    progress: 56,
+    entryFee: '2,000 金币',
+    requirement: '账号等级 >= 5',
+    settlement: '每晚 22:10 统一结算',
+    rules: [
+      '每 50 次有效旋转记 1 局，单次旋转最低 20 金币。',
+      '仅统计当日 00:00 - 22:00 的净收益作为赛事积分。',
+      '中途退出保留已得积分，重新进入不重置。'
+    ],
+    personnel: [
+      { label: '已报名', value: '1,122' },
+      { label: '在线中', value: '846' },
+      { label: '等待中', value: '138' },
+      { label: '已淘汰', value: '92' }
+    ],
+    rewards: [
+      '第 1 名：68,000 金币 + 180 活动币',
+      '第 2-10 名：8,000 金币 + 60 活动币',
+      '第 11-100 名：2,000 金币 + 20 活动币'
+    ],
+  },
+  {
+    id: 'jackpot-cup',
+    title: 'Jackpot 争夺赛',
+    mode: 'Progressive Slot',
+    prize: '￥ 28,000',
+    team: '932 / 1,500 名玩家',
+    progress: 62,
+    entryFee: '1,500 金币',
+    requirement: '近 3 天内有 1 次 Slot 记录',
+    settlement: '每晚 21:40 统一结算',
+    rules: [
+      '赛事期间触发 Jackpot 可获得额外积分加成。',
+      '单局最高积分按净赢金币分段计算，上限 10,000 分。',
+      '若积分相同，按完成局数较少者排名更高。'
+    ],
+    personnel: [
+      { label: '已报名', value: '932' },
+      { label: '在线中', value: '664' },
+      { label: '等待中', value: '120' },
+      { label: '已淘汰', value: '58' }
+    ],
+    rewards: [
+      '第 1 名：28,000 金币 + 120 活动币',
+      '第 2-20 名：3,000 金币 + 36 活动币',
+      '参与奖：300 金币 + 6 活动币'
+    ],
+  },
+  {
+    id: 'casual-cup',
+    title: '休闲积分挑战',
+    mode: '捕鱼 + 消除',
+    prize: '￥ 12,000',
+    team: '488 / 800 名玩家',
+    progress: 61,
+    entryFee: '800 金币',
+    requirement: '账号等级 >= 3',
+    settlement: '每晚 20:30 统一结算',
+    rules: [
+      '仅统计休闲专区指定游戏，不计入 Slot 局数。',
+      '每局胜利 +3 分，失败 +1 分，连胜有额外乘区。',
+      '禁止代打与脚本操作，检测异常将取消资格。'
+    ],
+    personnel: [
+      { label: '已报名', value: '488' },
+      { label: '在线中', value: '352' },
+      { label: '等待中', value: '84' },
+      { label: '已淘汰', value: '26' }
+    ],
+    rewards: [
+      '第 1 名：12,000 金币 + 80 活动币',
+      '第 2-30 名：1,200 金币 + 18 活动币',
+      '参与奖：150 金币 + 3 活动币'
+    ],
+  },
+];
 
-    {/* Achievements Section */}
-    <div style={{ width: '100%', marginTop: '5px' }} onClick={onAchievementsClick}>
-        <div style={{ 
-            background: 'rgba(255,255,255,0.1)', 
-            padding: '15px', 
-            borderRadius: '10px', 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            cursor: 'pointer'
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaTrophy style={{ color: '#ffd700', marginRight: '10px', fontSize: '1.2rem' }} />
-                <div>
-                    <div style={{ fontWeight: 'bold' }}>{t.achievements}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '2px', display: 'flex', gap: '5px' }}>
-                        <span style={{ color: '#00e676' }}>✔ {t.ach_firstWin}</span>
-                        <span style={{ color: '#00e676' }}>✔ {t.ach_social}</span>
-                    </div>
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', color: '#aaa', fontSize: '0.9rem' }}>
-                <span style={{ marginRight: '5px' }}>2/4</span>
-                <FaChevronRight />
-            </div>
-        </div>
-    </div>
+const arenaGlobalRules = [
+  '所有赛事均使用金币报名，活动币仅用于活动商店兑换。',
+  '每日同一账号最多报名 3 场赛事，重复报名将自动退回手续费后拒绝。',
+  '若网络中断超过 3 分钟，系统将以中断前最后一局成绩结算。',
+  '赛果以服务器记录为准，最终解释权归 cocogames 赛事中心。'
+];
 
-    {/* Game Records Section */}
-    <div style={{ width: '100%', marginTop: '10px' }}>
-        <h3 style={{ color: '#ffd700', marginBottom: '10px', fontSize: '1rem' }}>{t.gameRecords}</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[
-                { game: 'Shark Hunter', profit: 1200 },
-                { game: '777 Deluxe', profit: -200 },
-                { game: 'Dragon Era', profit: 5000 }
-            ].map((record, i) => (
-                <div key={i} style={{ 
-                    background: 'rgba(255,255,255,0.05)', 
-                    padding: '10px', 
-                    borderRadius: '8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '0.9rem'
-                }}>
-                    <div>
-                        <div style={{ fontWeight: 'bold', color: '#fff' }}>{record.game}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{ color: record.profit > 0 ? '#00e676' : '#ff3d00', fontWeight: 'bold' }}>
-                            {record.profit > 0 ? '+' : ''}{record.profit}
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
-  </div>
-);
+const arenaPopulation = [
+  { label: '当前在线参赛', value: 1862, ratio: 93 },
+  { label: '已报名待开赛', value: 342, ratio: 42 },
+  { label: '候补队列', value: 118, ratio: 28 },
+  { label: '裁判与风控席位', value: 24, ratio: 12 }
+];
 
-const SettingsView = ({ t, onLangChange, currentLang, jackpotNotif, toggleJackpotNotif, onBack }) => (
-    <div style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', marginRight: '10px' }}>
-              <FaArrowLeft />
-          </button>
-          <h2 style={{ color: '#ffd700', margin: 0 }}>{t.settings}</h2>
-      </div>
-      
-      {/* Language Selector */}
-      <div style={{ width: '100%', marginBottom: '20px' }}>
-        <h3 style={{ color: '#ffd700', marginBottom: '10px', fontSize: '1rem' }}>{t.language}</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '5px' }}>
-          {['en', 'zh', 'es', 'pt', 'fil'].map(lang => (
-            <button 
-              key={lang}
-              onClick={() => onLangChange(lang)}
-              style={{
-                padding: '8px 0',
-                background: currentLang === lang ? '#ffd700' : 'rgba(255,255,255,0.1)',
-                color: currentLang === lang ? '#000' : '#fff',
-                border: '1px solid #ffd700',
-                borderRadius: '5px',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              {lang.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
+const missionSeed = [
+  { id: 'm1', title: '累计旋转 100 次', progress: 68, total: 100, coinReward: 300, tokenReward: 4 },
+  { id: 'm2', title: '完成 5 局休闲游戏', progress: 3, total: 5, coinReward: 200, tokenReward: 6 },
+  { id: 'm3', title: '触发 1 次 Free Spin', progress: 1, total: 1, coinReward: 500, tokenReward: 8 },
+  { id: 'm4', title: '分享一次中奖记录', progress: 0, total: 1, coinReward: 120, tokenReward: 3 },
+];
 
-      {/* Jackpot Notification Toggle */}
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '10px' }}>
-        <span style={{ color: '#fff', fontSize: '1rem' }}>{t.jackpotNotification}</span>
-        <button 
-            onClick={toggleJackpotNotif}
-            style={{
-                background: jackpotNotif ? '#00e676' : '#444',
-                color: jackpotNotif ? '#000' : '#fff',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-            }}
-        >
-            {jackpotNotif ? t.on : t.off}
-        </button>
-      </div>
-    </div>
-);
+const coinPacks = [
+  { id: 'p1', coin: '6,000', bonus: '+8%', price: '￥6', tag: '首充', tokenBonus: 2 },
+  { id: 'p2', coin: '30,000', bonus: '+18%', price: '￥30', tag: '热门', tokenBonus: 10 },
+  { id: 'p3', coin: '68,000', bonus: '+28%', price: '￥68', tag: '超值', tokenBonus: 25 },
+  { id: 'p4', coin: '128,000', bonus: '+40%', price: '￥128', tag: '推荐', tokenBonus: 50 },
+];
 
-// Simple Modal Component
-const Modal = ({ isOpen, onClose, title, content, t }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="modal-overlay" onClick={onClose} style={{
-      position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-      background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 1000, backdropFilter: 'blur(3px)'
-    }}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{
-        background: 'linear-gradient(180deg, #311b92, #4527a0)',
-        padding: '25px', borderRadius: '15px', width: '90%', maxWidth: '400px',
-        textAlign: 'center', border: '2px solid #ffd700', position: 'relative',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-      }}>
-        <span onClick={onClose} style={{
-          position: 'absolute', top: '10px', right: '15px', fontSize: '1.5rem',
-          cursor: 'pointer', color: '#aaa'
-        }}>&times;</span>
-        <h2 style={{ marginBottom: '15px', color: '#ffd700' }}>{title}</h2>
-        <div style={{ marginBottom: '20px', lineHeight: '1.5' }}>{content}</div>
-        <button onClick={onClose} style={{
-          background: 'linear-gradient(180deg, #ff9100, #ff6d00)',
-          border: 'none', padding: '10px 30px', borderRadius: '20px',
-          color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.2)'
-        }}>{t.ok}</button>
-      </div>
-    </div>
-  );
-};
+const leaderboard = [
+  { name: 'ReelMaster', score: 128800, streak: '最高连中 6 次' },
+  { name: 'LuckyBean', score: 106420, streak: '最高连中 5 次' },
+  { name: 'SpinKing', score: 98880, streak: '触发 3 次 Jackpot' },
+  { name: 'FishHero', score: 87500, streak: '休闲连胜 9 局' },
+];
+
+const profileRecords = [
+  { id: 'r1', game: 'Golden Pharaoh', type: 'Slots', coin: 12600, token: 6, time: '今天 20:18' },
+  { id: 'r2', game: 'Fish Hunter', type: '休闲', coin: -1200, token: 1, time: '今天 18:52' },
+  { id: 'r3', game: 'Ocean 777', type: 'Slots', coin: 8800, token: 4, time: '今天 16:10' },
+  { id: 'r4', game: 'Bubble Pop', type: '休闲', coin: 900, token: 2, time: '今天 14:36' },
+  { id: 'r5', game: 'Wild West Deluxe', type: 'Slots', coin: -3600, token: 0, time: '今天 12:28' },
+];
+
+const profileSecurity = [
+  { label: '手机号绑定', value: '138****6651', status: '已完成' },
+  { label: '登录保护', value: '设备验证已开启', status: '已开启' },
+  { label: '支付密码', value: '已设置，7 天前更新', status: '正常' },
+  { label: '异常登录检测', value: '近 30 天无风险', status: '安全' },
+];
 
 function App() {
   const [activeTab, setActiveTab] = useState('lobby');
-  const [balance, setBalance] = useState(177553);
-  const [modalState, setModalState] = useState({ isOpen: false, title: '', content: '' });
-  const [lang, setLang] = useState('en');
-  const [jackpotNotif, setJackpotNotif] = useState(true);
-  const [selectedActivity, setSelectedActivity] = useState(null);
-  
-  const t = translations[lang];
+  const [activeCategory, setActiveCategory] = useState('全部');
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const [coins, setCoins] = useState(228680);
+  const [activityCoins, setActivityCoins] = useState(420);
+  const [toast, setToast] = useState('');
+  const [pickedDays, setPickedDays] = useState([true, true, false, false, false, false, false]);
+  const [missions, setMissions] = useState(missionSeed);
+  const [spinAngle, setSpinAngle] = useState(0);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [selectedGame, setSelectedGame] = useState(null);
 
-  const showModal = (title, content) => {
-    setModalState({ isOpen: true, title, content });
-  };
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % heroBanners.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, []);
 
-  const handleRecharge = () => {
-    const amount = 10000;
-    setBalance(prev => prev + amount);
-    showModal(t.rechargeSuccess, t.rechargeMsg.replace('{amount}', amount.toLocaleString()));
-  };
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'lobby':
-        return (
-          <>
-            <HUD 
-              t={t}
-              onGiftClick={() => showModal(t.limitedGift, <div>{t.giftMsg}</div>)}
-              onEventClick={() => showModal(t.rechargeRebate, <div>{t.rebateMsg}</div>)}
-            />
-            <GameGrid />
-          </>
-        );
-      case 'activities': 
-        if (selectedActivity) {
-            return <ActivityDetailView t={t} activityId={selectedActivity} onBack={() => setSelectedActivity(null)} />;
-        }
-        return <ActivityView t={t} onActivityClick={setSelectedActivity} />;
-      case 'tasks': return <TaskView t={t} />;
-      case 'profile': return <ProfileView t={t} onSettingsClick={() => setActiveTab('settings')} onVIPClick={() => setActiveTab('vip')} onAchievementsClick={() => setActiveTab('achievements')} />;
-      case 'settings': return <SettingsView t={t} onLangChange={setLang} currentLang={lang} jackpotNotif={jackpotNotif} toggleJackpotNotif={() => setJackpotNotif(!jackpotNotif)} onBack={() => setActiveTab('profile')} />;
-      case 'vip': return <VIPSystem t={t} onBack={() => setActiveTab('profile')} />;
-      case 'achievements': return <Achievements t={t} onBack={() => setActiveTab('profile')} />;
-      default: return <GameGrid />;
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
     }
+    const timer = setTimeout(() => setToast(''), 1800);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const categories = useMemo(() => ['全部', ...new Set(games.map((item) => item.category))], []);
+
+  const displayGames = useMemo(() => {
+    if (activeCategory === '全部') {
+      return games;
+    }
+    return games.filter((item) => item.category === activeCategory);
+  }, [activeCategory]);
+
+  const currentBanner = heroBanners[bannerIndex];
+  const renderRewardText = (coinReward, tokenReward) => `${coinReward} 金币 + ${tokenReward} 活动币`;
+
+  const claimDay = (index) => {
+    if (pickedDays[index]) {
+      return;
+    }
+    const next = [...pickedDays];
+    next[index] = true;
+    setPickedDays(next);
+    const coinGain = index === 6 ? 588 : 188;
+    const tokenGain = index === 6 ? 6 : 1;
+    setCoins((prev) => prev + coinGain);
+    setActivityCoins((prev) => prev + tokenGain);
+    setToast(`签到成功 +${coinGain} 金币 +${tokenGain} 活动币`);
+  };
+
+  const claimMission = (id) => {
+    const mission = missions.find((item) => item.id === id);
+    if (!mission || mission.progress < mission.total) {
+      setToast('任务未完成');
+      return;
+    }
+    const coinGain = mission.coinReward ?? 0;
+    const tokenGain = mission.tokenReward ?? 0;
+    setCoins((prev) => prev + coinGain);
+    setActivityCoins((prev) => prev + tokenGain);
+    setMissions((prev) => prev.filter((item) => item.id !== id));
+    setToast(`任务奖励 +${coinGain} 金币 +${tokenGain} 活动币`);
+  };
+
+  const spinLuckyWheel = () => {
+    if (isSpinning) {
+      return;
+    }
+    setIsSpinning(true);
+    const delta = 1800 + Math.floor(Math.random() * 360);
+    setSpinAngle((prev) => prev + delta);
+    window.setTimeout(() => {
+      setIsSpinning(false);
+      const reward = [
+        { coin: 188, token: 0 },
+        { coin: 388, token: 2 },
+        { coin: 588, token: 4 },
+        { coin: 888, token: 8 },
+      ][Math.floor(Math.random() * 4)];
+      setCoins((prev) => prev + reward.coin);
+      setActivityCoins((prev) => prev + reward.token);
+      setToast(`转盘奖励 +${reward.coin} 金币 +${reward.token} 活动币`);
+    }, 3600);
+  };
+
+  const buyPack = (pack) => {
+    const amount = Number(pack.coin.replaceAll(',', ''));
+    const bonusRate = Number(pack.bonus.replace('+', '').replace('%', '')) / 100;
+    const total = Math.round(amount * (1 + bonusRate));
+    const tokenBonus = pack.tokenBonus ?? 0;
+    setCoins((prev) => prev + total);
+    setActivityCoins((prev) => prev + tokenBonus);
+    setToast(`充值到账 ${total.toLocaleString()} 金币 +${tokenBonus} 活动币`);
+  };
+
+  const launchGame = (game) => {
+    setSelectedGame(game);
+  };
+
+  const renderSectionHeader = (title, desc, action = '查看更多') => (
+    <div className="section-header">
+      <div>
+        <h2>{title}</h2>
+        <p>{desc}</p>
+      </div>
+      <button className="text-action" type="button">
+        {action}
+        <FaChevronRight />
+      </button>
+    </div>
+  );
+
+  const renderLobby = () => (
+    <div className="page-stack">
+      <section className="hero-card" style={{ '--hero-accent': currentBanner.accent }}>
+        <span className="hero-badge">{currentBanner.badge}</span>
+        <h1>{currentBanner.title}</h1>
+        <p>{currentBanner.subtitle}</p>
+        <div className="hero-actions">
+          <button type="button" className="btn-primary">
+            <FaPlayCircle />
+            {currentBanner.cta}
+          </button>
+          <button type="button" className="btn-glass">
+            <FaGift />
+            福利中心
+          </button>
+        </div>
+        <div className="hero-dots" aria-hidden="true">
+          {heroBanners.map((_, index) => (
+            <span key={index} className={index === bannerIndex ? 'dot active' : 'dot'} />
+          ))}
+        </div>
+      </section>
+
+      <section className="card-shell quick-panel">
+        {quickActions.map((action, index) => {
+          const Icon = action.icon;
+          return (
+            <button
+              type="button"
+              key={action.id}
+              className="quick-action"
+              style={{ animationDelay: `${index * 90}ms` }}
+              onClick={() => setToast(`${action.title} 已打开`)}
+            >
+              <div className="quick-icon">
+                <Icon />
+              </div>
+              <div>
+                <h3>{action.title}</h3>
+                <p>{action.sub}</p>
+              </div>
+            </button>
+          );
+        })}
+      </section>
+
+      <section className="card-shell">
+        {renderSectionHeader('热门 Slot 与休闲', '主打 Slot，补充轻量休闲游戏，支持即点即玩')}
+        <div className="category-row">
+          {categories.map((category) => (
+            <button
+              type="button"
+              key={category}
+              className={category === activeCategory ? 'chip active' : 'chip'}
+              onClick={() => setActiveCategory(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+        <div className="game-grid">
+          {displayGames.map((game, index) => (
+            <button
+              type="button"
+              key={game.id}
+              className="game-card"
+              style={{ animationDelay: `${120 + index * 70}ms` }}
+              onClick={() => launchGame(game)}
+            >
+              <div className="game-thumb" aria-hidden="true">
+                <span>{game.label}</span>
+                <FaGamepad />
+              </div>
+              <div className="game-meta">
+                <h3>{game.name}</h3>
+                <p>{game.category}</p>
+                <div className="game-row">
+                  <span>
+                    <FaUsers /> {game.players}
+                  </span>
+                  <span>
+                    <FaFire /> {game.heat}
+                  </span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="card-shell">
+        {renderSectionHeader('今日赢家榜', 'Slot 与休闲游戏实时赢币排行', '完整榜单')}
+        <div className="leaderboard-list">
+          {leaderboard.map((item, idx) => (
+            <div className="leaderboard-item" key={item.name}>
+              <div className="rank-badge">#{idx + 1}</div>
+              <div>
+                <h3>{item.name}</h3>
+                <p>{item.streak}</p>
+              </div>
+              <strong>{item.score}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+
+  const renderArena = () => (
+    <div className="page-stack">
+      <section className="card-shell headline-shell">
+        <h2>Slot 赛事</h2>
+        <p>规则透明、人数可见，所有赛事按统一结算标准发奖。</p>
+      </section>
+
+      <section className="card-shell arena-policy-shell">
+        {renderSectionHeader('赛事通用规则', '报名前请先确认规则和结算时间', '完整规则')}
+        <ul className="arena-list">
+          {arenaGlobalRules.map((rule) => (
+            <li key={rule}>{rule}</li>
+          ))}
+        </ul>
+      </section>
+
+      {arenaCards.map((card, index) => (
+        <section className="card-shell arena-card" key={card.id} style={{ animationDelay: `${index * 100}ms` }}>
+          <div className="arena-head">
+            <div>
+              <h3>{card.title}</h3>
+              <p>{card.mode}</p>
+            </div>
+            <span className="arena-prize">
+              <FaMedal /> {card.prize}
+            </span>
+          </div>
+          <div className="arena-meta-grid">
+            <article className="arena-metric">
+              <span>报名费</span>
+              <strong>{card.entryFee}</strong>
+            </article>
+            <article className="arena-metric">
+              <span>参赛要求</span>
+              <strong>{card.requirement}</strong>
+            </article>
+            <article className="arena-metric">
+              <span>结算时间</span>
+              <strong>{card.settlement}</strong>
+            </article>
+          </div>
+          <div className="arena-progress-label">
+            <span>{card.team}</span>
+            <span>{card.progress}%</span>
+          </div>
+          <div className="progress-track">
+            <div className="progress-value" style={{ width: `${card.progress}%` }} />
+          </div>
+          <div className="arena-detail-grid">
+            <article className="arena-block">
+              <h4>规则说明</h4>
+              <ul className="arena-list">
+                {card.rules.map((rule) => (
+                  <li key={rule}>{rule}</li>
+                ))}
+              </ul>
+            </article>
+            <article className="arena-block">
+              <h4>人员情况</h4>
+              <div className="roster-grid">
+                {card.personnel.map((info) => (
+                  <div className="roster-item" key={info.label}>
+                    <span>{info.label}</span>
+                    <strong>{info.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </article>
+            <article className="arena-block">
+              <h4>奖励发放</h4>
+              <ul className="arena-list reward-list">
+                {card.rewards.map((reward) => (
+                  <li key={reward}>{reward}</li>
+                ))}
+              </ul>
+            </article>
+          </div>
+          <button type="button" className="btn-primary" onClick={() => setToast(`已报名 ${card.title}`)}>
+            <FaFlag />
+            报名参赛
+          </button>
+        </section>
+      ))}
+
+      <section className="card-shell timeline-shell">
+        <h3>今日赛事时段</h3>
+        <div className="timeline-item">
+          <span>13:00</span>
+          <p>经典 Slot 冲榜场</p>
+        </div>
+        <div className="timeline-item">
+          <span>17:30</span>
+          <p>休闲积分赛</p>
+        </div>
+        <div className="timeline-item">
+          <span>21:00</span>
+          <p>Jackpot 决胜局</p>
+        </div>
+      </section>
+
+      <section className="card-shell population-shell">
+        <h3>全站参赛人员情况</h3>
+        <div className="population-list">
+          {arenaPopulation.map((item) => (
+            <article className="population-item" key={item.label}>
+              <div className="population-head">
+                <span>{item.label}</span>
+                <strong>{item.value.toLocaleString()}</strong>
+              </div>
+              <div className="progress-track">
+                <div className="progress-value" style={{ width: `${item.ratio}%` }} />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+
+  const renderEvents = () => (
+    <div className="page-stack">
+      <section className="card-shell split-shell">
+        <div>
+          <h2>7 日签到</h2>
+          <p>连续签到可领取 Free Spin 和金币。</p>
+          <div className="checkin-grid">
+            {pickedDays.map((picked, index) => (
+              <button
+                type="button"
+                key={index}
+                className={picked ? 'checkin-day done' : 'checkin-day'}
+                onClick={() => claimDay(index)}
+              >
+                <span>D{index + 1}</span>
+                <strong>{picked ? '已领' : '领取'}</strong>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="card-shell split-shell">
+        <div>
+          <h2>幸运转盘</h2>
+          <p>每日 3 次免费机会，转中最高奖励 888 金币。</p>
+          <div className="wheel-wrap">
+            <div
+              className={isSpinning ? 'wheel spinning' : 'wheel'}
+              style={{ transform: `rotate(${spinAngle}deg)` }}
+              aria-hidden="true"
+            >
+              <span>188</span>
+              <span>388</span>
+              <span>588</span>
+              <span>888</span>
+            </div>
+            <button type="button" className="wheel-btn" onClick={spinLuckyWheel}>
+              <FaBolt /> 抽取
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="card-shell">
+        {renderSectionHeader('每日任务', '完成 Slot 与休闲任务，快速积累资源')}
+        <div className="mission-list">
+          {missions.map((mission) => {
+            const percent = Math.round((mission.progress / mission.total) * 100);
+            return (
+              <article className="mission-item" key={mission.id}>
+                <div>
+                  <h3>{mission.title}</h3>
+                  <p>{renderRewardText(mission.coinReward, mission.tokenReward)}</p>
+                </div>
+                <div className="mission-track">
+                  <div className="progress-track">
+                    <div className="progress-value" style={{ width: `${percent}%` }} />
+                  </div>
+                  <span>
+                    {mission.progress}/{mission.total}
+                  </span>
+                </div>
+                <button type="button" className="btn-glass" onClick={() => claimMission(mission.id)}>
+                  领取
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+
+  const renderStore = () => (
+    <div className="page-stack">
+      <section className="card-shell headline-shell">
+        <h2>Slot 金币商城</h2>
+        <p>专为 Slot 与休闲局准备的金币礼包，到账更快。</p>
+      </section>
+
+      <section className="card-shell">
+        <div className="pack-grid">
+          {coinPacks.map((pack, index) => (
+            <article className="pack-card" key={pack.id} style={{ animationDelay: `${index * 80}ms` }}>
+              <span className="pack-tag">{pack.tag}</span>
+              <h3>{pack.coin}</h3>
+              <p>金币</p>
+              <p>送 {pack.tokenBonus} 活动币</p>
+              <strong>{pack.bonus}</strong>
+              <button type="button" className="btn-primary" onClick={() => buyPack(pack)}>
+                <FaWallet /> {pack.price}
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="card-shell vip-shell">
+        <div>
+          <h3>Slot 月度特权卡</h3>
+          <p>每天 1,000 金币 + 12 活动币 + 2 次免费旋转</p>
+        </div>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => {
+            setActivityCoins((prev) => prev + 120);
+            setToast('已开通月卡，赠送 120 活动币');
+          }}
+        >
+          <FaCrown /> 立即开通
+        </button>
+      </section>
+
+      <section className="card-shell exchange-shell">
+        <h3>兑换码中心</h3>
+        <div className="exchange-row">
+          <input placeholder="输入兑换码" />
+          <button type="button" className="btn-glass" onClick={() => setToast('兑换码已提交')}>
+            兑换
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+
+  const renderProfile = () => (
+    <div className="page-stack">
+      <section className="card-shell profile-hero">
+        <div className="profile-top">
+          <div className="avatar-ring">N</div>
+          <div>
+            <h2>NovaPlayer</h2>
+            <p>ID: 98271631</p>
+          </div>
+        </div>
+        <div className="stats-grid">
+          <article>
+            <span>总旋转</span>
+            <strong>12,480</strong>
+          </article>
+          <article>
+            <span>最高单次中奖</span>
+            <strong>88,800</strong>
+          </article>
+          <article>
+            <span>连中记录</span>
+            <strong>9</strong>
+          </article>
+          <article>
+            <span>本周收益</span>
+            <strong>+12,640</strong>
+          </article>
+        </div>
+      </section>
+
+      <section className="card-shell">
+        {renderSectionHeader('资产总览', '仅使用金币与活动币', '账单明细')}
+        <div className="asset-grid">
+          <article>
+            <span>金币余额</span>
+            <strong>{coins.toLocaleString()}</strong>
+            <p>可用于 Slot 与休闲游戏内消耗</p>
+          </article>
+          <article>
+            <span>活动币余额</span>
+            <strong>{activityCoins.toLocaleString()}</strong>
+            <p>可在活动商店兑换入场券与外观</p>
+          </article>
+          <article>
+            <span>今日金币净收益</span>
+            <strong>+4,680</strong>
+            <p>来自 26 局 Slot 与 8 局休闲</p>
+          </article>
+          <article>
+            <span>今日活动币获得</span>
+            <strong>+18</strong>
+            <p>来源：任务、签到、转盘</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="card-shell">
+        {renderSectionHeader('成就进度', '解锁 Slot 与休闲成就可获得稀有称号')}
+        <div className="achievement-list">
+          <article>
+            <div>
+              <h3>百转达人</h3>
+              <p>累计完成 1,000 次旋转</p>
+            </div>
+            <span>82%</span>
+          </article>
+          <article>
+            <div>
+              <h3>Jackpot 猎手</h3>
+              <p>累计触发 20 次 Jackpot</p>
+            </div>
+            <span>48%</span>
+          </article>
+          <article>
+            <div>
+              <h3>休闲王者</h3>
+              <p>在休闲游戏中获胜 100 局</p>
+            </div>
+            <span>61%</span>
+          </article>
+        </div>
+      </section>
+
+      <section className="card-shell">
+        {renderSectionHeader('最近战绩', '展示最近 5 局金币与活动币变化', '更多记录')}
+        <div className="record-list">
+          {profileRecords.map((record) => (
+            <article className="record-item" key={record.id}>
+              <div>
+                <h3>{record.game}</h3>
+                <p>
+                  {record.type} · {record.time}
+                </p>
+              </div>
+              <div className="record-change">
+                <strong className={record.coin >= 0 ? 'record-up' : 'record-down'}>
+                  {record.coin >= 0 ? '+' : ''}
+                  {record.coin.toLocaleString()} 金币
+                </strong>
+                <span>+{record.token} 活动币</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="card-shell">
+        {renderSectionHeader('账号与安全', '设备、支付、登录保护状态', '安全中心')}
+        <div className="account-list">
+          {profileSecurity.map((item) => (
+            <article className="account-item" key={item.label}>
+              <div>
+                <h3>{item.label}</h3>
+                <p>{item.value}</p>
+              </div>
+              <span>{item.status}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="card-shell settings-list">
+        <button type="button" onClick={() => setToast('音效设置已更新')}>
+          <FaBell /> 音效与震动
+          <FaChevronRight />
+        </button>
+        <button type="button" onClick={() => setToast('自动旋转设置已更新')}>
+          <FaBolt /> 自动旋转设置
+          <FaChevronRight />
+        </button>
+        <button type="button" onClick={() => setToast('奖励中心已打开')}>
+          <FaStar /> 奖励中心
+          <FaChevronRight />
+        </button>
+      </section>
+    </div>
+  );
+
+  const renderCurrentTab = () => {
+    if (activeTab === 'arena') {
+      return renderArena();
+    }
+    if (activeTab === 'events') {
+      return renderEvents();
+    }
+    if (activeTab === 'store') {
+      return renderStore();
+    }
+    if (activeTab === 'profile') {
+      return renderProfile();
+    }
+    return renderLobby();
   };
 
   return (
-    <div className="app-container">
-      <Header balance={balance} onRecharge={handleRecharge} t={t} />
-      
-      {renderContent()}
+    <div className="app-root">
+      <div className="bg-layer" aria-hidden="true" />
 
-      {activeTab !== 'settings' && activeTab !== 'vip' && activeTab !== 'achievements' && !selectedActivity && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={t} />}
-      
-      <Modal 
-        isOpen={modalState.isOpen} 
-        onClose={() => setModalState({ ...modalState, isOpen: false })}
-        title={modalState.title}
-        content={modalState.content}
-        t={t}
-      />
+      <header className="top-bar">
+        <div className="brand">
+          <div className="logo-dot" />
+          <div>
+            <strong>cocogames</strong>
+            <span>slot & casual lobby</span>
+          </div>
+        </div>
+        <div className="wallet-box">
+          <div>
+            <span>金币</span>
+            <strong>{coins.toLocaleString()}</strong>
+          </div>
+          <div>
+            <span>活动币</span>
+            <strong>{activityCoins.toLocaleString()}</strong>
+          </div>
+        </div>
+      </header>
+
+      <main className="content-shell">{renderCurrentTab()}</main>
+
+      <nav className="bottom-nav" aria-label="主导航">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              type="button"
+              key={tab.id}
+              className={activeTab === tab.id ? 'nav-item active' : 'nav-item'}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <Icon />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {selectedGame && (
+        <div className="modal-mask" onClick={() => setSelectedGame(null)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{selectedGame.name}</h3>
+              <button type="button" onClick={() => setSelectedGame(null)}>
+                关闭
+              </button>
+            </div>
+            <p>{selectedGame.category} | 实时在线 {selectedGame.players}</p>
+            <div className="modal-preview" aria-hidden="true">
+              <FaRocket />
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                setToast(`正在进入 ${selectedGame.name}`);
+                setSelectedGame(null);
+              }}
+            >
+              <FaPlayCircle /> 立即开始
+            </button>
+          </div>
+        </div>
+      )}
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
