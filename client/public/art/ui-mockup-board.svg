@@ -1,0 +1,172 @@
+<svg width="1800" height="1280" viewBox="0 0 1800 1280" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="160" y1="80" x2="1560" y2="1200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#081426"/>
+      <stop offset="0.55" stop-color="#0D1F3D"/>
+      <stop offset="1" stop-color="#12335F"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="300" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1A3662" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#0C1830" stop-opacity="0.96"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="22" y1="22" x2="278" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB34A"/>
+      <stop offset="0.45" stop-color="#FF7B4A"/>
+      <stop offset="1" stop-color="#17B7FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="24" stdDeviation="16" flood-color="#010A17" flood-opacity="0.45"/>
+    </filter>
+    <style>
+      text { font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif; }
+      .title { font-size: 20px; font-weight: 700; fill: #F4F8FF; }
+      .sub { font-size: 13px; font-weight: 500; fill: #9EB3D6; }
+      .tag { font-size: 12px; font-weight: 700; fill: #F4F8FF; }
+      .screenTitle { font-size: 22px; font-weight: 700; fill: #F4F8FF; }
+      .screenSub { font-size: 13px; font-weight: 500; fill: #9EB3D6; }
+      .tiny { font-size: 11px; font-weight: 600; fill: #DCE9FF; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1280" fill="url(#bg)"/>
+  <circle cx="1480" cy="220" r="240" fill="#1BC5BE" fill-opacity="0.12"/>
+  <circle cx="280" cy="1030" r="260" fill="#FF8C57" fill-opacity="0.12"/>
+  <circle cx="760" cy="250" r="180" fill="#17B7FF" fill-opacity="0.12"/>
+
+  <text x="96" y="96" font-size="54" font-weight="700" fill="#F4F8FF">Game Lobby UI Board</text>
+  <text x="96" y="138" font-size="20" font-weight="500" fill="#9EB3D6">基于现有大厅结构整理的一级页与二级页效果图，总共覆盖 8 个核心屏幕。</text>
+
+  <g transform="translate(90 220)" filter="url(#shadow)">
+    <text x="18" y="-18" class="screenTitle">大厅</text>
+    <text x="18" y="8" class="screenSub">Banner / 快捷入口 / 游戏宫格 / 公告流</text>
+    <rect x="0" y="26" width="300" height="560" rx="34" fill="url(#glass)" stroke="#2B4F82"/>
+    <rect x="18" y="48" width="264" height="54" rx="18" fill="#102341"/>
+    <rect x="34" y="62" width="38" height="26" rx="13" fill="#18C8B6"/>
+    <rect x="180" y="60" width="84" height="30" rx="15" fill="#162B4D"/>
+    <rect x="26" y="118" width="248" height="144" rx="26" fill="url(#hero)"/>
+    <rect x="42" y="136" width="78" height="24" rx="12" fill="#FFFFFF" fill-opacity="0.18"/>
+    <rect x="42" y="176" width="164" height="18" rx="9" fill="#F9FCFF"/>
+    <rect x="42" y="204" width="132" height="12" rx="6" fill="#F9FCFF" fill-opacity="0.75"/>
+    <rect x="42" y="228" width="88" height="32" rx="16" fill="#102341"/>
+    <rect x="26" y="280" width="118" height="92" rx="20" fill="#142846"/>
+    <rect x="156" y="280" width="118" height="92" rx="20" fill="#142846"/>
+    <rect x="26" y="388" width="118" height="118" rx="20" fill="#142846"/>
+    <rect x="156" y="388" width="118" height="118" rx="20" fill="#142846"/>
+    <rect x="24" y="530" width="252" height="38" rx="19" fill="#0B1730"/>
+    <rect x="42" y="540" width="34" height="18" rx="9" fill="#17B7FF"/>
+    <rect x="104" y="540" width="34" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.2"/>
+    <rect x="166" y="540" width="34" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.2"/>
+    <rect x="228" y="540" width="34" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.2"/>
+  </g>
+
+  <g transform="translate(420 220)" filter="url(#shadow)">
+    <text x="18" y="-18" class="screenTitle">赛事</text>
+    <text x="18" y="8" class="screenSub">赛事概览 / 规则面板 / 比赛卡片 / 人员情况</text>
+    <rect x="0" y="26" width="300" height="560" rx="34" fill="url(#glass)" stroke="#2B4F82"/>
+    <rect x="24" y="52" width="252" height="96" rx="24" fill="#13294B"/>
+    <rect x="24" y="166" width="252" height="108" rx="24" fill="#142846"/>
+    <rect x="36" y="184" width="110" height="14" rx="7" fill="#F9FCFF"/>
+    <rect x="36" y="210" width="210" height="10" rx="5" fill="#9EB3D6"/>
+    <rect x="24" y="292" width="252" height="122" rx="24" fill="#142846"/>
+    <rect x="38" y="312" width="140" height="16" rx="8" fill="#F9FCFF"/>
+    <rect x="190" y="312" width="54" height="24" rx="12" fill="#FFB34A"/>
+    <rect x="38" y="348" width="200" height="10" rx="5" fill="#9EB3D6"/>
+    <rect x="38" y="368" width="180" height="10" rx="5" fill="#9EB3D6"/>
+    <rect x="38" y="388" width="156" height="10" rx="5" fill="#9EB3D6"/>
+    <rect x="24" y="432" width="252" height="118" rx="24" fill="#142846"/>
+    <rect x="38" y="452" width="156" height="12" rx="6" fill="#F9FCFF"/>
+    <rect x="38" y="480" width="206" height="12" rx="6" fill="#9EB3D6"/>
+    <rect x="38" y="504" width="168" height="12" rx="6" fill="#9EB3D6"/>
+    <rect x="38" y="528" width="94" height="26" rx="13" fill="#18C8B6"/>
+  </g>
+
+  <g transform="translate(750 220)" filter="url(#shadow)">
+    <text x="18" y="-18" class="screenTitle">活动</text>
+    <text x="18" y="8" class="screenSub">签到 / 幸运转盘 / 任务中心 / 邀请俱乐部</text>
+    <rect x="0" y="26" width="300" height="560" rx="34" fill="url(#glass)" stroke="#2B4F82"/>
+    <rect x="24" y="52" width="118" height="140" rx="22" fill="#142846"/>
+    <rect x="158" y="52" width="118" height="140" rx="22" fill="#142846"/>
+    <rect x="24" y="208" width="118" height="140" rx="22" fill="#142846"/>
+    <rect x="158" y="208" width="118" height="140" rx="22" fill="#142846"/>
+    <circle cx="88" cy="120" r="34" fill="#FFB34A"/>
+    <circle cx="222" cy="120" r="34" fill="#17B7FF"/>
+    <rect x="44" y="252" width="76" height="18" rx="9" fill="#18C8B6"/>
+    <rect x="178" y="252" width="76" height="18" rx="9" fill="#FF8C57"/>
+    <rect x="24" y="370" width="252" height="164" rx="24" fill="#142846"/>
+    <rect x="40" y="390" width="156" height="14" rx="7" fill="#F9FCFF"/>
+    <rect x="40" y="420" width="210" height="10" rx="5" fill="#9EB3D6"/>
+    <rect x="40" y="444" width="228" height="48" rx="16" fill="#102341"/>
+    <rect x="40" y="506" width="96" height="28" rx="14" fill="#FFB34A"/>
+  </g>
+
+  <g transform="translate(1080 220)" filter="url(#shadow)">
+    <text x="18" y="-18" class="screenTitle">商城</text>
+    <text x="18" y="8" class="screenSub">礼包墙 / VIP 月卡 / 兑换码中心</text>
+    <rect x="0" y="26" width="300" height="560" rx="34" fill="url(#glass)" stroke="#2B4F82"/>
+    <rect x="24" y="52" width="118" height="148" rx="22" fill="#142846"/>
+    <rect x="158" y="52" width="118" height="148" rx="22" fill="#142846"/>
+    <rect x="42" y="70" width="42" height="18" rx="9" fill="#FFB34A"/>
+    <rect x="176" y="70" width="42" height="18" rx="9" fill="#18C8B6"/>
+    <rect x="40" y="112" width="72" height="34" rx="17" fill="#F9FCFF"/>
+    <rect x="174" y="112" width="72" height="34" rx="17" fill="#F9FCFF"/>
+    <rect x="40" y="166" width="84" height="22" rx="11" fill="#FF8C57"/>
+    <rect x="174" y="166" width="84" height="22" rx="11" fill="#FF8C57"/>
+    <rect x="24" y="218" width="252" height="118" rx="24" fill="#142846"/>
+    <rect x="40" y="238" width="144" height="16" rx="8" fill="#F9FCFF"/>
+    <rect x="40" y="264" width="208" height="10" rx="5" fill="#9EB3D6"/>
+    <rect x="186" y="296" width="62" height="24" rx="12" fill="#FFB34A"/>
+    <rect x="24" y="356" width="252" height="132" rx="24" fill="#142846"/>
+    <rect x="40" y="378" width="162" height="14" rx="7" fill="#F9FCFF"/>
+    <rect x="40" y="406" width="180" height="40" rx="14" fill="#102341"/>
+    <rect x="228" y="406" width="28" height="40" rx="14" fill="#18C8B6"/>
+  </g>
+
+  <g transform="translate(90 840)" filter="url(#shadow)">
+    <text x="18" y="-18" class="screenTitle">我的</text>
+    <text x="18" y="8" class="screenSub">角色头图 / 资产总览 / 战绩 / 安全中心</text>
+    <rect x="0" y="26" width="300" height="360" rx="34" fill="url(#glass)" stroke="#2B4F82"/>
+    <rect x="24" y="52" width="252" height="112" rx="24" fill="#142846"/>
+    <circle cx="76" cy="108" r="28" fill="#17B7FF"/>
+    <rect x="116" y="86" width="104" height="16" rx="8" fill="#F9FCFF"/>
+    <rect x="116" y="114" width="80" height="12" rx="6" fill="#9EB3D6"/>
+    <rect x="24" y="182" width="118" height="84" rx="20" fill="#142846"/>
+    <rect x="158" y="182" width="118" height="84" rx="20" fill="#142846"/>
+    <rect x="24" y="282" width="252" height="82" rx="20" fill="#142846"/>
+  </g>
+
+  <g transform="translate(420 840)" filter="url(#shadow)">
+    <text x="18" y="-18" class="screenTitle">游戏详情</text>
+    <text x="18" y="8" class="screenSub">封面海报 / 玩法说明 / 房间等级 / 开始按钮</text>
+    <rect x="0" y="26" width="300" height="360" rx="34" fill="url(#glass)" stroke="#2B4F82"/>
+    <rect x="24" y="52" width="84" height="104" rx="20" fill="#FFB34A"/>
+    <rect x="124" y="52" width="152" height="20" rx="10" fill="#F9FCFF"/>
+    <rect x="124" y="84" width="112" height="12" rx="6" fill="#9EB3D6"/>
+    <rect x="124" y="108" width="146" height="36" rx="18" fill="#102341"/>
+    <rect x="24" y="180" width="252" height="64" rx="20" fill="#142846"/>
+    <rect x="24" y="260" width="252" height="88" rx="20" fill="#142846"/>
+    <rect x="168" y="314" width="92" height="26" rx="13" fill="#18C8B6"/>
+  </g>
+
+  <g transform="translate(750 840)" filter="url(#shadow)">
+    <text x="18" y="-18" class="screenTitle">赛事详情</text>
+    <text x="18" y="8" class="screenSub">赛事信息 / 奖励梯度 / 进度和报名 CTA</text>
+    <rect x="0" y="26" width="300" height="360" rx="34" fill="url(#glass)" stroke="#2B4F82"/>
+    <rect x="24" y="52" width="252" height="88" rx="24" fill="#142846"/>
+    <rect x="24" y="156" width="252" height="72" rx="20" fill="#142846"/>
+    <rect x="24" y="244" width="252" height="96" rx="20" fill="#142846"/>
+    <rect x="36" y="270" width="192" height="12" rx="6" fill="#9EB3D6"/>
+    <rect x="36" y="292" width="168" height="12" rx="6" fill="#9EB3D6"/>
+    <rect x="180" y="310" width="80" height="24" rx="12" fill="#FFB34A"/>
+  </g>
+
+  <g transform="translate(1080 840)" filter="url(#shadow)">
+    <text x="18" y="-18" class="screenTitle">资产与安全二级页</text>
+    <text x="18" y="8" class="screenSub">账单明细 / 登录设备 / 风险控制动作</text>
+    <rect x="0" y="26" width="300" height="360" rx="34" fill="url(#glass)" stroke="#2B4F82"/>
+    <rect x="24" y="52" width="252" height="92" rx="24" fill="#142846"/>
+    <rect x="24" y="162" width="252" height="88" rx="20" fill="#142846"/>
+    <rect x="24" y="268" width="252" height="72" rx="20" fill="#142846"/>
+    <rect x="40" y="286" width="96" height="24" rx="12" fill="#18C8B6"/>
+    <rect x="152" y="286" width="108" height="24" rx="12" fill="#FF8C57"/>
+  </g>
+</svg>

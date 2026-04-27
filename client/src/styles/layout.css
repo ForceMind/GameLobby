@@ -1,0 +1,531 @@
+.hero-panel,
+.headline-card,
+.detail-banner,
+.detail-hero-card,
+.detail-actions-card,
+.profile-hero,
+.pack-card,
+.tournament-card,
+.population-card,
+.stack-item,
+.notice-card,
+.purchase-card,
+.resource-card,
+.distribution-item,
+.roster-card,
+.room-card,
+.mission-card,
+.record-item {
+  padding: 18px;
+}
+
+.hero-panel {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 18px;
+  background:
+    linear-gradient(135deg, rgba(9, 18, 34, 0.92), rgba(14, 29, 55, 0.82)),
+    radial-gradient(circle at top right, var(--hero-accent), transparent 42%);
+}
+
+.hero-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 24%, rgba(255, 255, 255, 0.08), transparent 56%);
+  pointer-events: none;
+}
+
+.hero-copy h1,
+.headline-card h1,
+.profile-hero h1 {
+  margin: 10px 0 6px;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+.hero-copy p,
+.headline-card p,
+.profile-hero p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.hero-badge,
+.detail-badge,
+.item-tag,
+.pack-tag,
+.rank-pill,
+.game-tag,
+.prize-pill,
+.perk-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.hero-badge,
+.detail-badge,
+.item-tag,
+.pack-tag,
+.prize-pill {
+  padding: 5px 10px;
+}
+
+.hero-badge {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hero-actions,
+.hero-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hero-actions {
+  margin-top: 18px;
+}
+
+.hero-dots {
+  margin-top: 18px;
+}
+
+.hero-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.hero-dot.active {
+  width: 28px;
+  background: #fff;
+}
+
+.hero-showcase,
+.hero-art,
+.hero-meter,
+.detail-meta,
+.mission-progress {
+  display: grid;
+}
+
+.hero-showcase {
+  align-content: center;
+  justify-items: end;
+  gap: 14px;
+}
+
+.hero-art {
+  width: 152px;
+  height: 152px;
+  place-items: center;
+  border-radius: 36px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.hero-meter {
+  width: min(240px, 100%);
+  gap: 6px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.hero-meter span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.hero-meter strong {
+  font-size: 2rem;
+}
+
+.hero-meter p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.stats-strip,
+.population-grid,
+.pack-grid,
+.roster-grid,
+.metric-grid,
+.asset-grid,
+.profile-stats,
+.checkin-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.stats-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.stat-card span,
+.population-head span,
+.summary-card span,
+.wallet-pill span,
+.resource-card span,
+.room-card span,
+.record-change span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.stat-card strong,
+.population-head strong,
+.summary-card strong,
+.resource-card strong,
+.room-card h3,
+.record-item h3 {
+  margin-top: 4px;
+  font-size: 1rem;
+}
+
+.feature-grid,
+.event-grid,
+.record-list,
+.leaderboard-list,
+.stack-list,
+.timeline-list,
+.mission-list,
+.notice-list,
+.distribution-list {
+  display: grid;
+  gap: 12px;
+}
+
+.feature-grid,
+.event-grid,
+.population-grid,
+.room-grid,
+.pack-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feature-card,
+.event-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  text-align: left;
+}
+
+.feature-card h3,
+.event-card h3,
+.record-item h3,
+.leaderboard-item h3,
+.stack-item h3,
+.timeline-item h3,
+.notice-card h3,
+.room-card h3,
+.pack-card h3,
+.vip-panel h3,
+.redeem-teaser h3,
+.tournament-card h3,
+.purchase-card h3,
+.mission-card h3,
+.invite-card strong,
+.profile-hero h1 {
+  margin: 0;
+}
+
+.feature-card p,
+.event-card p,
+.leaderboard-item p,
+.stack-item p,
+.timeline-item p,
+.notice-card p,
+.game-body p,
+.pack-card p,
+.purchase-card p,
+.invite-card p,
+.record-item p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.82rem;
+}
+
+.split-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+}
+
+.chip.active {
+  background: linear-gradient(135deg, rgba(23, 183, 255, 0.22), rgba(255, 159, 86, 0.24));
+  color: #fff;
+}
+
+.game-grid,
+.tournament-grid,
+.room-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.game-grid,
+.tournament-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-card {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  text-align: left;
+}
+
+.game-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 136px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(23, 183, 255, 0.05));
+}
+
+.game-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.game-body {
+  padding: 16px;
+}
+
+.game-title-row,
+.record-item,
+.leaderboard-item,
+.stack-item,
+.timeline-item,
+.tournament-top,
+.population-head,
+.mini-rows,
+.progress-head,
+.detail-topline,
+.detail-hero-grid,
+.profile-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.game-title-row span,
+.mini-rows span,
+.progress-head span,
+.summary-text,
+.detail-heading p,
+.detail-hero-card p,
+.tournament-card p,
+.record-item p {
+  color: var(--muted);
+}
+
+.game-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+}
+
+.stack-item,
+.timeline-item,
+.notice-card,
+.tournament-card,
+.population-card,
+.vip-panel,
+.redeem-teaser,
+.resource-card,
+.distribution-item,
+.purchase-card,
+.mission-card,
+.invite-card {
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.stack-item.compact,
+.notice-card,
+.resource-card,
+.distribution-item {
+  padding: 16px;
+}
+
+.leaderboard-item,
+.record-item {
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rank-pill,
+.item-tag,
+.pack-tag {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.leaderboard-item strong,
+.prize-pill {
+  color: var(--accent-d);
+}
+
+.tournament-card,
+.population-card,
+.pack-card,
+.purchase-card,
+.mission-card,
+.resource-card {
+  display: grid;
+  gap: 12px;
+}
+
+.prize-pill {
+  background: rgba(255, 224, 138, 0.14);
+}
+
+.rule-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.detail-banner,
+.headline-card {
+  padding: 20px 22px;
+}
+
+.detail-heading {
+  margin-top: 16px;
+}
+
+.detail-heading h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.detail-badge {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.detail-spacer {
+  min-width: 1px;
+}
+
+.back-btn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.back-arrow {
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+@media (max-width: 1280px) {
+  .hero-panel,
+  .split-layout,
+  .detail-hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1120px) {
+  .game-grid,
+  .tournament-grid,
+  .pack-grid,
+  .room-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .feature-grid,
+  .event-grid,
+  .game-grid,
+  .tournament-grid,
+  .population-grid,
+  .pack-grid,
+  .room-grid,
+  .stats-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-showcase {
+    justify-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-copy h1,
+  .headline-card h1,
+  .profile-hero h1 {
+    font-size: 1.4rem;
+  }
+
+  .hero-art {
+    width: 128px;
+    height: 128px;
+  }
+
+  .wallet-pill {
+    padding: 10px;
+  }
+
+  .metric-grid,
+  .asset-grid,
+  .profile-stats,
+  .checkin-grid {
+    grid-template-columns: 1fr;
+  }
+}

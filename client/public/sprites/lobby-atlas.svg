@@ -1,0 +1,245 @@
+<svg width="768" height="640" viewBox="0 0 768 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="navA" x1="12" y1="12" x2="116" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12335F"/>
+      <stop offset="1" stop-color="#0A1C38"/>
+    </linearGradient>
+    <linearGradient id="navB" x1="12" y1="12" x2="116" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18C8B6"/>
+      <stop offset="1" stop-color="#0F4A86"/>
+    </linearGradient>
+    <linearGradient id="navC" x1="12" y1="12" x2="116" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB34A"/>
+      <stop offset="1" stop-color="#FF6B46"/>
+    </linearGradient>
+    <linearGradient id="navD" x1="12" y1="12" x2="116" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#39D37D"/>
+      <stop offset="1" stop-color="#167C5F"/>
+    </linearGradient>
+    <linearGradient id="navE" x1="12" y1="12" x2="116" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1AA9FF"/>
+      <stop offset="1" stop-color="#764EF8"/>
+    </linearGradient>
+    <linearGradient id="navF" x1="12" y1="12" x2="116" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF857A"/>
+      <stop offset="1" stop-color="#AA3D69"/>
+    </linearGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#051326" flood-opacity="0.28"/>
+    </filter>
+    <style>
+      .tile { rx: 28; }
+      .line { stroke: #F8FAFF; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+      .soft { fill: rgba(255,255,255,0.2); }
+      .ink { fill: #F8FAFF; }
+      .gold { fill: #FFD16D; }
+      .mint { fill: #72F0CB; }
+      .orange { fill: #FFAA63; }
+      .sky { fill: #8BD6FF; }
+      .rose { fill: #FF9CB2; }
+      .deep { fill: #13294E; }
+      text { font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif; font-weight: 700; }
+    </style>
+  </defs>
+
+  <g transform="translate(0 0)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navA)"/>
+    <path d="M36 69 L64 43 L92 69 V92 H76 V74 H52 V92 H36 Z" class="line"/>
+  </g>
+  <g transform="translate(128 0)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navB)"/>
+    <path d="M43 86 H85" class="line"/>
+    <path d="M50 39 H78" class="line"/>
+    <path d="M45 43 V59 C45 70 53 80 64 80 C75 80 83 70 83 59 V43" class="line"/>
+    <path d="M54 84 V96" class="line"/>
+    <path d="M74 84 V96" class="line"/>
+  </g>
+  <g transform="translate(256 0)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navC)"/>
+    <rect x="34" y="34" width="60" height="56" rx="12" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M34 52 H94" class="line"/>
+    <path d="M48 30 V46" class="line"/>
+    <path d="M80 30 V46" class="line"/>
+    <circle cx="50" cy="66" r="5" class="ink"/>
+    <circle cx="66" cy="66" r="5" class="ink"/>
+    <circle cx="82" cy="66" r="5" class="ink"/>
+  </g>
+  <g transform="translate(384 0)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navD)"/>
+    <path d="M42 49 H86" class="line"/>
+    <path d="M48 49 V40 C48 34 53 30 59 30 H69 C75 30 80 34 80 40 V49" class="line"/>
+    <path d="M38 49 H90 V90 H38 Z" class="line"/>
+    <path d="M54 63 H74" class="line"/>
+  </g>
+  <g transform="translate(512 0)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navE)"/>
+    <circle cx="64" cy="48" r="18" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M38 92 C44 74 55 66 64 66 C73 66 84 74 90 92" class="line"/>
+  </g>
+  <g transform="translate(640 0)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navF)"/>
+    <path d="M52 84 C52 92 58 96 64 96 C70 96 76 92 76 84 V56 C76 48 71 42 64 40 C57 42 52 48 52 56 Z" class="line"/>
+    <path d="M46 84 H82" class="line"/>
+    <circle cx="64" cy="98" r="8" class="gold"/>
+  </g>
+
+  <g transform="translate(0 128)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navF)"/>
+    <rect x="38" y="48" width="52" height="40" rx="10" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M64 34 V102" class="line"/>
+    <path d="M34 58 H94" class="line"/>
+    <rect x="48" y="28" width="32" height="22" rx="6" class="gold"/>
+  </g>
+  <g transform="translate(128 128)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navC)"/>
+    <circle cx="64" cy="64" r="32" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <text x="64" y="73" font-size="26" text-anchor="middle" class="ink">777</text>
+    <circle cx="64" cy="64" r="44" stroke="#FFD16D" stroke-width="4" stroke-dasharray="4 8"/>
+  </g>
+  <g transform="translate(256 128)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navB)"/>
+    <rect x="42" y="34" width="44" height="58" rx="8" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M52 34 V24 H76 V34" class="line"/>
+    <path d="M52 56 H74" class="line"/>
+    <path d="M52 70 H74" class="line"/>
+    <path d="M54 84 L61 91 L76 74" class="line"/>
+  </g>
+  <g transform="translate(384 128)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navA)"/>
+    <circle cx="64" cy="64" r="24" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M64 50 V65 L76 72" class="line"/>
+    <path d="M46 42 L36 32" class="line"/>
+    <path d="M36 32 V48 H52" class="line"/>
+  </g>
+  <g transform="translate(512 128)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navC)"/>
+    <path d="M42 84 V50 L54 62 L66 44 L78 62 L90 50 V84 Z" class="line"/>
+    <text x="64" y="96" font-size="24" text-anchor="middle" class="gold">VIP</text>
+  </g>
+  <g transform="translate(640 128)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navD)"/>
+    <path d="M64 30 L90 42 V62 C90 78 79 90 64 98 C49 90 38 78 38 62 V42 Z" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M51 62 L61 72 L79 50" class="line"/>
+  </g>
+
+  <g transform="translate(0 256)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navC)"/>
+    <ellipse cx="64" cy="64" rx="28" ry="28" class="gold"/>
+    <ellipse cx="64" cy="64" rx="18" ry="18" fill="#FFF2CD"/>
+    <text x="64" y="73" font-size="22" text-anchor="middle" fill="#D68216">C</text>
+    <ellipse cx="49" cy="48" rx="28" ry="28" stroke="#FFE1A4" stroke-width="6"/>
+  </g>
+  <g transform="translate(128 256)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navE)"/>
+    <polygon points="64,28 86,42 86,70 64,84 42,70 42,42" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <text x="64" y="69" font-size="22" text-anchor="middle" class="ink">T</text>
+  </g>
+  <g transform="translate(256 256)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navB)"/>
+    <circle cx="64" cy="56" r="26" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <polygon points="64,28 70,44 87,44 73,56 78,74 64,64 50,74 55,56 41,44 58,44" class="gold"/>
+    <rect x="56" y="82" width="16" height="16" rx="4" class="gold"/>
+  </g>
+  <g transform="translate(384 256)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navA)"/>
+    <rect x="34" y="34" width="60" height="56" rx="12" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M34 52 H94" class="line"/>
+    <path d="M48 30 V46" class="line"/>
+    <path d="M80 30 V46" class="line"/>
+    <path d="M46 72 L60 86 L84 58" class="line"/>
+  </g>
+  <g transform="translate(512 256)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navC)"/>
+    <path d="M58 34 H76 L64 58 H82 L50 94 L58 68 H42 Z" class="ink"/>
+  </g>
+  <g transform="translate(640 256)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navD)"/>
+    <circle cx="64" cy="64" r="32" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M48 66 L58 76 L82 50" class="line"/>
+  </g>
+
+  <g transform="translate(0 384)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navC)"/>
+    <polygon points="64,24 92,94 36,94" fill="#2E1A0A"/>
+    <path d="M64 34 L84 86 H44 Z" fill="#FFD27D"/>
+    <circle cx="64" cy="54" r="8" fill="#0A1C38"/>
+    <path d="M58 80 H70" stroke="#0A1C38" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="96" cy="36" r="10" class="gold"/>
+  </g>
+  <g transform="translate(128 384)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navE)"/>
+    <path d="M34 80 C46 64 82 64 94 80" stroke="#D7F5FF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M34 62 C46 46 82 46 94 62" stroke="#D7F5FF" stroke-width="8" stroke-linecap="round"/>
+    <text x="64" y="98" font-size="28" text-anchor="middle" class="gold">777</text>
+  </g>
+  <g transform="translate(256 384)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navF)"/>
+    <circle cx="52" cy="56" r="14" fill="#FF5B5B"/>
+    <circle cx="76" cy="56" r="14" fill="#FF5B5B"/>
+    <path d="M64 38 C64 22 84 20 90 36" stroke="#8FD77A" stroke-width="6" stroke-linecap="round"/>
+    <path d="M52 70 C52 86 72 96 88 92" stroke="#FFD16D" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="40" cy="88" r="10" fill="#FFBE5C"/>
+  </g>
+  <g transform="translate(384 384)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navD)"/>
+    <polygon points="64,30 74,50 96,52 80,66 84,88 64,76 44,88 48,66 32,52 54,50" class="gold"/>
+    <path d="M38 96 H90" stroke="#F8FAFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M50 40 H78" stroke="#2E1A0A" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(512 384)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navB)"/>
+    <path d="M38 76 C48 44 92 42 92 62 C92 80 70 90 54 82 C44 94 28 92 24 86 C28 84 34 80 38 76 Z" fill="#C8F4FF"/>
+    <circle cx="78" cy="62" r="4" fill="#12335F"/>
+    <path d="M22 54 L38 62" stroke="#FFD16D" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(640 384)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navE)"/>
+    <circle cx="44" cy="72" r="10" fill="#D8F6FF"/>
+    <circle cx="64" cy="52" r="16" fill="#B4EAFF"/>
+    <circle cx="86" cy="76" r="12" fill="#8DD7FF"/>
+    <circle cx="84" cy="46" r="8" fill="#FFD16D"/>
+  </g>
+
+  <g transform="translate(0 512)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navA)"/>
+    <rect x="40" y="34" width="22" height="22" rx="6" fill="#F8FAFF"/>
+    <rect x="66" y="34" width="22" height="22" rx="6" fill="#DCEBFF"/>
+    <rect x="40" y="60" width="22" height="22" rx="6" fill="#DCEBFF"/>
+    <rect x="66" y="60" width="22" height="22" rx="6" fill="#F8FAFF"/>
+    <circle cx="51" cy="45" r="3" fill="#12335F"/>
+    <circle cx="77" cy="45" r="3" fill="#12335F"/>
+    <circle cx="51" cy="71" r="3" fill="#12335F"/>
+    <circle cx="77" cy="71" r="3" fill="#12335F"/>
+  </g>
+  <g transform="translate(128 512)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navD)"/>
+    <path d="M38 84 C48 58 80 38 94 50 C108 62 82 86 54 90" stroke="#DFF8E8" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="48" cy="84" r="10" fill="#F8FAFF"/>
+    <path d="M84 38 V62" stroke="#FFD16D" stroke-width="8" stroke-linecap="round"/>
+    <path d="M84 38 L96 46" stroke="#FFD16D" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(256 512)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navB)"/>
+    <circle cx="50" cy="52" r="20" fill="#D8F6FF"/>
+    <circle cx="78" cy="52" r="20" fill="#FFD16D"/>
+    <rect x="44" y="72" width="40" height="12" rx="6" fill="#F8FAFF"/>
+  </g>
+  <g transform="translate(384 512)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navC)"/>
+    <path d="M36 84 L44 48 L58 64 L64 40 L72 64 L86 48 L92 84 Z" class="gold"/>
+    <circle cx="50" cy="84" r="6" fill="#2E1A0A"/>
+    <circle cx="78" cy="84" r="6" fill="#2E1A0A"/>
+  </g>
+  <g transform="translate(512 512)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navA)"/>
+    <rect x="34" y="44" width="60" height="42" rx="12" class="soft" stroke="#F8FAFF" stroke-width="6"/>
+    <path d="M34 58 H94" class="line"/>
+    <path d="M48 44 V34 H80 V44" class="line"/>
+    <circle cx="76" cy="72" r="6" class="gold"/>
+  </g>
+  <g transform="translate(640 512)" filter="url(#shadow)">
+    <rect x="12" y="12" width="104" height="104" class="tile" fill="url(#navF)"/>
+    <polygon points="64,28 72,50 96,50 76,64 84,88 64,72 44,88 52,64 32,50 56,50" class="gold"/>
+    <circle cx="64" cy="64" r="8" fill="#F8FAFF"/>
+  </g>
+</svg>

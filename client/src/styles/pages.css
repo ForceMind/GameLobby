@@ -1,0 +1,444 @@
+.headline-card,
+.profile-hero,
+.detail-actions-card {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.profile-stats article,
+.asset-grid article,
+.metric-grid article,
+.summary-card,
+.roster-card,
+.population-card,
+.room-card {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.profile-stats span,
+.asset-grid span,
+.metric-grid span,
+.summary-card span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.profile-stats strong,
+.asset-grid strong,
+.metric-grid strong,
+.summary-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1rem;
+}
+
+.asset-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.avatar-shell {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(23, 183, 255, 0.24), rgba(255, 159, 86, 0.24));
+}
+
+.mission-row,
+.mission-card-foot {
+  display: grid;
+  gap: 10px;
+}
+
+.mission-row {
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mission-row:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.mission-progress span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.population-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.population-card,
+.distribution-item {
+  gap: 12px;
+}
+
+.tournament-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tournament-top p,
+.summary-text,
+.mini-rows,
+.progress-head {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.mini-rows {
+  color: var(--muted);
+}
+
+.progress-head {
+  margin: 6px 0 10px;
+  align-items: center;
+}
+
+.event-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pack-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pack-card {
+  justify-items: start;
+}
+
+.pack-card strong,
+.purchase-card strong {
+  color: var(--accent-d);
+}
+
+.pack-card > span:last-child {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.vip-panel,
+.redeem-teaser {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stack-item {
+  align-items: flex-start;
+}
+
+.stack-item.compact {
+  padding: 16px;
+}
+
+.stack-item .item-tag {
+  min-width: 56px;
+}
+
+.notice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.notice-head small {
+  color: var(--muted);
+}
+
+.detail-hero-card {
+  padding: 22px;
+}
+
+.detail-hero-grid {
+  align-items: center;
+}
+
+.poster-shell {
+  width: 168px;
+  height: 168px;
+  display: grid;
+  place-items: center;
+  border-radius: 36px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.detail-meta {
+  gap: 18px;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.perk-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.perk-chip {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.room-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.room-card p,
+.record-change span {
+  margin: 4px 0 0;
+}
+
+.detail-summary-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.roster-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.roster-card span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.roster-card strong {
+  display: block;
+  margin-top: 6px;
+}
+
+.checkin-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.checkin-card {
+  min-height: 110px;
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  justify-items: center;
+  padding: 16px 10px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.checkin-card.done {
+  background: linear-gradient(135deg, rgba(35, 208, 155, 0.18), rgba(23, 183, 255, 0.12));
+}
+
+.checkin-card span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.checkin-card small {
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.wheel-layout {
+  align-items: center;
+}
+
+.wheel-stage {
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+}
+
+.wheel-shell {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  display: grid;
+  place-items: center;
+}
+
+.wheel-pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 28px solid var(--accent-d);
+  transform: translateX(-50%);
+}
+
+.wheel-disc {
+  position: relative;
+  width: 220px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 8px solid rgba(255, 255, 255, 0.14);
+  background: conic-gradient(from 0deg, #17b7ff, #23d09b, #ff9f56, #1d6dff, #17b7ff);
+  box-shadow: var(--shadow-md);
+  transition: transform 3.4s cubic-bezier(0.2, 0.92, 0.28, 1);
+}
+
+.wheel-disc::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(8, 16, 30, 0.94);
+  border: 6px solid rgba(255, 255, 255, 0.18);
+  transform: translate(-50%, -50%);
+}
+
+.wheel-disc span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.wheel-disc .p1 {
+  transform: translate(58px, -82px);
+}
+
+.wheel-disc .p2 {
+  transform: translate(82px, 18px);
+}
+
+.wheel-disc .p3 {
+  transform: translate(-18px, 82px);
+}
+
+.wheel-disc .p4 {
+  transform: translate(-88px, -10px);
+}
+
+.invite-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.invite-card span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.redeem-box {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.redeem-box input {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.purchase-card {
+  align-content: center;
+  justify-items: start;
+}
+
+.purchase-card.vip-theme {
+  background: linear-gradient(135deg, rgba(255, 159, 86, 0.16), rgba(23, 183, 255, 0.1));
+}
+
+.resource-cards,
+.distribution-list,
+.notice-list {
+  display: grid;
+  gap: 12px;
+}
+
+.resource-card {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.record-change {
+  text-align: right;
+}
+
+.empty-state {
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 1120px) {
+  .pack-grid,
+  .tournament-grid,
+  .room-grid,
+  .asset-grid,
+  .profile-stats,
+  .detail-summary-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .pack-grid,
+  .event-grid,
+  .population-grid,
+  .roster-grid,
+  .detail-summary-row,
+  .profile-stats,
+  .asset-grid,
+  .checkin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vip-panel,
+  .redeem-teaser,
+  .invite-card,
+  .record-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .record-change {
+    text-align: left;
+  }
+
+  .redeem-box {
+    grid-template-columns: 1fr;
+  }
+
+  .wheel-shell {
+    width: 220px;
+    height: 220px;
+  }
+
+  .wheel-disc {
+    width: 190px;
+  }
+}

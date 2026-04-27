@@ -34,7 +34,7 @@ const WeekendParty = ({ t }) => (
 );
 
 const DailyCheckin = ({ t }) => {
-  const [checkedDays, setCheckedDays] = useState([true, true, false, false, false, false, false]);
+  const [checkedDays] = useState([true, true, false, false, false, false, false]);
   
   return (
     <div className="activity-detail-content daily-checkin">

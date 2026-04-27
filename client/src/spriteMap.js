@@ -1,0 +1,36 @@
+export const SPRITE_ATLAS_URL = `${import.meta.env.BASE_URL}sprites/lobby-atlas.svg`;
+export const SPRITE_COLUMNS = 6;
+export const SPRITE_ROWS = 5;
+
+export const spriteMap = {
+  home: { col: 0, row: 0 },
+  arena: { col: 1, row: 0 },
+  events: { col: 2, row: 0 },
+  store: { col: 3, row: 0 },
+  profile: { col: 4, row: 0 },
+  bell: { col: 5, row: 0 },
+  gift: { col: 0, row: 1 },
+  jackpot: { col: 1, row: 1 },
+  mission: { col: 2, row: 1 },
+  history: { col: 3, row: 1 },
+  vip: { col: 4, row: 1 },
+  shield: { col: 5, row: 1 },
+  coin: { col: 0, row: 2 },
+  token: { col: 1, row: 2 },
+  trophy: { col: 2, row: 2 },
+  calendar: { col: 3, row: 2 },
+  bolt: { col: 4, row: 2 },
+  check: { col: 5, row: 2 },
+  goldenPharaoh: { col: 0, row: 3 },
+  ocean777: { col: 1, row: 3 },
+  fruitParty: { col: 2, row: 3 },
+  wildWest: { col: 3, row: 3 },
+  fishHunter: { col: 4, row: 3 },
+  bubblePop: { col: 5, row: 3 },
+  diceMerge: { col: 0, row: 4 },
+  miniGolf: { col: 1, row: 4 },
+  logo: { col: 2, row: 4 },
+  crown: { col: 3, row: 4 },
+  wallet: { col: 4, row: 4 },
+  spark: { col: 5, row: 4 },
+};
