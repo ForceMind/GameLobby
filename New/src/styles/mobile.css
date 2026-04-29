@@ -1,0 +1,1630 @@
+﻿/* Mobile H5 layout. Loaded after App.css to isolate phone proportions. */
+@media (max-width: 767px) {
+  :root {
+    --m-gap: 10px;
+    --m-radius: 18px;
+    --m-nav-h: 68px;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+  }
+
+  body {
+    background: #eef8ff;
+  }
+
+  .app-root {
+    min-height: 100dvh;
+    background:
+      radial-gradient(circle at 88% 4%, rgba(91, 193, 255, 0.22), transparent 34%),
+      radial-gradient(circle at 5% 24%, rgba(105, 223, 195, 0.18), transparent 28%),
+      linear-gradient(180deg, #edf9ff 0%, #f7fcff 45%, #eef8ff 100%);
+    background-attachment: fixed;
+  }
+
+  .app-shell {
+    width: min(100%, 430px);
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 10px 10px calc(var(--m-nav-h) + 30px + env(safe-area-inset-bottom));
+    overflow-x: clip;
+  }
+
+  main {
+    width: 100%;
+  }
+
+  .screen {
+    gap: var(--m-gap);
+  }
+
+  .topbar {
+    position: relative;
+    top: auto;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: minmax(88px, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 2px;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .player {
+    width: auto;
+    min-width: 0;
+    gap: 7px;
+  }
+
+  .avatar {
+    width: 42px;
+    height: 42px;
+    font-size: 1.2rem;
+  }
+
+  .player strong {
+    font-size: 0.92rem;
+    line-height: 1.05;
+  }
+
+  .player span {
+    display: none;
+    max-width: 92px;
+    margin-top: 5px;
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+
+  .wallets {
+    /* Four compact controls must fit beside the player brand at 390px width. */
+    width: auto;
+    display: grid;
+    grid-template-columns: 96px 60px 34px 36px;
+    justify-self: end;
+    gap: 5px;
+  }
+
+  .wallet-pill,
+  .icon-button,
+  .language-button {
+    height: 36px;
+    min-height: 0;
+    border-radius: 999px;
+    box-shadow: 0 8px 22px rgba(35, 96, 145, 0.12);
+  }
+
+  .wallet-pill {
+    width: auto;
+    min-width: 0;
+    gap: 5px;
+    padding: 0 6px;
+  }
+
+  .wallet-pill strong {
+    font-size: 0.68rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .coin-icon,
+  .event-icon,
+  .wallet-add {
+    width: 22px;
+    height: 22px;
+    font-size: 0.66rem;
+  }
+
+  .wallet-add {
+    display: none;
+  }
+
+  .icon-button {
+    width: 34px;
+    font-size: 0.92rem;
+  }
+
+  .language-button {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+    font-size: 0.66rem;
+  }
+
+  .feature-banner,
+  .jackpot-card,
+  .panel,
+  .shortcut-bar,
+  .tournament-hero,
+  .event-hero,
+  .shop-hero,
+  .profile-card,
+  .profile-actions,
+  .profile-menu,
+  .how-to,
+  .event-callout {
+    border-radius: var(--m-radius);
+    box-shadow: 0 12px 28px rgba(35, 96, 145, 0.11);
+  }
+
+  .hero-row,
+  .dashboard-row,
+  .profile-card,
+  .asset-row,
+  .detail-grid,
+  .detail-columns,
+  .detail-hero,
+  .product-detail,
+  .event-detail-head,
+  .wheel-detail {
+    grid-template-columns: 1fr;
+    gap: var(--m-gap);
+  }
+
+  .feature-banner {
+    min-height: 188px;
+    padding: 20px 22px;
+    border-radius: 24px;
+    align-items: center;
+    background:
+      linear-gradient(90deg, rgba(5, 24, 74, 0.96), rgba(8, 54, 130, 0.72)),
+      url('https://games-web.coconut.tv/icon/cyberpunk.png') right center / auto 112% no-repeat;
+  }
+
+  .feature-banner img,
+  .hero-art {
+    display: none;
+  }
+
+  .feature-banner span,
+  .event-hero span,
+  .tournament-hero span,
+  .tournament-list span {
+    height: 30px;
+    padding: 0 11px;
+    border-radius: 9px;
+    font-size: 0.78rem;
+  }
+
+  .feature-banner h1,
+  .page-heading h1,
+  .event-hero h2,
+  .shop-hero h2,
+  .tournament-hero h2 {
+    font-size: 2.18rem;
+    line-height: 0.95;
+  }
+
+  .feature-banner h1 {
+    max-width: 230px;
+    margin: 12px 0 8px;
+  }
+
+  .feature-banner p {
+    margin: 0 0 18px;
+    font-size: 0.98rem;
+  }
+
+  .feature-banner button,
+  .tournament-hero footer button,
+  .event-callout button,
+  .shop-hero button,
+  .detail-actions button {
+    height: 48px;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 22px;
+    font-size: 0.96rem;
+  }
+
+  .jackpot-card {
+    min-height: 170px;
+    padding: 24px 22px;
+  }
+
+  .jackpot-card h2,
+  .section-title h2,
+  .board-panel h2,
+  .rewards-panel h2,
+  .shop-section h2 {
+    font-size: 1.28rem;
+  }
+
+  .jackpot-card p {
+    margin: 22px 0 6px;
+    font-size: 0.95rem;
+  }
+
+  .jackpot-card strong {
+    font-size: 2rem;
+  }
+
+  .treasure {
+    right: 24px;
+    bottom: 28px;
+    width: 112px;
+    height: 64px;
+    opacity: 0.82;
+  }
+
+  .treasure::before {
+    top: 11px;
+    height: 10px;
+  }
+
+  .treasure::after {
+    top: 25px;
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+
+  .shortcut-bar {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+    padding: 12px 4px;
+    overflow: hidden;
+  }
+
+  .shortcut-bar button {
+    min-width: 0;
+    gap: 7px;
+    font-size: 0.64rem;
+    line-height: 1.05;
+  }
+
+  .shortcut-bar span {
+    width: 42px;
+    height: 42px;
+    font-size: 1.06rem;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .section-title {
+    margin-bottom: 14px;
+    gap: 10px;
+  }
+
+  .section-title button {
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .category-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .category-tabs button,
+  .chip-row button,
+  .filter-btn,
+  .segmented button {
+    min-width: 0;
+    height: 44px;
+    font-size: 0.86rem;
+  }
+
+  .game-grid {
+    /* Mobile lobby intentionally uses 4 columns to match the dense H5 design. */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .game-card {
+    width: 100%;
+    min-height: 0;
+    aspect-ratio: 1 / 1.32;
+    border-radius: 12px;
+  }
+
+  .game-badge {
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 7px;
+    font-size: 0.58rem;
+  }
+
+  .game-card strong {
+    left: 6px;
+    right: 6px;
+    bottom: 20px;
+    font-size: 0.58rem;
+    line-height: 1.05;
+  }
+
+  .game-card small {
+    left: 6px;
+    right: 6px;
+    bottom: 5px;
+    font-size: 0.55rem;
+  }
+
+  .art-tile span {
+    min-height: 36%;
+    border-radius: 12px;
+    font-size: clamp(0.95rem, 5vw, 1.45rem);
+  }
+
+  .dashboard-row {
+    gap: var(--m-gap);
+  }
+
+  .reward-strip {
+    grid-template-columns: repeat(5, minmax(56px, 1fr));
+    gap: 7px;
+    overflow: hidden;
+  }
+
+  .reward-strip button {
+    min-height: 90px;
+    padding: 8px 4px;
+    border-radius: 13px;
+    font-size: 0.76rem;
+  }
+
+  .winner-row {
+    grid-template-columns: 28px 1fr auto;
+    min-height: 44px;
+    gap: 9px;
+    font-size: 0.86rem;
+  }
+
+  .winner-row span {
+    width: 27px;
+    height: 27px;
+  }
+
+  .page-heading {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .page-heading > span,
+  .page-heading .gift-illustration {
+    font-size: 2.35rem;
+  }
+
+  .page-heading p {
+    margin-top: 4px;
+    font-size: 0.98rem;
+  }
+
+  .page-heading button {
+    display: none;
+  }
+
+  .toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .segmented {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 5px;
+  }
+
+  .filter-btn {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .tournament-hero > div {
+    min-height: 228px;
+    padding: 24px;
+  }
+
+  .tournament-hero h2 {
+    max-width: 250px;
+    font-size: 2.1rem;
+  }
+
+  .tournament-hero small {
+    margin-top: 16px;
+  }
+
+  .tournament-hero > div > strong {
+    font-size: 2.55rem;
+  }
+
+  .tournament-art {
+    display: none;
+  }
+
+  .tournament-hero footer {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .tournament-hero footer span {
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .tournament-list {
+    padding: 0 16px;
+  }
+
+  .tournament-list button {
+    grid-template-columns: 76px minmax(0, 1fr) 20px;
+    grid-template-rows: auto auto auto;
+    gap: 12px;
+    min-height: 116px;
+    padding: 14px 0;
+  }
+
+  .tournament-list .list-art {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    width: 76px;
+    height: 76px;
+    border-radius: 14px;
+  }
+
+  .tournament-list .list-art span {
+    min-height: 34px;
+    font-size: 1.2rem;
+  }
+
+  .tournament-item-main {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .tournament-item-meta,
+  .tournament-item-time {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .tournament-item-meta {
+    grid-row: 2;
+  }
+
+  .tournament-item-time {
+    grid-row: 3;
+  }
+
+  .tournament-list button > svg:last-child {
+    grid-column: 3;
+    grid-row: 1 / 4;
+    align-self: center;
+    justify-self: end;
+  }
+
+  .tournament-list strong {
+    font-size: 0.94rem;
+    line-height: 1.08;
+  }
+
+  .tournament-list small,
+  .tournament-list em {
+    font-size: 0.82rem;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .detail-grid article,
+  .stat-grid span,
+  .detail-card,
+  .detail-columns article,
+  .data-row,
+  .secondary-grid button,
+  .reward-table button {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .roster-grid {
+    gap: 10px;
+  }
+
+  .roster-grid span {
+    padding: 12px;
+  }
+
+  .how-to {
+    padding: 20px;
+  }
+
+  .how-to h2 {
+    font-size: 1.1rem;
+  }
+
+  .how-to div {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .how-to .step-arrow {
+    display: none;
+  }
+
+  .how-to span {
+    width: 62px;
+    height: 62px;
+    margin-bottom: 4px;
+    font-size: 1.55rem;
+  }
+
+  .event-hero,
+  .shop-hero {
+    min-height: 244px;
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .event-hero p,
+  .shop-hero p {
+    max-width: 100%;
+    font-size: 0.98rem;
+  }
+
+  .event-progress-card {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 14px;
+  }
+
+  .event-progress-card strong {
+    font-size: 1.55rem;
+  }
+
+  .event-progress-card .milestones {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .event-progress-card .milestones span {
+    padding: 7px 8px;
+    font-size: 0.76rem;
+  }
+
+  .event-list {
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+    gap: 12px;
+  }
+
+  .event-list button {
+    grid-template-columns: 78px 1fr;
+    gap: 12px;
+    min-height: 0;
+    padding: 14px;
+    border-radius: 18px;
+    background: white;
+    box-shadow: 0 10px 24px rgba(35, 96, 145, 0.11);
+  }
+
+  .event-list button > svg:last-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .event-thumb {
+    width: 72px;
+    height: 72px;
+    font-size: 2rem;
+  }
+
+  .event-list span:not(.event-thumb) {
+    height: 26px;
+    font-size: 0.7rem;
+  }
+
+  .event-list strong {
+    margin-top: 6px;
+    font-size: 0.98rem;
+  }
+
+  .event-list p,
+  .event-list small {
+    margin: 4px 0;
+    font-size: 0.82rem;
+  }
+
+  .event-list em {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    width: 100%;
+    min-height: 42px;
+    border-radius: 13px;
+    font-size: 0.82rem;
+  }
+
+  .event-callout {
+    display: grid;
+    grid-template-columns: 58px 1fr;
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .event-callout > span {
+    width: 58px;
+    height: 58px;
+    font-size: 1.65rem;
+  }
+
+  .event-callout button {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .shop-hero strong {
+    right: 18px;
+    top: 18px;
+    width: 82px;
+    height: 82px;
+    font-size: 1.15rem;
+  }
+
+  .shop-hero button {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    margin-top: 14px;
+  }
+
+  .shop-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .shop-grid,
+  .deal-grid {
+    /* Shop purchase cards use 3 columns on mobile so more products are visible. */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .shop-grid button,
+  .deal-grid button {
+    min-height: 132px;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 13px;
+  }
+
+  .shop-grid strong,
+  .deal-grid strong {
+    font-size: 0.72rem;
+  }
+
+  .shop-grid .product-art,
+  .item-grid .product-art,
+  .compact-art {
+    min-height: 48px;
+    border-radius: 11px;
+  }
+
+  .deal-grid p {
+    margin: 4px 0;
+    font-size: 0.66rem;
+  }
+
+  .profile-card {
+    min-height: 0;
+  }
+
+  .profile-stat {
+    padding: 22px;
+  }
+
+  .profile-stat h2 {
+    font-size: 1.15rem;
+  }
+
+  .profile-stat > div {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .profile-stat div span {
+    min-height: 86px;
+    padding: 10px;
+  }
+
+  .profile-stat div span svg {
+    font-size: 1.2rem;
+  }
+
+  .profile-stat div strong {
+    font-size: 1rem;
+  }
+
+  .vip-badge {
+    width: 100%;
+    height: auto;
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-radius: 22px;
+    font-size: 1.55rem;
+    box-shadow: inset 0 0 0 5px #f4c343, 0 12px 24px rgba(17, 62, 130, 0.16);
+  }
+
+  .vip-badge small {
+    font-size: 0.78rem;
+  }
+
+  .profile-actions {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    padding: 12px 8px;
+  }
+
+  .profile-actions button,
+  .profile-menu button {
+    min-height: 46px;
+    padding: 0 8px;
+    font-size: 0.86rem;
+  }
+
+  .profile-actions button {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    padding: 6px 2px;
+    font-size: 0.62rem;
+    line-height: 1.05;
+  }
+
+  .profile-actions button svg:last-child {
+    display: none;
+  }
+
+  .asset-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .asset-row article {
+    min-height: 86px;
+    grid-template-columns: 42px 1fr;
+    padding: 14px;
+  }
+
+  .asset-row span {
+    font-size: 1.9rem;
+  }
+
+  .asset-row strong {
+    font-size: 1.35rem;
+  }
+
+  .progress-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .progress-cards button {
+    padding: 18px;
+  }
+
+  .progress-cards button > span {
+    width: 58px;
+    height: 58px;
+    font-size: 1.55rem;
+  }
+
+  .profile-menu button {
+    padding-inline: 18px;
+  }
+
+  .detail-overlay {
+    padding: 8px;
+    place-items: end center;
+  }
+
+  .detail-panel {
+    width: 100%;
+    max-height: 91dvh;
+    border-radius: 22px;
+  }
+
+  .detail-header {
+    padding: 20px 18px 14px;
+  }
+
+  .detail-header h2 {
+    font-size: 2rem;
+  }
+
+  .detail-body {
+    gap: 14px;
+    padding: 16px 18px 20px;
+  }
+
+  .stat-grid,
+  .secondary-grid,
+  .reward-table {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .all-games-grid {
+    /* The All Games detail sheet follows the same 4-column mobile catalog rule. */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .all-games-grid button {
+    min-height: 118px;
+    padding: 8px;
+    border-radius: 12px;
+    font-size: 0.66rem;
+  }
+
+  .all-games-grid .secondary-art {
+    border-radius: 12px;
+  }
+
+  .service-pill {
+    display: none;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 50;
+    width: min(406px, calc(100% - 22px));
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    padding: 9px 8px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 16px 36px rgba(35, 96, 145, 0.2);
+    backdrop-filter: blur(16px);
+  }
+
+  .nav {
+    height: 58px;
+    min-width: 0;
+    gap: 3px;
+    border-radius: 16px;
+    font-size: 0.68rem;
+  }
+
+  .nav svg {
+    font-size: 1.28rem;
+  }
+
+  .wallets {
+    grid-template-columns: 96px 62px 34px;
+    gap: 5px;
+  }
+
+  .language-button {
+    display: none;
+  }
+
+  .page-heading {
+    grid-template-columns: 32px 1fr;
+    gap: 8px;
+    min-height: 50px;
+  }
+
+  .page-heading > span,
+  .page-heading .gift-illustration {
+    font-size: 1.85rem;
+  }
+
+  .page-heading .gift-illustration {
+    display: none;
+  }
+
+  .page-heading h1 {
+    font-size: 1.58rem;
+    letter-spacing: 0.01em;
+  }
+
+  .page-heading p {
+    font-size: 0.78rem;
+  }
+
+  .feature-banner h1 {
+    font-size: 1.95rem;
+  }
+
+  .jackpot-card {
+    min-height: 82px;
+    padding: 12px 82px 12px 14px;
+  }
+
+  .jackpot-card h2 {
+    font-size: 0.9rem;
+  }
+
+  .jackpot-card p {
+    display: none;
+  }
+
+  .jackpot-card strong {
+    font-size: 1.18rem;
+  }
+
+  .treasure {
+    right: 12px;
+    bottom: 50%;
+    width: 58px;
+    height: 34px;
+    transform: translateY(50%);
+    opacity: 0.9;
+  }
+
+  .treasure::before {
+    top: 7px;
+    height: 7px;
+  }
+
+  .treasure::after {
+    top: 13px;
+    width: 18px;
+    height: 18px;
+    font-size: 0.62rem;
+  }
+
+  .category-tabs,
+  .subpage-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .reward-strip {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .reward-strip button {
+    min-height: 68px;
+    padding: 5px 2px;
+    border-radius: 10px;
+    font-size: 0.54rem;
+    line-height: 1.05;
+  }
+
+  .reward-strip svg {
+    font-size: 1rem;
+  }
+
+  .tournament-hero footer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .tournament-hero footer button {
+    grid-column: 1 / -1;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .how-to div {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .how-to article {
+    gap: 4px;
+  }
+
+  .how-to span {
+    width: 42px;
+    height: 42px;
+    font-size: 1.05rem;
+  }
+
+  .how-to p {
+    font-size: 0.66rem;
+    line-height: 1.18;
+  }
+
+  .event-filter-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) 38px;
+    gap: 5px;
+  }
+
+  .event-filter-row button {
+    height: 34px;
+    padding: 0 4px;
+    font-size: 0.55rem;
+    line-height: 1.05;
+  }
+
+  .event-filter-action {
+    width: 38px;
+    justify-self: end;
+    font-size: 0;
+  }
+
+  .event-filter-action svg {
+    font-size: 0.95rem;
+  }
+
+  .event-hero,
+  .shop-hero {
+    min-height: 172px;
+    padding: 16px;
+  }
+
+  .event-hero h2,
+  .shop-hero h2,
+  .tournament-hero h2 {
+    font-size: 1.55rem;
+  }
+
+  .event-progress-card {
+    gap: 8px;
+    margin-top: 10px;
+    padding: 10px;
+  }
+
+  .event-list button {
+    grid-template-columns: 54px minmax(0, 1fr) 58px;
+    grid-template-rows: auto auto;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .event-thumb {
+    width: 54px;
+    height: 54px;
+    font-size: 1.35rem;
+  }
+
+  .event-list p {
+    display: none;
+  }
+
+  .event-progress {
+    grid-column: 2;
+  }
+
+  .event-list em {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 44px;
+    font-size: 0.62rem;
+  }
+
+  .event-list button > svg:last-child {
+    display: none;
+  }
+
+  .shop-section .shop-grid button:nth-child(n+4) {
+    display: none;
+  }
+
+  .shop-grid,
+  .deal-grid,
+  .shop-list-page {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .progress-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .progress-cards button {
+    min-height: 126px;
+    padding: 8px 6px;
+    border-radius: 12px;
+  }
+
+  .progress-cards button > span {
+    width: 38px;
+    height: 38px;
+    margin-bottom: 6px;
+    font-size: 1rem;
+  }
+
+  .progress-cards h3 {
+    font-size: 0.68rem;
+    line-height: 1.05;
+  }
+
+  .progress-cards p {
+    display: none;
+  }
+
+  .progress-cards small,
+  .progress-cards strong {
+    font-size: 0.58rem;
+    line-height: 1.1;
+  }
+
+  .progress-cards strong {
+    margin-top: 6px;
+    padding: 6px 4px;
+  }
+
+  .vip-entry {
+    min-height: 48px;
+    padding: 0 14px;
+    font-size: 0.78rem;
+  }
+
+  .vip-entry strong {
+    font-size: 0.68rem;
+  }
+
+  .secondary-header {
+    grid-template-columns: 82px 1fr;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 18px;
+  }
+
+  .secondary-header button {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 0.72rem;
+  }
+
+  .secondary-header h1 {
+    font-size: 1.42rem;
+  }
+
+  .secondary-header p {
+    font-size: 0.76rem;
+  }
+
+  .tournament-subpage-head,
+  .event-subpage-head {
+    grid-template-columns: 72px 1fr;
+    gap: 10px;
+  }
+
+  .tournament-subpage-head .detail-art,
+  .event-subpage-head .event-thumb {
+    width: 72px;
+    height: 72px;
+    min-height: 72px;
+    border-radius: 14px;
+  }
+
+  .reward-table-seven {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .reward-table-seven button {
+    min-height: 72px;
+    padding: 5px 2px;
+    border-radius: 10px;
+    font-size: 0.52rem;
+  }
+
+  .ranking-list .data-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .bottom-nav {
+    padding: 8px;
+    border-radius: 24px;
+    background:
+      linear-gradient(180deg, #ffffff 0%, #edf8ff 54%, #dbeaff 100%);
+    box-shadow:
+      0 18px 36px rgba(35, 96, 145, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.98),
+      inset 0 -8px 20px rgba(117, 179, 255, 0.2);
+    backdrop-filter: none;
+  }
+
+  .bottom-nav::before {
+    inset: 4px 8px auto;
+    height: 14px;
+  }
+
+  .nav {
+    height: 52px;
+    font-size: 0.62rem;
+  }
+
+  .nav svg {
+    font-size: 1.15rem;
+  }
+
+  .event-hero-compact {
+    min-height: 0;
+  }
+
+  .event-hero-compact .event-rank-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .event-rank-card .mini-progress,
+  .event-rank-card button {
+    grid-column: 1 / -1;
+  }
+
+  .compact-flow {
+    padding: 12px;
+  }
+
+  .compact-flow h2 {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+  }
+
+  .compact-flow div {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .compact-flow span {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+  }
+
+  .compact-flow p {
+    font-size: 0.58rem;
+    line-height: 1.12;
+  }
+
+  .event-list button {
+    grid-template-columns: 48px minmax(0, 1fr) 52px;
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .event-list strong {
+    font-size: 0.82rem;
+  }
+
+  .event-progress small,
+  .event-progress strong {
+    font-size: 0.62rem;
+  }
+
+  .event-list em {
+    font-size: 0.56rem;
+    line-height: 1.1;
+    align-self: center;
+    min-height: 34px;
+    padding: 5px 3px;
+    border-radius: 12px;
+  }
+
+  .event-subpage-head,
+  .tournament-subpage-head {
+    padding: 10px;
+  }
+
+  .tournament-compact-detail {
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .tournament-compact-detail .detail-art {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+  }
+
+  .tournament-compact-detail .big-number {
+    font-size: 1.18rem;
+    line-height: 1;
+  }
+
+  .tournament-compact-detail .stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .tournament-compact-detail .stat-grid span {
+    padding: 6px 3px;
+    border-radius: 10px;
+    font-size: 0.52rem;
+    line-height: 1.05;
+  }
+
+  .tournament-compact-detail .stat-grid strong {
+    font-size: 0.62rem;
+  }
+
+  .event-rank-inline {
+    gap: 5px;
+    margin-top: 6px;
+  }
+
+  .event-rank-inline span {
+    padding: 6px 8px;
+    font-size: 0.62rem;
+  }
+
+  .event-detail-grid {
+    gap: 8px;
+  }
+
+  .mission-row {
+    padding: 10px;
+  }
+
+  .mission-row button {
+    min-height: 30px;
+    padding: 0 9px;
+    font-size: 0.58rem;
+  }
+
+  .mission-row strong,
+  .mission-row small {
+    font-size: 0.62rem;
+  }
+
+  .vip-status-card {
+    min-height: 106px;
+    grid-template-columns: 1fr auto;
+    gap: 5px 8px;
+    padding: 12px;
+  }
+
+  .vip-status-card strong {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 6px 8px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+  }
+
+  .vip-status-card small,
+  .vip-status-card em {
+    grid-column: 1 / -1;
+    font-size: 0.62rem;
+    line-height: 1.12;
+  }
+
+  .vip-status-card > svg:last-child {
+    position: absolute;
+    right: 10px;
+    bottom: 12px;
+  }
+
+  .profile-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .asset-summary-row {
+    grid-template-columns: 36px 1fr auto 14px;
+    min-height: 60px;
+    padding: 9px !important;
+    gap: 8px;
+  }
+
+  .asset-summary-row > span {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .asset-summary-row strong,
+  .asset-summary-row em {
+    font-size: 0.72rem;
+  }
+
+  .asset-summary-row small {
+    font-size: 0.58rem;
+  }
+
+  .redeem-form {
+    grid-template-columns: 1fr;
+  }
+
+  .redeem-form input,
+  .feedback-form input,
+  .feedback-form textarea {
+    min-height: 40px;
+    border-radius: 12px;
+    font-size: 0.76rem;
+  }
+
+  .feedback-form textarea {
+    min-height: 96px;
+  }
+
+  .vip-summary {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .vip-summary strong {
+    font-size: 1.25rem;
+  }
+
+  .vip-level-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .vip-level-grid article {
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items: start;
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .vip-level-grid h3,
+  .vip-level-grid small,
+  .vip-level-grid p,
+  .vip-level-grid strong {
+    font-size: 0.62rem;
+    line-height: 1.12;
+  }
+
+  .vip-level-grid button {
+    grid-column: 1 / -1;
+    justify-self: start;
+    min-width: 96px;
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 0.58rem;
+  }
+
+  .game-detail-panel {
+    max-height: 86dvh;
+  }
+
+  .game-detail-panel .detail-header {
+    padding: 12px 14px 8px;
+  }
+
+  .game-detail-panel .detail-header h2 {
+    font-size: 1.36rem;
+  }
+
+  .game-detail-panel .detail-header p {
+    margin-top: 3px;
+    font-size: 0.68rem;
+  }
+
+  .game-detail-panel .detail-body {
+    gap: 8px;
+    padding: 10px 12px 14px;
+  }
+
+  .game-detail-compact {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+  }
+
+  .game-detail-compact .detail-art {
+    width: 72px;
+    height: 72px;
+    border-radius: 14px;
+  }
+
+  .game-detail-compact p {
+    display: none;
+  }
+
+  .game-detail-compact .pill-list {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .game-detail-compact .pill-list span {
+    padding: 4px 7px;
+    font-size: 0.56rem;
+  }
+
+  .compact-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .compact-stat-grid span {
+    padding: 5px 3px;
+    border-radius: 9px;
+    font-size: 0.52rem;
+    line-height: 1.05;
+  }
+
+  .compact-stat-grid strong {
+    font-size: 0.58rem;
+  }
+
+  .compact-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .compact-actions button {
+    min-height: 34px;
+    height: 34px;
+    padding: 0 8px;
+    font-size: 0.62rem;
+  }
+
+  .compact-rule-columns {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .compact-rule-columns article {
+    padding: 9px;
+    border-radius: 12px;
+  }
+
+  .compact-rule-columns h3 {
+    margin-bottom: 4px;
+    font-size: 0.72rem;
+  }
+
+  .compact-rule-columns p {
+    margin: 3px 0;
+    font-size: 0.58rem;
+    line-height: 1.16;
+  }
+
+  .event-filter-row {
+    grid-template-columns: minmax(78px, 1.2fr) repeat(3, minmax(44px, 0.8fr)) 56px;
+    gap: 5px;
+  }
+
+  .event-filter-row button {
+    white-space: nowrap;
+    font-size: 0.58rem;
+  }
+
+  .event-filter-row .event-filter-action {
+    width: 56px;
+    min-width: 56px;
+    padding: 0 5px;
+    justify-content: center;
+    gap: 3px;
+    font-size: 0.56rem;
+    line-height: 1;
+  }
+
+  .event-filter-row .event-filter-action svg {
+    flex: 0 0 auto;
+    font-size: 0.82rem;
+  }
+}

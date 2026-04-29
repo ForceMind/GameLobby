@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+message Game{
+  int32 id = 1;
+  string name = 2; // 名称
+  string icon = 3; //图标
+  string url = 4; //游戏链接
+  int32 type = 5;
+}
+
+message User{
+  string uid = 1;
+  string nickname = 2;
+  string avatar = 3;
+  int32 token = 4;
+}
+
+message InitReq {
+}
+
+message InitRet{
+  User user = 1;
+  repeated Game gameList = 2;
+}
+
+message PurchasePush {
+  string game = 1;
+}
+
+message UpdateGamePush{
+  repeated Game gameList = 1;
+}
+
+message DupLoginPush{
+}
+
+//维护
+message WHPush{
+}
+
+message Ping{}
+
+message Pong{}
+
+message APNS {
+  string nickname = 1;
+  int32 amount = 2;
+  int32 gid = 3;
+  string avatar = 4;
+}
+
+message GetApnsReq{
+  int32 gid = 1;
+}
+
+message GetApnsRet{
+  repeated APNS apns = 1;
+}
+
+message ApnsPush{
+  APNS apns = 1;
+}

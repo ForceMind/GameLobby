@@ -1,0 +1,211 @@
+﻿/* Desktop web layout. Loaded after App.css and mobile.css. */
+@media (min-width: 768px) {
+  :root {
+    --d-shell: min(1180px, calc(100vw - 64px));
+    --d-nav-h: 88px;
+  }
+
+  .app-root {
+    min-height: 100dvh;
+    background:
+      radial-gradient(circle at 18% 4%, rgba(55, 174, 255, 0.18), transparent 34%),
+      radial-gradient(circle at 85% 20%, rgba(60, 216, 159, 0.14), transparent 32%),
+      linear-gradient(180deg, #eaf8ff 0%, #f7fcff 50%, #eef8ff 100%);
+  }
+
+  .app-shell {
+    width: var(--d-shell);
+    max-width: 1180px;
+    padding: 28px 0 calc(var(--d-nav-h) + 54px);
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin-bottom: 2px;
+    padding: 14px 0 18px;
+    background: linear-gradient(180deg, rgba(234, 248, 255, 0.96), rgba(234, 248, 255, 0.68));
+  }
+
+  .avatar {
+    width: 66px;
+    height: 66px;
+  }
+
+  .player strong {
+    font-size: 1.32rem;
+  }
+
+  .player span {
+    font-size: 0.96rem;
+  }
+
+  .wallet-pill {
+    min-width: 156px;
+    height: 52px;
+  }
+
+  .icon-button {
+    width: 52px;
+    height: 52px;
+  }
+
+  .language-button {
+    min-width: 58px;
+    height: 52px;
+    padding-inline: 16px;
+  }
+
+  .screen {
+    gap: 22px;
+  }
+
+  .hero-row {
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 0.95fr);
+    gap: 22px;
+  }
+
+  .feature-banner,
+  .jackpot-card {
+    min-height: 280px;
+  }
+
+  .feature-banner {
+    padding: 34px;
+  }
+
+  .feature-banner h1 {
+    font-size: 3.7rem;
+  }
+
+  .jackpot-card {
+    padding: 34px 30px;
+  }
+
+  .shortcut-bar {
+    padding: 22px 24px;
+  }
+
+  .panel {
+    padding: 24px;
+  }
+
+  .game-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .game-card {
+    aspect-ratio: 1 / 1.24;
+  }
+
+  .dashboard-row {
+    grid-template-columns: 1fr 0.9fr;
+    gap: 22px;
+  }
+
+  .reward-strip {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .page-heading {
+    min-height: 82px;
+  }
+
+  .toolbar {
+    align-items: center;
+  }
+
+  .tournament-hero > div {
+    min-height: 318px;
+  }
+
+  .tournament-hero h2 {
+    font-size: 3.2rem;
+  }
+
+  .tournament-hero footer {
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .tournament-list button {
+    grid-template-columns: 112px minmax(220px, 1.7fr) minmax(140px, 1fr) minmax(120px, 0.8fr) 24px;
+    min-height: 132px;
+  }
+
+  .event-list button {
+    grid-template-columns: 104px minmax(220px, 1.5fr) minmax(180px, 1fr) 124px 24px;
+    min-height: 138px;
+  }
+
+  .event-hero,
+  .shop-hero {
+    min-height: 270px;
+  }
+
+  .event-progress-card {
+    grid-template-columns: 150px 1fr;
+  }
+
+  .shop-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .deal-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .profile-card {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-actions {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .asset-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .service-pill {
+    display: none;
+  }
+
+  .bottom-nav {
+    position: sticky;
+    left: auto;
+    bottom: 22px;
+    transform: none;
+    z-index: 50;
+    width: var(--d-shell);
+    max-width: 1180px;
+    margin: 24px auto 0;
+    padding: 12px 18px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 42px rgba(35, 96, 145, 0.18);
+    backdrop-filter: blur(16px);
+  }
+
+  .nav {
+    height: 64px;
+    border-radius: 18px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .app-shell {
+    max-width: 1240px;
+  }
+
+  :root {
+    --d-shell: min(1240px, calc(100vw - 80px));
+  }
+}

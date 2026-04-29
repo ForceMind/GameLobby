@@ -1,0 +1,86 @@
+.hud-btn {
+    position: fixed;
+    z-index: 90;
+    background: none;
+    border: none;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    text-shadow: 0 2px 2px rgba(0,0,0,0.5);
+}
+
+.icon-container {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    border: 2px solid #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* Mobile-friendly positioning */
+.hud-left {
+    position: fixed;
+    left: 10px;
+    top: 50%; /* Center vertically */
+    transform: translateY(-50%);
+    z-index: 90;
+}
+
+.hud-right {
+    position: fixed;
+    right: 10px;
+    top: 50%; /* Center vertically */
+    transform: translateY(-50%);
+    z-index: 90;
+}
+
+/* Adjustments for smaller screens */
+@media (max-width: 600px) {
+    .hud-left {
+        left: 5px;
+    }
+    
+    .hud-right {
+        right: 5px;
+    }
+
+    .icon-container {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+
+    .hud-btn span {
+        font-size: 0.7rem;
+    }
+}
+
+.gift-glow {
+    background: linear-gradient(135deg, #ff4081, #f50057);
+    animation: pulse 2s infinite;
+}
+
+.event-glow {
+    background: linear-gradient(135deg, #7c4dff, #651fff);
+    animation: bounce 3s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 64, 129, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 64, 129, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 64, 129, 0); }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+}

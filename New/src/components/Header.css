@@ -1,0 +1,93 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.4); /* Increased opacity for better visibility */
+    position: fixed; /* Changed from sticky to fixed */
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    backdrop-filter: blur(10px); /* Increased blur */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3); /* Added shadow for separation */
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.username {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.vip-badge {
+    font-size: 0.7rem;
+    background: linear-gradient(90deg, #ffd700, #ff8c00);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #333;
+    font-weight: bold;
+    width: fit-content;
+}
+
+.wallet-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.balance-pill {
+    background: #4a148c;
+    border: 1px solid #7c43bd;
+    border-radius: 20px;
+    padding: 5px 5px 5px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.coin-icon {
+    color: #ffd700;
+}
+
+.btn-buy {
+    background: linear-gradient(180deg, #00e676, #00c853);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    font-weight: bold;
+    padding: 5px 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.btn-exit {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    padding: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
