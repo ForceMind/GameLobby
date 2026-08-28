@@ -54,6 +54,7 @@ export default function H5Provider({ children }) {
   const returnMode = useRef(entry.mode)
 
   useEffect(() => {
+    if (entry.accepted) saveEntry({ accepted: true, mode: entry.mode })
     if (entry.accepted && !activeGame.current) {
       displayMode.request({
         mode: entry.mode,

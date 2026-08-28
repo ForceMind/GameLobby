@@ -20,6 +20,13 @@ test('H5首次进入必须同意，模式默认半屏并保留合法会话选择
   )
   assert.equal(normalizeMode('invalid'), 'half')
   assert.equal(readEntryState(null, 'full').mode, 'full')
+  assert.deepEqual(
+    readEntryState(
+      JSON.stringify({ version: 1, accepted: true, mode: 'half' }),
+      'full',
+    ),
+    { accepted: true, mode: 'full' },
+  )
 })
 
 test('游戏加载进度单调且不超出0到100', () => {
