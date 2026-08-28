@@ -1,11 +1,11 @@
 {
   "name": "joyloop-static",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prepare-release.mjs",
     "lint": "eslint .",
     "test": "node --test",
     "check:dist": "node scripts/check-dist.mjs",

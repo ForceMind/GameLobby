@@ -1,10 +1,14 @@
-# Joyloop 内嵌 H5 v0.2.3 高保真原型
+# Joyloop 内嵌 H5 v0.2.4 高保真原型
 
 这是 Joyloop 游戏大厅的 React + Vite 静态前端，面向内置在 App 中的 H5，也可独立作为 Cloudflare Pages 静态站点预览。当前代码不连接真实数据库、鉴权、游戏引擎或支付服务；宿主接入方式见 [HOST-INTEGRATION.md](HOST-INTEGRATION.md)。
 
 ## 页面入口
 
 Vite 会生成七个入口：`index.html`（独立原型说明首页）、`lobby.html`、`games.html`、`tournaments.html`、`events.html`、`store.html` 和 `profile.html`。生产输出位于 `dist/`。
+
+v0.2.4 另生成 `start-v0.2.4.html`（与说明首页完全一致的新 URL），用于部署后避开旧入口缓存；JS/CSS 放在 `assets/release-0.2.4/`。所有响应配置 `Cache-Control: no-store`，移除原来覆盖 `/assets/*` 的一年 immutable 缓存。根目录 `404.html` 让 Pages 对不存在的路径返回 404，不再将缺失脚本替换成首页的 200 HTML。不能通过更改 HTML 的 MIME 类型伪装修复脚本缺失。
+
+此策略优先保证频繁更新的原型一致性，会增加重新打开页面时的资源下载。旧浏览器或 CDN 已存储的响应不能由新包追溯删除，因此发布后请先用新入口验证；若自定义域名有强制缓存或重写规则，需另行在 Cloudflare 控制台调整，不能靠 ZIP 覆盖这些规则。
 
 六个业务页之间使用 History API 切换内容，保留 H5 外框、顶部资产栏、底部导航和宿主上下文，不再逐次重载 HTML。页面标题、导航选中项随路由更新；新导航从内容顶部开始，历史导航恢复已记录的滚动位置，筛选和锚点保留。直接打开、刷新与新窗口仍使用对应 HTML 入口，说明首页保持独立。
 

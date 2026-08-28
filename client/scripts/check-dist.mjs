@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile, access } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { releaseAssets, releaseEntry } from './release-config.mjs'
 
 const output = fileURLToPath(new URL('../dist/', import.meta.url))
 const pages = {
@@ -38,6 +39,11 @@ for (const [file, page] of Object.entries(pages)) {
     `${file}: no bundled stylesheet`,
   )
   for (const asset of assets) await access(resolve(output, asset))
+  for (const asset of assets.filter((asset) => /\.(?:js|css)$/.test(asset))) {
+    assert.ok(asset.startsWith(`./${releaseAssets}/`), `${file}: stale asset path ${asset}`)
+    const content = await readFile(resolve(output, asset), 'utf8')
+    assert.doesNotMatch(content, /^\s*<!doctype html/i, `${file}: HTML disguised as an asset`)
+  }
   assert.doesNotMatch(
     html,
     /(?:src|href)="https?:\/\//,
@@ -47,6 +53,16 @@ for (const [file, page] of Object.entries(pages)) {
 
 const headers = await readFile(resolve(output, '_headers'), 'utf8')
 assert.match(headers, /X-Content-Type-Options: nosniff/)
+assert.match(headers, /Cache-Control: no-store/)
+assert.doesNotMatch(headers, /immutable|max-age=31536000/)
+const notFound = await readFile(resolve(output, '404.html'), 'utf8')
+assert.match(notFound, /Page not found/)
+assert.doesNotMatch(notFound, /<script/i, '404 recovery must not depend on JS')
+assert.equal(
+  await readFile(resolve(output, releaseEntry), 'utf8'),
+  await readFile(resolve(output, 'index.html'), 'utf8'),
+  'Fresh release entry must match the normal entry',
+)
 console.log(
-  '✓ Seven static HTML entries, relative JS/CSS assets, and Pages headers verified.',
+  '✓ Seven pages, fresh release entry, versioned assets, 404 and no-store headers verified.',
 )

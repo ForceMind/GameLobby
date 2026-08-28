@@ -2,6 +2,16 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。当前未代为创建 Cloudflare 项目或执行线上部署。
 
+## v0.2.4 白屏问题修正包
+
+1. 将新 ZIP **完整上传为一次新部署**，不要只替换 HTML 或混用旧版 assets。
+2. 部署成功后先打开 `https://joyloop.xincreates.com/start-v0.2.4.html`，此 URL 不复用旧首页缓存。
+3. Network 中应请求 `/assets/release-0.2.4/main-*.js`，状态 200、Content-Type 为 JavaScript，响应不是 HTML。样式同目录且为 `text/css`。
+4. 新包的所有响应应带 `Cache-Control: no-store`。如果自定义域名有强制缓存、Worker 或重写规则，检查它们是否覆盖 Pages 行为；必要时针对该站点旧缓存 URL 清除缓存，避免影响其他站点。
+5. 请求一个确定不存在的脚本，例如 `/assets/release-0.2.4/not-present.js`，应得到 404，而不是首页 200。404 的 HTML 内容是正常错误页，不能将它伪装为 JavaScript。
+
+根目录 `404.html` 用于关闭 Pages 默认的 SPA 首页回退；业务页均有真实 HTML 文件，原有前端 History 导航不受影响。参见 [Pages 路由与缓存说明](https://developers.cloudflare.com/pages/configuration/serving-pages/)。新包无法清除手机此前已经缓存的响应，也无法修改账号级缓存规则；若新入口仍失败，记录失败请求的完整 URL、状态码与响应类型。
+
 ## 直接上传 ZIP
 
 在 `client` 目录执行：
@@ -11,7 +21,7 @@ npm ci
 npm run package:pages
 ```
 
-脚本会在仓库根目录生成 `artifacts/joyloop-cf-pages-<date>-<gitshort>.zip`、SHA-256 文件和 manifest。ZIP 顶层直接包含入口 HTML、`assets/` 和 `_headers`，没有多余的 `dist/` 外壳。
+脚本会在仓库根目录生成 `artifacts/joyloop-cf-pages-<date>-<gitshort>.zip`、SHA-256 文件和 manifest。ZIP 顶层直接包含七个页面 HTML、当前版本的新入口、`404.html`、`assets/` 和 `_headers`，没有多余的 `dist/` 外壳。
 
 在 Cloudflare 控制台进入 **Workers & Pages → 创建 Pages 应用 → Direct Upload / 直接上传**，上传 ZIP 并确认部署。已有 Git 集成项目不能用控制台拖拽覆盖，应使用 Git 构建流程，或另建 Direct Upload 项目。[Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)
 

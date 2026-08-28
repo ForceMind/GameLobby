@@ -7,6 +7,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { spawn } from 'node:child_process'
+import { releaseEntry } from './release-config.mjs'
 
 const execFile = promisify((command, args, options, callback) => {
   const child = spawn(command, args, {
@@ -41,6 +42,7 @@ const entryFiles = [
   'events.html',
   'store.html',
   'profile.html',
+  releaseEntry,
 ]
 const omittedBuildFiles = new Set(['vite.svg'])
 
@@ -77,7 +79,7 @@ async function sha256(file) {
 async function assertDist() {
   await fs.access(distDir)
   const files = await walk(distDir)
-  const allowed = new Set([...entryFiles, '_headers'])
+  const allowed = new Set([...entryFiles, '_headers', '404.html'])
   const assetFiles = files.filter((file) => file.startsWith('assets/'))
   for (const file of files) {
     if (
@@ -90,7 +92,7 @@ async function assertDist() {
   }
   if (assetFiles.length === 0)
     throw new Error('dist/assets is empty; build the client first')
-  for (const file of [...entryFiles, '_headers', ...assetFiles]) {
+  for (const file of [...entryFiles, '_headers', '404.html', ...assetFiles]) {
     const full = join(distDir, file)
     const stat = await fs.stat(full)
     if (!stat.isFile()) throw new Error(`Expected a regular file: dist/${file}`)
@@ -149,7 +151,7 @@ async function main() {
   const assetFiles = (await walk(join(distDir, 'assets'))).map(
     (file) => `assets/${file}`,
   )
-  const packagedFiles = [...entryFiles, ...assetFiles, '_headers']
+  const packagedFiles = [...entryFiles, ...assetFiles, '_headers', '404.html']
   const date = new Date().toISOString().slice(0, 10)
   const gitShort =
     (await gitOutput(['rev-parse', '--short', 'HEAD'])) || 'nogit'
