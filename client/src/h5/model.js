@@ -1,7 +1,7 @@
-export const ENTRY_STORAGE_KEY = 'joyloop.h5-entry.v1'
+export const ENTRY_STORAGE_KEY = 'joyloop.h5-layout.v1'
 
 export function normalizeMode(value) {
-  return value === 'full' ? 'full' : 'half'
+  return value === 'half' ? 'half' : 'full'
 }
 
 export function readEntryState(raw, requestedMode) {
@@ -9,11 +9,10 @@ export function readEntryState(raw, requestedMode) {
   try {
     saved = JSON.parse(raw || 'null')
   } catch {
-    /* A corrupt preference must not bypass consent. */
+    /* Invalid preferences fall back to the default layout. */
   }
   const requested = requestedMode === 'half' || requestedMode === 'full'
   return {
-    accepted: saved?.version === 1 && saved?.accepted === true,
     mode: normalizeMode(requested ? requestedMode : saved?.mode),
   }
 }

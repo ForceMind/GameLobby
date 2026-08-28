@@ -5,7 +5,7 @@ import { Icon } from './icons.jsx'
 import { Modal } from './ui.jsx'
 import { useLocale } from './useLocale.js'
 import { useH5 } from './h5/useH5.js'
-import EntryGate from './h5/EntryGate.jsx'
+import WalletDetails from './h5/WalletDetails.jsx'
 import GameSession from './h5/GameSession.jsx'
 import EventsPage from './pages/EventsPage.jsx'
 import GamesPage from './pages/GamesPage.jsx'
@@ -51,32 +51,9 @@ function MainNav({ page, mobile = false }) {
   )
 }
 
-function AppHeader({ page, openModal }) {
+function AppHeader({ page, openWallet }) {
   const { t, href } = useLocale()
-  const { mode, setMode, closeLobby, wallet: balances } = useH5()
-  const showGems = () =>
-    openModal({
-      title: t('宝石'),
-      subtitle: t('当前余额：{value}', { value: balances.gemsLabel }),
-      body: (
-        <div className="wallet-detail">
-          <span className="asset-symbol gem">
-            <Icon name="gem" />
-          </span>
-          <p>
-            {t('宝石可用于指定活动与赛事，也可以从签到、任务和礼包中获取。')}
-          </p>
-          <a className="btn btn-primary" href={href('events.html#tasks')}>
-            {t('获取宝石')}
-          </a>
-          <a className="btn btn-secondary" href={href('store.html')}>
-            {t('查看礼包')}
-          </a>
-        </div>
-      ),
-      confirmLabel: t('关闭'),
-      cancelLabel: null,
-    })
+  const { closeLobby, canCloseLobby, wallet: balances } = useH5()
   return (
     <header className="app-header">
       <div className="header-inner">
@@ -89,17 +66,17 @@ function AppHeader({ page, openModal }) {
             <Icon name="chevronLeft" />
             <span>{t('返回大厅')}</span>
           </a>
-        ) : (
+        ) : canCloseLobby ? (
           <button
             className="exit-button"
             type="button"
             onClick={closeLobby}
-            aria-label={t('返回 App')}
+            aria-label={t('退出大厅')}
           >
             <Icon name="chevronLeft" />
-            <span>{t('返回 App')}</span>
+            <span>{t('退出大厅')}</span>
           </button>
-        )}
+        ) : null}
         <a
           className="brand"
           href={href('lobby.html')}
@@ -115,66 +92,37 @@ function AppHeader({ page, openModal }) {
         </a>
         <MainNav page={page} />
         <div className="asset-cluster" aria-label={t('资产余额')}>
-          <a
-            className="asset-chip asset-chip-action"
-            href={href('store.html')}
-            aria-label={t('金币余额：{value}，点击购买', {
-              value: balances.coinsLabel,
-            })}
-          >
-            <span className="asset-symbol coin">
-              <Icon name="coin" />
-            </span>
-            <span>
-              <small>{t('金币')}</small>
-              <strong>{formatWalletLabel(balances.coins)}</strong>
-            </span>
-            <span className="asset-add" aria-hidden="true">
-              +
-            </span>
-          </a>
-          <button
-            className="asset-chip asset-chip-action"
-            type="button"
-            onClick={showGems}
-            aria-label={t('宝石余额：{value}，查看获取方式', {
-              value: balances.gemsLabel,
-            })}
-          >
-            <span className="asset-symbol gem">
-              <Icon name="gem" />
-            </span>
-            <span>
-              <small>{t('宝石')}</small>
-              <strong>{formatWalletLabel(balances.gems)}</strong>
-            </span>
-            <span className="asset-add" aria-hidden="true">
-              +
-            </span>
-          </button>
+          {['coins', 'gems'].map((currency) => (
+            <button
+              key={currency}
+              className="asset-chip asset-chip-action"
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => openWallet(currency)}
+              aria-label={t(
+                currency === 'coins'
+                  ? '金币余额：{value}'
+                  : '宝石余额：{value}',
+                {
+                  value:
+                    balances[currency === 'coins' ? 'coinsLabel' : 'gemsLabel'],
+                },
+              )}
+            >
+              <span
+                className={
+                  'asset-symbol ' + (currency === 'coins' ? 'coin' : 'gem')
+                }
+              >
+                <Icon name={currency === 'coins' ? 'coin' : 'gem'} />
+              </span>
+              <span>
+                <small>{t(currency === 'coins' ? '金币' : '宝石')}</small>
+                <strong>{formatWalletLabel(balances[currency])}</strong>
+              </span>
+            </button>
+          ))}
         </div>
-        <button
-          className="icon-btn lobby-mode-button"
-          type="button"
-          onClick={() => setMode(mode === 'half' ? 'full' : 'half')}
-          aria-label={t(mode === 'half' ? '全屏打开大厅' : '切换半屏大厅')}
-          title={t(mode === 'half' ? '全屏打开大厅' : '切换半屏大厅')}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d={
-                mode === 'half'
-                  ? 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5'
-                  : 'M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5'
-              }
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
       </div>
     </header>
   )
@@ -182,7 +130,7 @@ function AppHeader({ page, openModal }) {
 
 export default function App() {
   const { t, locale } = useLocale()
-  const { accepted, mode, game, closeGame, account } = useH5()
+  const { mode, game, closeGame, account } = useH5()
   const documentPage = document.body.dataset.page
   const page = [
     'lobby',
@@ -208,7 +156,6 @@ export default function App() {
     toastLocale.current = locale
   }, [locale])
   useEffect(() => {
-    if (!accepted) return undefined
     const scrollToHash = () => {
       try {
         const id = decodeURIComponent(window.location.hash.slice(1))
@@ -228,15 +175,23 @@ export default function App() {
       window.cancelAnimationFrame(frame)
       window.removeEventListener('hashchange', scrollToHash)
     }
-  }, [accepted])
+  }, [])
   useEffect(() => {
     if (!toastMessage) return undefined
     const timer = window.setTimeout(() => setToastMessage(null), 2800)
     return () => window.clearTimeout(timer)
   }, [toastMessage])
 
+  const openWallet = (currency) =>
+    setModal({
+      title: t(currency === 'coins' ? '金币' : '宝石'),
+      body: <WalletDetails currency={currency} />,
+      confirmLabel: t('关闭'),
+      cancelLabel: null,
+    })
+
   const renderPage = () => {
-    const props = { openModal: setModal, toast }
+    const props = { openModal: setModal, toast, openWallet }
     if (page === 'games') return <GamesPage {...props} />
     if (page === 'tournaments') return <TournamentsPage {...props} />
     if (page === 'events') return <EventsPage {...props} />
@@ -244,8 +199,6 @@ export default function App() {
     if (page === 'profile') return <ProfilePage key={account.id} {...props} />
     return <LobbyPage {...props} />
   }
-
-  if (!accepted) return <EntryGate />
 
   return (
     <div className="h5-stage">
@@ -260,7 +213,7 @@ export default function App() {
               <span />
               <span />
             </div>
-            <AppHeader page={page} openModal={setModal} />
+            <AppHeader page={page} openWallet={openWallet} />
             <main className="page-shell" id="main">
               {renderPage()}
             </main>

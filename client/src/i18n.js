@@ -61,7 +61,7 @@ export function createTranslator(locale) {
   }
 }
 
-export function localizedHref(value, locale) {
+export function localizedHref(value, locale, displayMode) {
   if (!value || value.startsWith('#') || /^(?:[a-z]+:|\/\/)/i.test(value))
     return value
   const hashIndex = value.indexOf('#')
@@ -73,5 +73,8 @@ export function localizedHref(value, locale) {
     queryIndex < 0 ? '' : target.slice(queryIndex + 1),
   )
   query.set('lang', supportedLocales.includes(locale) ? locale : 'zh')
+  if (['half', 'full'].includes(displayMode) && !query.has('mode')) {
+    query.set('mode', displayMode)
+  }
   return `${pathname}?${query.toString()}${hash}`
 }

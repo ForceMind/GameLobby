@@ -54,7 +54,12 @@ export default function LocaleProvider({ children }) {
     t,
     locale,
     setLocale,
-    href: (value) => localizedHref(value, locale),
+    href: (value) =>
+      localizedHref(
+        value,
+        locale,
+        new URLSearchParams(window.location.search).get('mode'),
+      ),
   }
   return (
     <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>

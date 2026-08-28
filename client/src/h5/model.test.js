@@ -3,29 +3,35 @@ import test from 'node:test'
 import { loadingProgress, normalizeMode, readEntryState } from './model.js'
 import { requestHost } from './hostBridge.js'
 
-test('H5首次进入必须同意，模式默认半屏并保留合法会话选择', () => {
-  assert.deepEqual(readEntryState(null), { accepted: false, mode: 'half' })
-  assert.deepEqual(readEntryState('broken'), { accepted: false, mode: 'half' })
+test('直接展示完整大厅，缺失或损坏的布局配置不阻挡访问', () => {
+  assert.deepEqual(readEntryState(null), { mode: 'full' })
+  assert.deepEqual(readEntryState('broken'), { mode: 'full' })
   assert.deepEqual(
     readEntryState(
       JSON.stringify({ version: 1, accepted: true, mode: 'full' }),
     ),
-    { accepted: true, mode: 'full' },
+    { mode: 'full' },
   )
   assert.deepEqual(
     readEntryState(
       JSON.stringify({ version: 2, accepted: true, mode: 'full' }),
     ),
-    { accepted: false, mode: 'full' },
+    { mode: 'full' },
   )
-  assert.equal(normalizeMode('invalid'), 'half')
+  assert.equal(normalizeMode('invalid'), 'full')
   assert.equal(readEntryState(null, 'full').mode, 'full')
   assert.deepEqual(
     readEntryState(
       JSON.stringify({ version: 1, accepted: true, mode: 'half' }),
       'full',
     ),
-    { accepted: true, mode: 'full' },
+    { mode: 'full' },
+  )
+  assert.deepEqual(
+    readEntryState(
+      JSON.stringify({ version: 1, accepted: false, mode: 'half' }),
+    ),
+    { mode: 'half' },
   )
 })
 

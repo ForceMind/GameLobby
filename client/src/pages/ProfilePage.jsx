@@ -80,8 +80,8 @@ function ProfileEditor({ initialName, onSave }) {
   )
 }
 
-export default function ProfilePage({ openModal, toast }) {
-  const { t, locale, setLocale, href } = useLocale()
+export default function ProfilePage({ openModal, toast, openWallet }) {
+  const { t, locale, setLocale } = useLocale()
   const { account: profile, wallet: balances } = useH5()
   const [settings, setSettings] = useState({
     sound: true,
@@ -263,7 +263,12 @@ export default function ProfilePage({ openModal, toast }) {
               description={t('用于游戏、赛事与活动')}
             />
             <div className="asset-overview">
-              <a className="card asset-card-link" href={href('store.html')}>
+              <button
+                className="card asset-card-link"
+                type="button"
+                onClick={() => openWallet('coins')}
+                aria-haspopup="dialog"
+              >
                 <span className="asset-symbol coin">
                   <Icon name="coin" />
                 </span>
@@ -272,22 +277,12 @@ export default function ProfilePage({ openModal, toast }) {
                   <strong>{balances.coinsLabel}</strong>
                   <p>{t('可用于开放的游戏与赛事')}</p>
                 </div>
-              </a>
+              </button>
               <button
                 className="card asset-card-link"
                 type="button"
-                onClick={() =>
-                  openModal({
-                    title: t('宝石用途'),
-                    subtitle: t('宝石可用于指定赛事与活动。'),
-                    body: (
-                      <p>{t('前往赛事和活动页面，查看可使用宝石的项目。')}</p>
-                    ),
-                    confirmLabel: t('知道了'),
-                    cancelLabel: null,
-                    onConfirm: () => {},
-                  })
-                }
+                onClick={() => openWallet('gems')}
+                aria-haspopup="dialog"
               >
                 <span className="asset-symbol gem">
                   <Icon name="gem" />

@@ -4,7 +4,7 @@
 
 ## 1. 注入公共上下文
 
-页面加载前，宿主可注入：
+页面打开即显示产品界面，不需要 H5 说明页或同意门槛。页面加载前，宿主可注入：
 
 ```js
 window.JoyloopHost = {
@@ -65,6 +65,8 @@ window.dispatchEvent(
 
 ## 3. 窗口模式
 
+高保真原型没有进入说明、同意门槛或界面缩放按钮。默认填满当前视口；宿主/评审环境可通过 `mode=half` 指定 1:1 形态，`mode=full` 指定完整视口。该配置随本次会话导航保留，不是用户设置。资产按钮只打开原地浮窗，不请求窗口切换。
+
 `setDisplayMode` 的 payload：
 
 ```js
@@ -123,7 +125,7 @@ window.JoyloopHost.request = async ({
 { version: 1, requestId, action: 'closeLobby', payload: {} }
 ```
 
-宿主收到后关闭当前 H5 容器或返回 App。浏览器预览无法关闭自身窗口时只会回到说明入口。
+宿主收到后关闭当前 H5 容器或返回 App。大厅的返回 App/关闭控件只在宿主可用时提供；浏览器预览不应提供无效的退出动作。页面跳转到新的入口文档后，宿主必须重新注入 bridge/context。
 
 ## 5. 购买
 

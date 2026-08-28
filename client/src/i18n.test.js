@@ -21,7 +21,7 @@ const sourceFiles = [
   'pages/StorePage.jsx',
   'pages/TournamentsPage.jsx',
   'pages/ProfilePage.jsx',
-  'h5/EntryGate.jsx',
+  'h5/WalletDetails.jsx',
   'h5/GameSession.jsx',
   'h5/H5Provider.jsx',
 ]
@@ -117,6 +117,23 @@ test('翻译保留所有动态占位符', () => {
   )
 })
 
+test('高保真原型不再渲染入口说明、同意门槛、缩放按钮或资产加号', async () => {
+  const app = await readFile(new URL('App.jsx', import.meta.url), 'utf8')
+  const provider = await readFile(
+    new URL('h5/H5Provider.jsx', import.meta.url),
+    'utf8',
+  )
+  assert.doesNotMatch(app, /EntryGate|lobby-mode-button|asset-add/)
+  assert.doesNotMatch(provider, /accepted|enterLobby/)
+  for (const key of [
+    '进入游戏大厅前',
+    '我已阅读并同意以上说明',
+    '使用当前 App 账号进入，无需重复登录。',
+  ]) {
+    assert.equal(Object.hasOwn(englishMessages, key), false)
+  }
+})
+
 test('静态数据中的中文文案有英文对应', () => {
   const missing = new Set()
   const visit = (value) => {
@@ -135,7 +152,7 @@ test('静态数据中的中文文案有英文对应', () => {
   assert.deepEqual([...missing], [], 'Missing English data labels')
 })
 
-test('语言选择与跨页链接保留筛选和锚点', () => {
+test('语言与展示配置的跨页链接保留筛选和锚点', () => {
   assert.equal(resolveLocale('?lang=en', 'zh'), 'en')
   assert.equal(resolveLocale('?lang=unknown', 'en'), 'en')
   assert.equal(resolveLocale('', 'unknown'), 'zh')
@@ -144,6 +161,14 @@ test('语言选择与跨页链接保留筛选和锚点', () => {
     'games.html?category=slots&lang=en#game-catalog',
   )
   assert.equal(localizedHref('#wheel', 'en'), '#wheel')
+  assert.equal(
+    localizedHref('games.html?category=slots#game-catalog', 'en', 'half'),
+    'games.html?category=slots&lang=en&mode=half#game-catalog',
+  )
+  assert.equal(
+    localizedHref('games.html?mode=full', 'zh', 'half'),
+    'games.html?mode=full&lang=zh',
+  )
   assert.equal(
     localizedHref('https://example.com', 'en'),
     'https://example.com',

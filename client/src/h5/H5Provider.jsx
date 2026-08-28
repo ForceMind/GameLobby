@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { H5Context } from './useH5.js'
-import { ENTRY_STORAGE_KEY, normalizeMode, readEntryState } from './model.js'
+import { ENTRY_STORAGE_KEY, readEntryState } from './model.js'
 import { requestHost } from './hostBridge.js'
 import { createDisplayModeDispatcher } from './displayMode.js'
 import { normalizeHostContext } from './hostContext.js'
@@ -13,7 +13,7 @@ function saveEntry(value) {
       JSON.stringify({ version: 1, ...value }),
     )
   } catch {
-    /* Consent will be asked again if session storage is unavailable. */
+    /* The prototype remains usable without storage. */
   }
 }
 
@@ -36,12 +36,12 @@ export default function H5Provider({ children }) {
     window.addEventListener('joyloop:context', updateContext)
     return () => window.removeEventListener('joyloop:context', updateContext)
   }, [])
-  const [entry, setEntry] = useState(() => {
+  const [entry] = useState(() => {
     let raw = null
     try {
       raw = window.sessionStorage.getItem(ENTRY_STORAGE_KEY)
     } catch {
-      /* Fall back to an unaccepted entry. */
+      /* Open directly with the default layout. */
     }
     return readEntryState(
       raw,
@@ -54,43 +54,23 @@ export default function H5Provider({ children }) {
   const returnMode = useRef(entry.mode)
 
   useEffect(() => {
-    if (entry.accepted) saveEntry({ accepted: true, mode: entry.mode })
-    if (entry.accepted && !activeGame.current) {
+    saveEntry({ mode: entry.mode })
+    if (!activeGame.current) {
       displayMode.request({
         mode: entry.mode,
         aspectRatio: entry.mode === 'half' ? 1 : null,
         reason: 'lobby',
       })
     }
-  }, [entry.accepted, entry.mode, displayMode])
-
-  const setMode = (requested) => {
-    const mode = normalizeMode(requested)
-    const next = { ...entry, mode }
-    setEntry(next)
-    saveEntry(next)
-    const url = new URL(window.location.href)
-    url.searchParams.set('mode', mode)
-    window.history.replaceState(null, '', url)
-  }
-
-  const enterLobby = () => {
-    const next = { ...entry, accepted: true }
-    setEntry(next)
-    saveEntry(next)
-  }
+  }, [entry.mode, displayMode])
 
   const closeLobby = () => {
     displayMode.cancelPending()
-    const next = { ...entry, accepted: false }
-    setEntry(next)
-    saveEntry(next)
     requestHost('closeLobby')
   }
 
   const openGame = (selected) => {
-    if (!entry.accepted || activeGame.current || selected.status !== 'ready')
-      return
+    if (activeGame.current || selected.status !== 'ready') return
     activeGame.current = true
     launchTrigger.current = document.activeElement
     returnMode.current = entry.mode
@@ -118,10 +98,8 @@ export default function H5Provider({ children }) {
   return (
     <H5Context.Provider
       value={{
-        accepted: entry.accepted,
         mode: entry.mode,
-        setMode,
-        enterLobby,
+        canCloseLobby: typeof window.JoyloopHost?.request === 'function',
         closeLobby,
         game,
         openGame,
