@@ -24,6 +24,8 @@ const sourceFiles = [
   'h5/WalletDetails.jsx',
   'h5/GameSession.jsx',
   'h5/H5Provider.jsx',
+  'h5/EntryGate.jsx',
+  'h5/FullScreenPrompt.jsx',
 ]
 const hasChinese = (value) => /[\u3400-\u9fff]/u.test(value)
 const placeholders = (value) =>
@@ -74,9 +76,16 @@ test('所有静态 t() 文案具备英文翻译，页面无未包装的中文正
           /演示|模拟|示例|原型|未接入|静态|人民币|￥|仅本页|只保存在本页|规则待确认/
         const developerEnglish =
           /\b(?:demo|sample|prototype|static|production|CNY)\b/i
+        const reviewCopy =
+          file === 'h5/EntryGate.jsx' ||
+          (file === 'LocaleProvider.jsx' &&
+            ['原型说明', 'Joyloop 高保真原型的展示范围与交互说明。'].includes(
+              node.value,
+            ))
         if (
-          developerCopy.test(node.value) ||
-          developerEnglish.test(englishMessages[node.value])
+          !reviewCopy &&
+          (developerCopy.test(node.value) ||
+            developerEnglish.test(englishMessages[node.value]))
         )
           raw.push(`${file}: development copy: ${node.value}`)
       }
@@ -117,14 +126,27 @@ test('翻译保留所有动态占位符', () => {
   )
 })
 
-test('高保真原型不再渲染入口说明、同意门槛、缩放按钮或资产加号', async () => {
+test('说明首页独立保留，大厅无全局同意门槛、缩放按钮或资产加号', async () => {
   const app = await readFile(new URL('App.jsx', import.meta.url), 'utf8')
   const provider = await readFile(
     new URL('h5/H5Provider.jsx', import.meta.url),
     'utf8',
   )
-  assert.doesNotMatch(app, /EntryGate|lobby-mode-button|asset-add/)
-  assert.doesNotMatch(provider, /accepted|enterLobby/)
+  const index = await readFile(
+    new URL('../index.html', import.meta.url),
+    'utf8',
+  )
+  const entry = await readFile(
+    new URL('h5/EntryGate.jsx', import.meta.url),
+    'utf8',
+  )
+  assert.match(index, /data-page="welcome"/)
+  assert.match(app, /if \(page === 'welcome'\) return <EntryGate \/>/)
+  assert.match(entry, /useState\('full'\)/)
+  assert.doesNotMatch(entry, /type="checkbox"|acknowledged|disabled=/)
+  assert.doesNotMatch(entry, /sessionStorage|localStorage|location.search/)
+  assert.doesNotMatch(app, /lobby-mode-button|asset-add/)
+  assert.doesNotMatch(provider, /sessionStorage|accepted|enterLobby/)
   for (const key of [
     '进入游戏大厅前',
     '我已阅读并同意以上说明',

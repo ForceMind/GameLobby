@@ -1,0 +1,124 @@
+/* Compact half-screen presentation. Full mode intentionally keeps the base layout. */
+.compact-fullscreen-entry {
+  display: none;
+}
+
+@container lobby (max-width: 700px) {
+  .h5-lobby.is-half .compact-lobby,
+  .h5-lobby.is-half .compact-games {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .h5-lobby.is-half .compact-lobby > .lobby-recent {
+    order: 2;
+    margin-bottom: 16px;
+  }
+
+  .h5-lobby.is-half .compact-lobby > .page-layout {
+    display: contents;
+  }
+
+  .h5-lobby.is-half .compact-lobby > .page-layout > .section {
+    order: 1;
+    margin-bottom: 16px;
+  }
+
+  .h5-lobby.is-half .compact-lobby .lobby-winners,
+  .h5-lobby.is-half .compact-lobby .lobby-promotions,
+  .h5-lobby.is-half .compact-lobby .lobby-quick-actions {
+    display: none;
+  }
+
+  .h5-lobby.is-half .compact-lobby .lobby-recent h1 {
+    font-size: 1.25rem;
+  }
+
+  .h5-lobby.is-half .compact-lobby .lobby-recent .eyebrow,
+  .h5-lobby.is-half .compact-lobby .section-head p,
+  .h5-lobby.is-half .compact-games .section-head p {
+    display: none;
+  }
+
+  /* In a square viewport the catalogue is the primary surface: keep each
+     card legible while removing secondary metadata that consumes vertical space. */
+  .h5-lobby.is-half .compact-lobby .catalog-results,
+  .h5-lobby.is-half .compact-games .catalog-results {
+    gap: 8px;
+  }
+
+  .h5-lobby.is-half .compact-lobby .catalog-results .game-cover,
+  .h5-lobby.is-half .compact-games .catalog-results .game-cover {
+    height: 54px;
+    aspect-ratio: auto;
+  }
+
+  .h5-lobby.is-half .compact-lobby .catalog-results .badge-row,
+  .h5-lobby.is-half .compact-games .catalog-results .badge-row,
+  .h5-lobby.is-half .compact-lobby .catalog-results .game-body > span,
+  .h5-lobby.is-half .compact-games .catalog-results .game-body > span {
+    display: none;
+  }
+
+  .h5-lobby.is-half .compact-lobby .catalog-results .game-body,
+  .h5-lobby.is-half .compact-games .catalog-results .game-body {
+    gap: 0;
+    padding: 7px 9px 8px;
+  }
+
+  .h5-lobby.is-half .compact-lobby .catalog-results .game-body > strong,
+  .h5-lobby.is-half .compact-games .catalog-results .game-body > strong {
+    font-size: 0.72rem;
+  }
+
+  .h5-lobby.is-half .compact-lobby .compact-fullscreen-entry,
+  .h5-lobby.is-half .compact-games .compact-fullscreen-entry {
+    display: flex;
+    order: 3;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    min-height: 38px;
+    margin: 0 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    font-size: 0.75rem;
+    font-weight: 750;
+    text-decoration: none;
+  }
+
+  .h5-lobby.is-half .compact-games .page-head {
+    display: none;
+  }
+
+  .h5-lobby.is-half .compact-games > .section {
+    order: 1;
+    margin-bottom: 16px;
+  }
+
+  .h5-lobby.is-half .compact-games .compact-fullscreen-entry {
+    margin-top: auto;
+  }
+}
+
+@container lobby (max-width: 389px) {
+  .h5-lobby.is-half .app-root .page-shell {
+    padding-top: 8px;
+  }
+  .h5-lobby.is-half .compact-lobby .catalog-results,
+  .h5-lobby.is-half .compact-games .catalog-results {
+    gap: 6px;
+  }
+  .h5-lobby.is-half .compact-lobby .catalog-results .game-cover,
+  .h5-lobby.is-half .compact-games .catalog-results .game-cover {
+    height: 48px;
+  }
+  .h5-lobby.is-half .compact-lobby .catalog-results .game-body,
+  .h5-lobby.is-half .compact-games .catalog-results .game-body {
+    padding: 5px 8px 6px;
+  }
+}

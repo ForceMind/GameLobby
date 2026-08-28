@@ -1,0 +1,31 @@
+.full-screen-prompt {
+  padding: 18px;
+}
+.full-screen-prompt-title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.full-screen-prompt-title .feature-icon {
+  width: 32px;
+  height: 32px;
+}
+.full-screen-prompt-title h1 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+.full-screen-prompt p {
+  margin: 14px 0;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 0.78rem;
+}
+.full-screen-prompt-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.full-screen-prompt-actions .btn {
+  padding-inline: 8px;
+  font-size: 0.75rem;
+}

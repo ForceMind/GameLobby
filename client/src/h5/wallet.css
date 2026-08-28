@@ -32,8 +32,9 @@
 }
 .wallet-summary strong {
   color: var(--ink);
-  font-size: 1.8rem;
-  overflow-wrap: anywhere;
+  font-size: clamp(1.15rem, 7cqw, 1.8rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .wallet-details h3 {
   margin: 0;

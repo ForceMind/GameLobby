@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 
 const output = fileURLToPath(new URL('../dist/', import.meta.url))
 const pages = {
-  index: 'lobby',
+  index: 'welcome',
   lobby: 'lobby',
   games: 'games',
   tournaments: 'tournaments',

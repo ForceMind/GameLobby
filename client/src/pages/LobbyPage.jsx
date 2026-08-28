@@ -4,6 +4,8 @@ import { banners } from '../data.js'
 import { SectionHeader } from '../ui.jsx'
 import { GameCatalog, RecentGames } from '../GameCatalog.jsx'
 import { useLocale } from '../useLocale.js'
+import { useH5 } from '../h5/useH5.js'
+import '../h5/compactLobby.css'
 
 const winnerRows = [
   ['NovaRay', '累积大奖 · Golden Pharaoh', '+268,800'],
@@ -14,12 +16,14 @@ const winnerRows = [
 
 export default function LobbyPage({ openModal, toast }) {
   const { t, href } = useLocale()
+  const { mode } = useH5()
   const [bannerIndex, setBannerIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const [interacting, setInteracting] = useState(false)
 
   useEffect(() => {
     if (
+      mode === 'half' ||
       paused ||
       interacting ||
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -30,7 +34,7 @@ export default function LobbyPage({ openModal, toast }) {
       5600,
     )
     return () => window.clearInterval(timer)
-  }, [paused, interacting])
+  }, [mode, paused, interacting])
 
   const banner = banners[bannerIndex]
   const renderWinners = () => (
@@ -49,13 +53,13 @@ export default function LobbyPage({ openModal, toast }) {
   )
 
   return (
-    <>
-      <RecentGames openModal={openModal} toast={toast} />
+    <div className="lobby-page compact-lobby">
+      {mode !== 'half' && <RecentGames openModal={openModal} toast={toast} />}
 
       <div className="page-layout">
         <GameCatalog variant="popular" openModal={openModal} toast={toast} />
 
-        <aside className="side-rail">
+        <aside className="side-rail lobby-winners">
           <section className="section">
             <SectionHeader
               title={t('今日赢家榜')}
@@ -83,7 +87,9 @@ export default function LobbyPage({ openModal, toast }) {
         </aside>
       </div>
 
-      <section className="section" aria-label={t('精选活动')}>
+      {mode === 'half' && <RecentGames openModal={openModal} toast={toast} />}
+
+      <section className="section lobby-promotions" aria-label={t('精选活动')}>
         <div
           className={`banner card banner-${banner.accent}`}
           role="region"
@@ -151,7 +157,7 @@ export default function LobbyPage({ openModal, toast }) {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section lobby-quick-actions">
         <SectionHeader
           title={t('快捷入口')}
           description={t('奖励、游戏与记录一触即达')}
@@ -182,6 +188,13 @@ export default function LobbyPage({ openModal, toast }) {
           ))}
         </div>
       </section>
-    </>
+      <a
+        className="compact-fullscreen-entry"
+        href={href('lobby.html?mode=full')}
+      >
+        <span>{t('全屏查看更多')}</span>
+        <Icon name="chevronRight" />
+      </a>
+    </div>
   )
 }

@@ -8,6 +8,7 @@ import {
 import { LocaleContext } from './useLocale.js'
 
 const pageTitles = {
+  welcome: '原型说明',
   lobby: '大厅',
   games: '全部游戏',
   tournaments: 'Slot 赛事',
@@ -47,7 +48,11 @@ export default function LocaleProvider({ children }) {
     document.title = `${t(pageTitles[document.body.dataset.page] ?? '大厅')} · Joyloop`
     const description = document.querySelector('meta[name="description"]')
     if (description)
-      description.content = t('Joyloop 游戏大厅，发现游戏、参与活动。')
+      description.content = t(
+        document.body.dataset.page === 'welcome'
+          ? 'Joyloop 高保真原型的展示范围与交互说明。'
+          : 'Joyloop 游戏大厅，发现游戏、参与活动。',
+      )
   }, [locale, t])
 
   const value = {

@@ -3,7 +3,7 @@ import test from 'node:test'
 import { loadingProgress, normalizeMode, readEntryState } from './model.js'
 import { requestHost } from './hostBridge.js'
 
-test('直接展示完整大厅，缺失或损坏的布局配置不阻挡访问', () => {
+test('业务页只使用显式布局参数，旧半屏缓存不会生效', () => {
   assert.deepEqual(readEntryState(null), { mode: 'full' })
   assert.deepEqual(readEntryState('broken'), { mode: 'full' })
   assert.deepEqual(
@@ -31,7 +31,12 @@ test('直接展示完整大厅，缺失或损坏的布局配置不阻挡访问',
     readEntryState(
       JSON.stringify({ version: 1, accepted: false, mode: 'half' }),
     ),
-    { mode: 'half' },
+    { mode: 'full' },
+  )
+  assert.deepEqual(readEntryState('broken', 'half'), { mode: 'half' })
+  assert.deepEqual(
+    readEntryState(JSON.stringify({ mode: 'half' }), 'invalid'),
+    { mode: 'full' },
   )
 })
 

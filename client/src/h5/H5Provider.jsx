@@ -1,21 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { H5Context } from './useH5.js'
-import { ENTRY_STORAGE_KEY, readEntryState } from './model.js'
+import { readEntryState } from './model.js'
 import { requestHost } from './hostBridge.js'
 import { createDisplayModeDispatcher } from './displayMode.js'
 import { normalizeHostContext } from './hostContext.js'
 import { profile, balances } from '../data.js'
-
-function saveEntry(value) {
-  try {
-    window.sessionStorage.setItem(
-      ENTRY_STORAGE_KEY,
-      JSON.stringify({ version: 1, ...value }),
-    )
-  } catch {
-    /* The prototype remains usable without storage. */
-  }
-}
 
 export default function H5Provider({ children }) {
   const [displayMode] = useState(() =>
@@ -37,15 +26,11 @@ export default function H5Provider({ children }) {
     return () => window.removeEventListener('joyloop:context', updateContext)
   }, [])
   const [entry] = useState(() => {
-    let raw = null
-    try {
-      raw = window.sessionStorage.getItem(ENTRY_STORAGE_KEY)
-    } catch {
-      /* Open directly with the default layout. */
-    }
     return readEntryState(
-      raw,
-      new URLSearchParams(window.location.search).get('mode'),
+      null,
+      document.body.dataset.page === 'welcome'
+        ? 'full'
+        : new URLSearchParams(window.location.search).get('mode'),
     )
   })
   const [game, setGame] = useState(null)
@@ -54,7 +39,6 @@ export default function H5Provider({ children }) {
   const returnMode = useRef(entry.mode)
 
   useEffect(() => {
-    saveEntry({ mode: entry.mode })
     if (!activeGame.current) {
       displayMode.request({
         mode: entry.mode,

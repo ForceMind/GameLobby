@@ -5,6 +5,8 @@ import h5Product from './locales/h5Product.js'
 import storeProduct from './locales/storeProduct.js'
 import profileProduct from './locales/profileProduct.js'
 import activitiesProduct from './locales/activitiesProduct.js'
+import entryProduct from './locales/entryProduct.js'
+import compactProduct from './locales/compactProduct.js'
 
 export const catalogs = {
   common,
@@ -14,6 +16,8 @@ export const catalogs = {
   storeProduct,
   profileProduct,
   activitiesProduct,
+  entryProduct,
+  compactProduct,
 }
 // Shared terminology wins if a page-specific catalog repeats a common label.
 export const englishMessages = {
@@ -24,6 +28,8 @@ export const englishMessages = {
   ...profileProduct,
   ...activitiesProduct,
   ...h5Product,
+  ...entryProduct,
+  ...compactProduct,
 }
 export const supportedLocales = ['zh', 'en']
 

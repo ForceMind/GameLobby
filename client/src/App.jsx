@@ -5,6 +5,8 @@ import { Icon } from './icons.jsx'
 import { Modal } from './ui.jsx'
 import { useLocale } from './useLocale.js'
 import { useH5 } from './h5/useH5.js'
+import EntryGate from './h5/EntryGate.jsx'
+import FullScreenPrompt from './h5/FullScreenPrompt.jsx'
 import WalletDetails from './h5/WalletDetails.jsx'
 import GameSession from './h5/GameSession.jsx'
 import EventsPage from './pages/EventsPage.jsx'
@@ -53,7 +55,7 @@ function MainNav({ page, mobile = false }) {
 
 function AppHeader({ page, openWallet }) {
   const { t, href } = useLocale()
-  const { closeLobby, canCloseLobby, wallet: balances } = useH5()
+  const { mode, closeLobby, canCloseLobby, wallet: balances } = useH5()
   return (
     <header className="app-header">
       <div className="header-inner">
@@ -118,7 +120,9 @@ function AppHeader({ page, openWallet }) {
               </span>
               <span>
                 <small>{t(currency === 'coins' ? '金币' : '宝石')}</small>
-                <strong>{formatWalletLabel(balances[currency])}</strong>
+                <strong>
+                  {formatWalletLabel(balances[currency], mode === 'half')}
+                </strong>
               </span>
             </button>
           ))}
@@ -129,10 +133,11 @@ function AppHeader({ page, openWallet }) {
 }
 
 export default function App() {
-  const { t, locale } = useLocale()
+  const { t, locale, href } = useLocale()
   const { mode, game, closeGame, account } = useH5()
   const documentPage = document.body.dataset.page
   const page = [
+    'welcome',
     'lobby',
     'games',
     'tournaments',
@@ -186,12 +191,26 @@ export default function App() {
     setModal({
       title: t(currency === 'coins' ? '金币' : '宝石'),
       body: <WalletDetails currency={currency} />,
-      confirmLabel: t('关闭'),
-      cancelLabel: null,
+      actions: (
+        <>
+          <a className="btn btn-secondary" href={href('events.html?mode=full')}>
+            {t('获得')}
+          </a>
+          <a className="btn btn-primary" href={href('store.html?mode=full')}>
+            {t('充值')}
+          </a>
+        </>
+      ),
     })
 
   const renderPage = () => {
     const props = { openModal: setModal, toast, openWallet }
+    if (
+      mode === 'half' &&
+      ['tournaments', 'events', 'store', 'profile'].includes(page)
+    ) {
+      return <FullScreenPrompt page={page} />
+    }
     if (page === 'games') return <GamesPage {...props} />
     if (page === 'tournaments') return <TournamentsPage {...props} />
     if (page === 'events') return <EventsPage {...props} />
@@ -199,6 +218,8 @@ export default function App() {
     if (page === 'profile') return <ProfilePage key={account.id} {...props} />
     return <LobbyPage {...props} />
   }
+
+  if (page === 'welcome') return <EntryGate />
 
   return (
     <div className="h5-stage">

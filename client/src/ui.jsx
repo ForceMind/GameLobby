@@ -129,25 +129,29 @@ export function Modal({ modal, onClose }) {
           {modal.body}
         </div>
         <div className="modal-actions">
-          {modal.cancelLabel !== null && (
-            <button
-              className="btn btn-secondary"
-              type="button"
-              onClick={onClose}
-            >
-              {modal.cancelLabel || t('取消')}
-            </button>
+          {modal.actions ?? (
+            <>
+              {modal.cancelLabel !== null && (
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={onClose}
+                >
+                  {modal.cancelLabel || t('取消')}
+                </button>
+              )}
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => {
+                  modal.onConfirm?.()
+                  onClose()
+                }}
+              >
+                {modal.confirmLabel || t('知道了')}
+              </button>
+            </>
           )}
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={() => {
-              modal.onConfirm?.()
-              onClose()
-            }}
-          >
-            {modal.confirmLabel || t('知道了')}
-          </button>
         </div>
       </section>
     </div>

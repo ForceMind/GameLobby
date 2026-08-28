@@ -1,8 +1,8 @@
 export const formatNumber = (value) =>
   new Intl.NumberFormat('zh-CN').format(value)
 
-export const formatWalletLabel = (value) =>
-  value < 100000
+export const formatWalletLabel = (value, compact = false) =>
+  value < (compact ? 1000 : 100000)
     ? new Intl.NumberFormat('en-US').format(value)
     : new Intl.NumberFormat('en-US', {
         notation: 'compact',
