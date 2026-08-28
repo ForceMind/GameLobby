@@ -1,21 +1,25 @@
 {
-  "name": "client",
+  "name": "joyloop-static",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test",
+    "check:dist": "node scripts/check-dist.mjs",
+    "package:pages": "npm run verify && node scripts/package-pages.mjs",
+    "verify": "npm run lint && npm test && npm run build && npm run check:dist",
     "preview": "vite preview"
   },
   "dependencies": {
-    "18": "^0.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0"
   },
   "devDependencies": {
+    "@babel/parser": "^7.28.5",
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
