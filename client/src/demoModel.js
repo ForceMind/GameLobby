@@ -24,13 +24,17 @@ export function filterGames(
 }
 
 export function packSummary(pack) {
-  const rate = Number(pack.bonus.replace(/[+%]/g, '')) / 100
-  const bonusCoins = Math.round(pack.coins * rate)
+  const baseCents = Math.round(pack.coins / 100)
+  const priceCents = Math.round(
+    (baseCents * (100 - Number(pack.discountPercent || 0))) / 100,
+  )
   return {
     baseCoins: pack.coins,
-    bonusCoins,
-    totalCoins: pack.coins + bonusCoins,
+    totalCoins: pack.coins,
     gems: pack.gemBonus,
+    baseCents,
+    priceCents,
+    discountPercent: Number(pack.discountPercent || 0),
   }
 }
 
@@ -40,7 +44,7 @@ export function validateDemoCode(value) {
   if (normalized === 'JOY-DEMO')
     return {
       type: 'success',
-      message: '校验成功：演示奖励包可用（未真实兑换）。',
+      message: '兑换码有效。',
     }
   if (normalized === 'USED-DEMO')
     return { type: 'error', message: '此兑换码已被使用。' }

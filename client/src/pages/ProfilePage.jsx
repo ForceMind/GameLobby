@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { Icon } from '../icons.jsx'
 import {
   achievements,
-  balances,
-  profile,
   profileSecurity,
   profileStats,
   recentRecords,
@@ -11,8 +9,35 @@ import {
 import { Progress, SectionHeader } from '../ui.jsx'
 import { formatNumber } from '../format.js'
 import { useLocale } from '../useLocale.js'
+import { useH5 } from '../h5/useH5.js'
 import { isValidNickname } from '../demoModel.js'
 
+function AccountAvatar({ account }) {
+  const [failed, setFailed] = useState(false)
+  const imageUrl =
+    typeof account.avatar === 'string' &&
+    /^(https:\/\/|\/(?!\/))/.test(account.avatar)
+      ? account.avatar
+      : null
+  const initials =
+    imageUrl || account.avatar?.length > 4
+      ? Array.from(account.name).slice(0, 2).join('')
+      : account.avatar
+  return (
+    <div className="avatar" aria-hidden="true">
+      {imageUrl && !failed ? (
+        <img
+          src={imageUrl}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        initials
+      )}
+    </div>
+  )
+}
 function ProfileEditor({ initialName, onSave }) {
   const { t } = useLocale()
   const [draft, setDraft] = useState(initialName)
@@ -56,14 +81,26 @@ function ProfileEditor({ initialName, onSave }) {
 }
 
 export default function ProfilePage({ openModal, toast }) {
-  const { t, locale, setLocale } = useLocale()
+  const { t, locale, setLocale, href } = useLocale()
+  const { account: profile, wallet: balances } = useH5()
   const [settings, setSettings] = useState({
     sound: true,
     vibration: false,
     autoplay: false,
   })
-  const [displayName, setDisplayName] = useState(profile.name)
-  const [signedIn, setSignedIn] = useState(true)
+  const [editedName, setDisplayName] = useState(null)
+  const displayName = editedName ?? profile.name
+  const unlockedCount = achievements.filter(
+    (achievement) => achievement.unlocked,
+  ).length
+  const copyProfileId = async () => {
+    try {
+      await navigator.clipboard.writeText(profile.id)
+      toast(t('ID 已复制'))
+    } catch {
+      toast(t('请长按 ID 复制'))
+    }
+  }
   const toggleSetting = (key, label) => {
     const next = !settings[key]
     setSettings((current) => ({ ...current, [key]: next }))
@@ -77,12 +114,12 @@ export default function ProfilePage({ openModal, toast }) {
   const openEditor = () => {
     const save = (value) => {
       setDisplayName(value)
-      toast(t('昵称已更新（仅本地演示）'))
+      toast(t('昵称已更新'))
       openModal(null)
     }
     openModal({
       title: t('编辑资料'),
-      subtitle: t('当前变更只保存在本页'),
+      subtitle: t('编辑你的游戏昵称'),
       body: <ProfileEditor initialName={displayName} onSave={save} />,
       confirmLabel: t('关闭'),
       cancelLabel: null,
@@ -91,7 +128,7 @@ export default function ProfilePage({ openModal, toast }) {
   const openRecords = () =>
     openModal({
       title: t('最近战绩详情'),
-      subtitle: t('以下为本页全部演示记录。'),
+      subtitle: t('查看最近的游戏与赛事记录。'),
       body: (
         <div className="detail-list">
           {recentRecords.map((record) => (
@@ -128,13 +165,13 @@ export default function ProfilePage({ openModal, toast }) {
   const openSecurity = (item) =>
     openModal({
       title: t('安全详情'),
-      subtitle: t('只读演示：不会修改密码或绑定信息。'),
+      subtitle: t('请在 App 账号设置中管理安全信息。'),
       body: (
         <div className="detail-list">
           <div>
             <strong>{t(item.label)}</strong>
             <span>{t(item.value)}</span>
-            <b>{t(item.status)}</b>
+            <b>{t(item.status === '管理' ? '查看' : item.status)}</b>
           </div>
         </div>
       ),
@@ -173,67 +210,33 @@ export default function ProfilePage({ openModal, toast }) {
         <p>{t('资产、记录、成就与账号安全集中管理。')}</p>
       </section>
       <section className="profile-hero card">
-        <div className="avatar" aria-hidden="true">
-          {signedIn ? profile.avatar : '?'}
-        </div>
+        <AccountAvatar
+          key={`${profile.id}:${profile.avatar}`}
+          account={profile}
+        />
         <div className="profile-copy">
-          <span className="pill">
-            {signedIn
-              ? t('等级 {level}', { level: profile.level })
-              : t('访客模式')}
-          </span>
-          <h2>{signedIn ? displayName : t('访客模式')}</h2>
-          <p>
-            {signedIn
-              ? t('Joyloop ID · {id}', { id: profile.id })
-              : t('当前未登录，资料与资产仅为演示内容。')}
-          </p>
+          <span className="pill">{t('App 账号')}</span>
+          <h2>{displayName}</h2>
+          <button
+            className="profile-id-action"
+            type="button"
+            onClick={copyProfileId}
+          >
+            {t('Joyloop ID · {id}', { id: profile.id })} <Icon name="copy" />
+          </button>
         </div>
-        <div className="profile-actions">
-          {signedIn ? (
-            <>
-              <button
-                className="btn btn-secondary"
-                type="button"
-                onClick={openEditor}
-              >
-                {t('编辑资料')}
-              </button>
-              <button
-                className="btn btn-ghost danger-text"
-                type="button"
-                onClick={() =>
-                  openModal({
-                    title: t('退出当前账号？'),
-                    subtitle: t('静态演示不会清除任何登录状态'),
-                    body: (
-                      <p>
-                        {t('正式版本需要在退出前处理未结算游戏与本地缓存。')}
-                      </p>
-                    ),
-                    confirmLabel: t('演示退出'),
-                    onConfirm: () => {
-                      setSignedIn(false)
-                      toast(t('已完成退出流程演示'))
-                    },
-                  })
-                }
-              >
-                {t('退出登录')}
-              </button>
-            </>
-          ) : (
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={() => {
-                setSignedIn(true)
-                toast(t('已恢复演示账号'))
-              }}
-            >
-              {t('恢复演示账号')}
-            </button>
-          )}
+        <div className="profile-hero-summary">
+          <strong>{t('Lv. {level}', { level: profile.level })}</strong>
+          <span>{t('{count}/3 成就已解锁', { count: unlockedCount })}</span>
+        </div>
+        <div className="profile-hero-actions">
+          <button
+            className="btn btn-secondary"
+            type="button"
+            onClick={openEditor}
+          >
+            {t('编辑资料')}
+          </button>
         </div>
       </section>
       <section className="section">
@@ -257,10 +260,10 @@ export default function ProfilePage({ openModal, toast }) {
           <section className="section">
             <SectionHeader
               title={t('资产总览')}
-              description={t('静态演示余额，不代表真实账户资产')}
+              description={t('用于游戏、赛事与活动')}
             />
             <div className="asset-overview">
-              <article className="card">
+              <a className="card asset-card-link" href={href('store.html')}>
                 <span className="asset-symbol coin">
                   <Icon name="coin" />
                 </span>
@@ -269,8 +272,23 @@ export default function ProfilePage({ openModal, toast }) {
                   <strong>{balances.coinsLabel}</strong>
                   <p>{t('可用于开放的游戏与赛事')}</p>
                 </div>
-              </article>
-              <article className="card">
+              </a>
+              <button
+                className="card asset-card-link"
+                type="button"
+                onClick={() =>
+                  openModal({
+                    title: t('宝石用途'),
+                    subtitle: t('宝石可用于指定赛事与活动。'),
+                    body: (
+                      <p>{t('前往赛事和活动页面，查看可使用宝石的项目。')}</p>
+                    ),
+                    confirmLabel: t('知道了'),
+                    cancelLabel: null,
+                    onConfirm: () => {},
+                  })
+                }
+              >
                 <span className="asset-symbol gem">
                   <Icon name="gem" />
                 </span>
@@ -279,7 +297,7 @@ export default function ProfilePage({ openModal, toast }) {
                   <strong>{balances.gemsLabel}</strong>
                   <p>{t('可用于指定赛事与活动')}</p>
                 </div>
-              </article>
+              </button>
             </div>
           </section>
           <section className="section">
@@ -324,7 +342,7 @@ export default function ProfilePage({ openModal, toast }) {
           <section className="section" id="records">
             <SectionHeader
               title={t('最近战绩')}
-              description={t('仅展示最近五条演示记录')}
+              description={t('最近五条游戏与赛事记录')}
               action={
                 <button
                   className="text-action"
@@ -367,7 +385,7 @@ export default function ProfilePage({ openModal, toast }) {
           <section className="section">
             <SectionHeader
               title={t('账号安全')}
-              description={t('关键操作需二次确认')}
+              description={t('账号安全由 App 管理')}
             />
             <div className="security-list card">
               {profileSecurity.map((item, index) => (
@@ -377,7 +395,7 @@ export default function ProfilePage({ openModal, toast }) {
                   onClick={() => openSecurity(item)}
                   aria-label={t('{label}，{status}', {
                     label: t(item.label),
-                    status: t(item.status),
+                    status: t(item.status === '管理' ? '查看' : item.status),
                   })}
                 >
                   <span className="list-icon">
@@ -392,7 +410,8 @@ export default function ProfilePage({ openModal, toast }) {
                     <small>{t(item.value)}</small>
                   </span>
                   <span>
-                    {t(item.status)} <Icon name="chevronRight" />
+                    {t(item.status === '管理' ? '查看' : item.status)}{' '}
+                    <Icon name="chevronRight" />
                   </span>
                 </button>
               ))}
@@ -401,7 +420,7 @@ export default function ProfilePage({ openModal, toast }) {
           <section className="section">
             <SectionHeader
               title={t('设置')}
-              description={t('当前变更只保存在本页')}
+              description={t('按你的习惯设置游戏体验')}
             />
             <div className="settings-list card">
               {[

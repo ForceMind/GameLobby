@@ -45,14 +45,15 @@ test('分类包含双标签游戏，服务状态过滤可组合', () => {
   )
 })
 
-test('礼包基础、加赠与合计一致', () => {
+test('礼包使用美元定价与独立折扣，金币不因折扣增加', () => {
   assert.deepEqual(
-    coinPacks.map((pack) => packSummary(pack).totalCoins),
-    [6480, 35400, 87040, 179200],
+    coinPacks.map((pack) => packSummary(pack).priceCents),
+    [55, 246, 490, 768],
   )
   for (const pack of coinPacks) {
     const summary = packSummary(pack)
-    assert.equal(summary.totalCoins, summary.baseCoins + summary.bonusCoins)
+    assert.equal(summary.totalCoins, summary.baseCoins)
+    assert.equal(summary.baseCents, pack.coins / 100)
     assert.equal(summary.gems, pack.gemBonus)
   }
 })

@@ -21,6 +21,9 @@ const sourceFiles = [
   'pages/StorePage.jsx',
   'pages/TournamentsPage.jsx',
   'pages/ProfilePage.jsx',
+  'h5/EntryGate.jsx',
+  'h5/GameSession.jsx',
+  'h5/H5Provider.jsx',
 ]
 const hasChinese = (value) => /[\u3400-\u9fff]/u.test(value)
 const placeholders = (value) =>
@@ -44,6 +47,8 @@ test('所有静态 t() 文案具备英文翻译，页面无未包装的中文正
     const source = await readFile(new URL(file, import.meta.url), 'utf8')
     const ast = parse(source, { sourceType: 'module', plugins: ['jsx'] })
     walk(ast, (node) => {
+      if (node.type === 'StringLiteral' && /￥|\bCNY\b/.test(node.value))
+        raw.push(`${file}: unexpected CNY pricing`)
       if (
         node.type === 'TemplateLiteral' &&
         node.quasis.some((part) =>
@@ -59,6 +64,21 @@ test('所有静态 t() 文案具备英文翻译，页面无未包装的中文正
         !Object.hasOwn(englishMessages, node.value)
       ) {
         missing.add(`${file}: ${node.value}`)
+      }
+      if (
+        node.type === 'StringLiteral' &&
+        hasChinese(node.value) &&
+        Object.hasOwn(englishMessages, node.value)
+      ) {
+        const developerCopy =
+          /演示|模拟|示例|原型|未接入|静态|人民币|￥|仅本页|只保存在本页|规则待确认/
+        const developerEnglish =
+          /\b(?:demo|sample|prototype|static|production|CNY)\b/i
+        if (
+          developerCopy.test(node.value) ||
+          developerEnglish.test(englishMessages[node.value])
+        )
+          raw.push(`${file}: development copy: ${node.value}`)
       }
       if (
         node.type === 'CallExpression' &&

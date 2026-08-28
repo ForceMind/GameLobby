@@ -4,6 +4,7 @@ import { gameCategories, games, recentGames } from './data.js'
 import { GameArtwork, SectionHeader } from './ui.jsx'
 import { filterGames } from './demoModel.js'
 import { useLocale } from './useLocale.js'
+import { useH5 } from './h5/useH5.js'
 
 function gameStatusCopy(status) {
   return (
@@ -15,26 +16,22 @@ function gameStatusCopy(status) {
   )
 }
 
-function openGameDetails(game, openModal, t) {
+function openGameDetails(game, openModal, t, openGame) {
   const isReady = game.status === 'ready'
+  if (isReady) {
+    openGame(game)
+    return
+  }
   openModal({
     title: game.name,
     kicker: t(game.categoryLabel),
-    subtitle: isReady
-      ? t('在线人数（示例）：{count}', { count: game.players })
-      : t('服务状态提示'),
+    subtitle: t('游戏暂不可用'),
     body: (
       <div className="game-preview">
         <GameArtwork game={game} />
         <div>
-          <h3>{t(isReady ? '游戏详情演示' : gameStatusCopy(game.status))}</h3>
-          <p>
-            {t(
-              isReady
-                ? '未接入游戏引擎，本版不提供实际对局。'
-                : '可返回目录查看其他游戏；所有状态均为演示数据。',
-            )}
-          </p>
+          <h3>{t(gameStatusCopy(game.status))}</h3>
+          <p>{t('请稍后再来，或选择其他游戏。')}</p>
         </div>
       </div>
     ),
@@ -45,10 +42,11 @@ function openGameDetails(game, openModal, t) {
 
 function GameCard({ game, openModal }) {
   const { t } = useLocale()
+  const { openGame } = useH5()
   const badgeLabels = {
     HOT: '热门',
     TREND: '流行',
-    NEW: '新上线',
+    NEW: '新游',
     FUN: '趣味',
     JACKPOT: '累积大奖',
   }
@@ -56,7 +54,7 @@ function GameCard({ game, openModal }) {
     <button
       className={`game-card card game-status-${game.status}`}
       type="button"
-      onClick={() => openGameDetails(game, openModal, t)}
+      onClick={() => openGameDetails(game, openModal, t, openGame)}
     >
       <span className="game-cover">
         <GameArtwork game={game} />
@@ -85,7 +83,7 @@ function GameCard({ game, openModal }) {
         <strong>{game.name}</strong>
         <span>
           <span>{t(game.categoryLabel)}</span>
-          <span title={t('在线人数（演示）；破折号表示当前没有数据。')}>
+          <span title={t('在线人数；破折号表示暂未开放。')}>
             <Icon name="users" /> {game.players}
           </span>
         </span>
@@ -96,6 +94,7 @@ function GameCard({ game, openModal }) {
 
 export function RecentGames({ openModal }) {
   const { t } = useLocale()
+  const { openGame } = useH5()
   const onKeyDown = (event) => {
     if (
       event.target !== event.currentTarget ||
@@ -118,7 +117,7 @@ export function RecentGames({ openModal }) {
           <p className="eyebrow">WELCOME BACK</p>
           <h1 id="recent-title">{t('最近在玩')}</h1>
           <p id="recent-games-hint">
-            {t('滑动或用左右方向键浏览，选择卡片查看游戏详情。')}
+            {t('滑动或用方向键浏览，点击开始游戏。')}
           </p>
         </div>
       </div>
@@ -136,7 +135,7 @@ export function RecentGames({ openModal }) {
             className="recent-card card"
             type="button"
             key={game.id}
-            onClick={() => openGameDetails(game, openModal, t)}
+            onClick={() => openGameDetails(game, openModal, t, openGame)}
           >
             <GameArtwork game={game} compact />
             <span className="recent-copy">
@@ -199,7 +198,9 @@ export function GameCatalog({ variant = 'library', openModal }) {
         title={t(popular ? '热门游戏' : '游戏目录')}
         titleId={popular ? 'popular-games-title' : 'game-catalog-title'}
         description={t(
-          popular ? '热门精选 · 静态示例' : '选择游戏卡片可查看详情和当前状态',
+          popular
+            ? '热门游戏，为你精选'
+            : '选择游戏，即可开始；未开放的游戏可查看状态。',
         )}
         action={
           popular ? (

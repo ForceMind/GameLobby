@@ -47,7 +47,7 @@ export default function LocaleProvider({ children }) {
     document.title = `${t(pageTitles[document.body.dataset.page] ?? '大厅')} · Joyloop`
     const description = document.querySelector('meta[name="description"]')
     if (description)
-      description.content = t('Joyloop 游戏大厅静态交互演示，不涉及真实交易。')
+      description.content = t('Joyloop 游戏大厅，发现游戏、参与活动。')
   }, [locale, t])
 
   const value = {

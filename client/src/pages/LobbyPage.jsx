@@ -59,15 +59,15 @@ export default function LobbyPage({ openModal, toast }) {
           <section className="section">
             <SectionHeader
               title={t('今日赢家榜')}
-              description={t('演示数据，不代表实时获奖。')}
+              description={t('今日游戏高光')}
               action={
                 <button
                   className="text-action"
                   type="button"
                   onClick={() =>
                     openModal({
-                      title: t('赢家榜示例'),
-                      subtitle: t('当前展示全部四条示例记录'),
+                      title: t('今日赢家榜'),
+                      subtitle: t('今日精彩表现'),
                       body: renderWinners(),
                       confirmLabel: t('关闭'),
                       cancelLabel: null,
@@ -107,7 +107,7 @@ export default function LobbyPage({ openModal, toast }) {
             <p>{t(banner.subtitle)}</p>
             {bannerIndex === 0 && (
               <strong className="banner-number">
-                8,880,000 <small>{t('示例金币奖池')}</small>
+                8,880,000 <small>{t('金币奖池')}</small>
               </strong>
             )}
           </div>
@@ -167,7 +167,7 @@ export default function LobbyPage({ openModal, toast }) {
               null,
             ],
             ['gift', '每日任务', '查看每日进度', 'events.html#tasks', '任务'],
-            ['clock', '最近战绩', '查看样例记录', 'profile.html#records', null],
+            ['clock', '最近战绩', '查看最近记录', 'profile.html#records', null],
           ].map(([icon, title, detail, destination, badge]) => (
             <a className="quick-card card" href={href(destination)} key={title}>
               <span className="quick-mark">

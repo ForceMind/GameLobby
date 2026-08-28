@@ -1,55 +1,57 @@
 # Joyloop 部署到 Cloudflare Pages
 
-## 直接上传压缩包
+本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。当前未代为创建 Cloudflare 项目或执行线上部署。
 
-使用 Node.js 22.12 或更新版本、系统 `zip` / `unzip`，在 `client` 目录执行：
+## 直接上传 ZIP
+
+在 `client` 目录执行：
 
 ```bash
 npm ci
 npm run package:pages
 ```
 
-脚本会在仓库根生成 `artifacts/joyloop-cf-pages-<date>-<gitshort>.zip`，以及 SHA-256 和 manifest 清单。ZIP 通过完整性测试，解压后逐文件哈希与构建输出比对；源代码、依赖、旧版页面和本机配置不会进入压缩包。
+脚本会在仓库根目录生成 `artifacts/joyloop-cf-pages-<date>-<gitshort>.zip`、SHA-256 文件和 manifest。ZIP 顶层直接包含入口 HTML、`assets/` 和 `_headers`，没有多余的 `dist/` 外壳。
 
-在 Cloudflare 控制台进入 **Workers & Pages → 创建 Pages 应用 → Direct Upload / 直接上传**，填写站点名并上传 ZIP，最后确认部署。已有 Direct Upload 项目可创建新部署上传。ZIP 顶层就是 `index.html`，没有多余的 `dist` 外壳；控制台也支持上传解压后的整个目录。[官方直接上传说明](https://developers.cloudflare.com/pages/get-started/direct-upload/)
+在 Cloudflare 控制台进入 **Workers & Pages → 创建 Pages 应用 → Direct Upload / 直接上传**，上传 ZIP 并确认部署。已有 Git 集成项目不能用控制台拖拽覆盖，应使用 Git 构建流程，或另建 Direct Upload 项目。[Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)
 
-注意：已有 Git 集成项目不提供控制台拖拽上传；应使用下方 Git 构建流程，或另建 Direct Upload 项目。不要为上传本包切换或覆盖已有生产项目。
-
-结构示例（哈希文件名每次构建可能不同）：
-
-```text
-index.html
-lobby.html
-games.html
-tournaments.html
-events.html
-store.html
-profile.html
-_headers
-assets/
-  main-<hash>.js
-  main-<hash>.css
-  joyloop.svg
+```bash
+cd ../artifacts
+shasum -a 256 -c joyloop-cf-pages-<date>-<gitshort>.zip.sha256
+unzip -l joyloop-cf-pages-<date>-<gitshort>.zip
 ```
 
-可使用同目录的 `.sha256` 文件核对 ZIP 完整性；manifest 中 `sourceCommit` 应与交付提交一致，`dirty: false` 表示包来自干净的已提交源码。
+把占位文件名替换为本次交付的文件名。manifest 中应确认 `dirty: false`，并核对 `sourceCommit`。
 
-## Git 集成部署
+## Git 集成
 
-项目根目录选择 `client`，配置如下：
+| 设置                   | 值                |
+| ---------------------- | ----------------- |
+| Root directory         | `client`          |
+| Build command          | `npm run build`   |
+| Build output directory | `dist`            |
+| Node.js                | 22（见 `.nvmrc`） |
 
-| 项目 | 值 |
-| --- | --- |
-| Root directory | `client` |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-
-`.nvmrc` 选择 Node 22。当前交付分支为 `joyloop`；选择生产分支还是预览分支由站点负责人决定，本项目脚本不会修改 Cloudflare 账号或域名设置。
+官方说明：[Build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/)。本项目脚本不会修改 Cloudflare 账号、域名或分支设置。
 
 ## 本地预览
 
-生产构建后运行 `npm run preview`，或使用任意静态 HTTP 服务提供 `client/dist`。不要直接双击 HTML；`file://` 会限制模块脚本加载。
+```bash
+npm run build
+npm run preview
+```
 
-## 范围与边界
+也可以使用任意静态 HTTP 服务提供 `dist/`。不要直接双击 HTML；`file://` 可能阻止模块脚本和相对入口正常加载。
 
-这是纯静态演示，提供简体中文和英文。除了语言偏好，交互状态只保存在当前页面内存中，不是真实支付、鉴权、订单或服务端账本。响应头默认禁止 iframe 嵌入；如需宿主嵌入，须先明确允许域名再调整安全策略。正式接入仍需后端、身份认证、支付风控、持久化和错误恢复。
+## 响应头和宿主尺寸
+
+`public/_headers` 会复制到 `dist/_headers`。当前策略允许顶层原生 WebView 和同源 iframe（`X-Frame-Options: SAMEORIGIN`）；跨源 iframe 需明确允许域名并同步调整 CSP、宿主 App 和安全策略。格式见 [Headers](https://developers.cloudflare.com/pages/configuration/headers/)。
+
+原生 WebView 的半屏/全屏尺寸不是 Pages 能决定的：CSS 只能使用 WebView 已分配的视口。需要真实容器扩展时，原生 App 必须响应 `setDisplayMode`，详见 [HOST-INTEGRATION.md](HOST-INTEGRATION.md)。
+
+## 上线前
+
+- 先通过 `npm run verify` 和 `npm run package:pages`。
+- 确认宿主注入账号、余额和请求桥接；没有桥接时购买保持失败/不可用。
+- 确认服务端按 SKU 重算价格和到账，宿主对 `requestId` 去重。
+- 不要把静态前端显示的余额、价格或状态当作账本事实。

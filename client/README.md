@@ -1,92 +1,59 @@
-# Joyloop 静态网页 v0.1.0
+# Joyloop 内嵌 H5 v0.2.0
 
-这是 Joyloop 游戏大厅的 React + Vite 静态交互原型。当前版本使用前端演示数据，不连接后端、数据库、鉴权、游戏引擎或真实支付，目标是先验证页面结构、视觉方向与基础交互，并可部署到 Cloudflare Pages。
+这是 Joyloop 游戏大厅的 React + Vite 静态前端，面向内置在 App 中的 H5，也可独立作为 Cloudflare Pages 静态站点预览。当前代码不连接真实数据库、鉴权、游戏引擎或支付服务；宿主接入方式见 [HOST-INTEGRATION.md](HOST-INTEGRATION.md)。
 
 ## 页面入口
 
-应用包含六个真实 HTML 页面入口，主导航保持五项：
+Vite 会生成七个入口：`index.html`（根入口别名）、`lobby.html`、`games.html`、`tournaments.html`、`events.html`、`store.html` 和 `profile.html`。生产输出位于 `dist/`。
 
-- `lobby.html`：游戏大厅
-- `games.html`：全部游戏（大厅子页，完整目录与组合筛选）
-- `tournaments.html`：赛事中心（页面标识为 `tournaments`）
-- `events.html`：活动中心
-- `store.html`：金币商城
-- `profile.html`：个人中心
+## 进入与游戏流程
 
-站点根路径 `/` 对应 `index.html`，作为大厅入口别名；Vite 会将上述页面及根入口一起输出到 `dist/`。
+首次进入先显示说明页。用户选择打开方式并同意后进入大厅；默认模式是半屏 1:1 方形窗口，边长为 `min(viewportWidth, viewportHeight, 640px)`，也可切换全屏。CSS 只能填充宿主已经分配的视口，不能越出小 WebView；真实容器扩展需原生 App 配合桥接调整。
 
-页面中的资产名称统一为「金币」和「宝石」。余额和全站人数固定；签到、任务、抽奖、报名/候补、兑换码、商城记录、昵称、访客状态和设置开关只提供本页反馈，刷新或切换页面后会重置；操作不产生真实订单、扣款或到账。语言偏好例外：它通过 URL 和可用时的浏览器本地存储保留。
+点击可进入游戏后，页面先切换到全屏加载状态。加载中左上角显示 `Lobby` 返回按钮；进入游戏后该按钮消失，游戏自己的关闭按钮固定在右上角。关闭游戏会请求宿主恢复进入前的大厅模式。仓库内游戏画面是本地交互流程，不是实际游戏引擎或实时对局。
 
-本版已吸收 `joyloop.zip` 的调整：大厅默认四款热门游戏，完整八款移入独立目录；活动总览可跳转到签到、转盘和每日任务。活动页的奖励记录仅保存在当前页内存中，不是服务端账单。
+页面使用当前 App 账号，不提供独立登录或退出登录；账号身份和注销由 App 管理。宿主可注入公共 `account` 与 `wallet`，或通过 `joyloop:context` 事件更新。
 
-## 语言与交互
+## 语言与资产
 
-- 正式提供 `zh`（简体中文）和 `en`（英文），顶部语言选择器与个人中心均可切换；也可直接访问 `lobby.html?lang=en`。
-- 所有页面、弹窗、表单、反馈、数据标签和无障碍标签均接入当前翻译目录。动态数量使用完整模板；内链保留语言、分类与锚点。
-- 英文金额明确标注 CNY，不做汇率转换。Joyloop、游戏名称、英文品牌标语和页面装饰性英文分类标题保持专名。
-- 旧版五语文件已归档到 `src/legacy/i18n.js`，不参与运行；西语、葡语、菲律宾语不显示为已可用选项。
-- 榜单、规则、战绩和安全状态有内容详情；昵称支持本页编辑；退出与恢复、报名/候补、兑换码均有明确状态结果。
+正式支持 `zh`（简体中文）和 `en`（英文）。商城统一使用美元：`1 USD = 10,000 金币`。当前静态礼包配置如下：
 
-## 本地运行
+|    金币 | 折扣 |   原价 | 折后价 |
+| ------: | ---: | -----: | -----: |
+|   6,000 |   8% |  $0.60 |  $0.55 |
+|  30,000 |  18% |  $3.00 |  $2.46 |
+|  68,000 |  28% |  $6.80 |  $4.90 |
+| 128,000 |  40% | $12.80 |  $7.68 |
 
-使用 Node.js 22.12 或更新版本（`.nvmrc` 选择 Node 22），在 `client` 目录执行：
+折扣档位属于业务最终确认前的静态配置；折扣不增加金币数量，宝石赠礼是独立字段。购买按钮进入确认页，再通过宿主 `purchase` 请求处理；宿主未接入时不会显示购买成功。
+
+## 本地运行、验证与打包
+
+使用 Node.js 22.12 或更新版本（`.nvmrc` 选择 Node 22）：
 
 ```bash
 npm ci
 npm run dev
-```
-
-构建生产文件并本地预览：
-
-```bash
 npm run build
 npm run preview
-```
-
-构建产物位于 `client/dist/`。
-
-代码检查、交互规则测试、生产构建与静态入口校验可一次运行：
-
-```bash
 npm run verify
-```
-
-生成直接上传用的压缩包（包含完整验证与构建）：
-
-```bash
 npm run package:pages
 ```
 
-产物位于仓库根 `artifacts/`，包括 `.zip`、`.zip.sha256`、`.zip.manifest.json`。清单记录源提交、工作区是否有未提交改动和每个文件的校验值。正式交付包应在干净提交上生成，`dirty` 必须为 `false`。
-
-请通过本地 HTTP 预览或静态托管访问，而不是直接双击 HTML；浏览器会限制 `file://` 下的模块脚本加载。
+打包脚本在仓库根目录 `artifacts/` 生成 ZIP、`.sha256` 和 manifest；正式包应来自干净提交，manifest 的 `dirty` 应为 `false`。不要直接双击 HTML，请通过本地 HTTP 预览。
 
 ## Cloudflare Pages
 
-连接 Git 仓库时使用以下设置：
+Git 集成设置：Root directory=`client`，Build command=`npm run build`，Build output directory=`dist`。直接上传见 [DEPLOY-CF-PAGES.md](DEPLOY-CF-PAGES.md)。`public/_headers` 会随构建复制到 `dist/_headers`。
 
-| 设置 | 值 |
-| --- | --- |
-| Root directory | `client` |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-
-也可以先在本地执行构建，再将 `client/dist` 目录作为静态产物上传。`client/public/_headers` 会随构建复制到输出目录，用于基础响应头与缓存策略。Pages 对 React/Vite 的官方构建配置是 `npm run build` 与 `dist`：[Cloudflare Pages 构建配置](https://developers.cloudflare.com/pages/configuration/build-configuration/)。
-
-当前响应头默认禁止第三方 iframe 嵌入。若后续需要嵌入宿主站点，应先确认允许的宿主域名，再调整 `X-Frame-Options` / CSP；这不影响直接浏览或 WebView 加载。
-
-## 当前边界
-
-这是可部署的浅色、自包含重建版本，重点是入口、布局、状态反馈和原型交互演示。正式版本仍需补齐身份认证、服务端数据校验、支付与风控、游戏启动、赛事规则与结算、资产账本、持久化及错误恢复；本任务要求是得到可部署的静态网页，不代表已经发布或完成线上接入。
-
-两个原型包都未包含引用的样式、脚本、图标和游戏封面。当前版本已提供自包含 CSS、图标、八组代码原生 SVG 主题插画和品牌图标，部署不依赖这些缺失文件；但无法据此声称与原型最终美术逐像素一致。评审与待确认规则见 [静态原型评审](../plans/joyloop_static_review.md)，操作范围及验证证据见 [QA.md](QA.md)。
+当前 `_headers` 使用 `SAMEORIGIN`，允许顶层原生 WebView 和同源 iframe；跨源 iframe 需另行明确允许域名、CSP 与宿主策略。
 
 ## 维护位置
 
-| 范围 | 位置 |
-| --- | --- |
-| 页面与共享外壳 | `src/pages/`、`src/App.jsx`、`src/ui.jsx` |
-| 游戏目录与插画 | `src/GameCatalog.jsx`、`src/GameIllustration.jsx` |
-| 语言与文案 | `src/LocaleProvider.jsx`、`src/i18n.js`、`src/locales/` |
-| 演示规则与单元测试 | `src/demoModel.js`、`src/*.test.js` |
-| 静态文件检查与打包 | `scripts/check-dist.mjs`、`scripts/package-pages.mjs` |
+| 范围               | 位置                                            |
+| ------------------ | ----------------------------------------------- |
+| 页面与 H5 外壳     | `src/pages/`、`src/App.jsx`、`src/h5/`          |
+| 游戏目录与本地流程 | `src/GameCatalog.jsx`、`src/h5/GameSession.jsx` |
+| 语言与产品文案     | `src/i18n.js`、`src/locales/`                   |
+| 静态规则与单元测试 | `src/demoModel.js`、`src/*.test.js`             |
+| 构建、检查与打包   | `scripts/`                                      |

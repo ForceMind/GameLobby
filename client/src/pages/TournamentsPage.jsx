@@ -31,7 +31,7 @@ export default function TournamentsPage({ openModal, toast }) {
       title: tournament
         ? `${t(tournament.title)} · ${t('详细规则')}`
         : t('赛事通用规则'),
-      subtitle: t('所有报名与候补操作仅为本地演示，不会扣除金币或宝石。'),
+      subtitle: t('报名货币、次数限制与资格要求'),
       body: (
         <div className="detail-list">
           {(tournament
@@ -46,14 +46,6 @@ export default function TournamentsPage({ openModal, toast }) {
               <span>{t(copy)}</span>
             </div>
           ))}
-          <div>
-            <strong>{t('计分')}</strong>
-            <span>{t('未知计分规则：等待服务端规则接入。')}</span>
-          </div>
-          <div>
-            <strong>{t('退款')}</strong>
-            <span>{t('未知退款规则：等待服务端规则接入。')}</span>
-          </div>
         </div>
       ),
       confirmLabel: t('知道了'),
@@ -67,29 +59,25 @@ export default function TournamentsPage({ openModal, toast }) {
     openModal({
       title: t(tournament.title),
       kicker: t(tournament.status),
-      subtitle: t('{prize} · {fee}', {
+      subtitle: t('奖池 {prize} · 报名费 {fee}', {
         prize: t(tournament.prize),
         fee: t(tournament.fee),
       }),
       body: (
         <div className="modal-copy-list">
           <p>
-            <strong>{t('参赛要求')}</strong>
+            <strong>{t('参赛要求')}: </strong>
             {t(tournament.requirement)}
           </p>
           <p>
-            <strong>{t('结算时间')}</strong>
+            <strong>{t('结算时间')}: </strong>
             {t(tournament.settlement)}
           </p>
           <p>
             {current
-              ? t(
-                  current === 'waitlist'
-                    ? '已在候补（演示）'
-                    : '已报名（演示）',
-                )
+              ? t(current === 'waitlist' ? '已在候补' : '已报名')
               : eligible
-                ? t('资格检查通过。静态演示不会扣除报名费。')
+                ? t('资格检查通过，可以报名。')
                 : full
                   ? t('当前正赛名额已满，可加入候补队列。')
                   : t('近 7 日指定游戏记录不足，暂不能报名。')}
@@ -99,9 +87,9 @@ export default function TournamentsPage({ openModal, toast }) {
       confirmLabel: current
         ? t('知道了')
         : eligible
-          ? t('确认演示报名')
+          ? t('确认报名')
           : full
-            ? t('加入演示候补')
+            ? t('加入候补')
             : t('知道了'),
       cancelLabel: current || (!eligible && !full) ? null : t('取消'),
       onConfirm: () => {
@@ -121,7 +109,7 @@ export default function TournamentsPage({ openModal, toast }) {
       <section className="page-head">
         <p className="eyebrow">{t('赛事 · LIVE EVENTS')}</p>
         <h1>{t('赛事')}</h1>
-        <p>{t('浏览赛事规则与报名状态示例，不进行真实报名或结算。')}</p>
+        <p>{t('浏览赛事规则、报名资格与当前名额。')}</p>
       </section>
       <section className="section">
         <details className="rules card">
@@ -261,11 +249,7 @@ export default function TournamentsPage({ openModal, toast }) {
                     onClick={() => openTournament(tournament)}
                   >
                     {entered
-                      ? t(
-                          entered === 'waitlist'
-                            ? '已在候补（演示）'
-                            : '已报名（演示）',
-                        )
+                      ? t(entered === 'waitlist' ? '已在候补' : '已报名')
                       : t(
                           tournament.id === 'slot-rank'
                             ? '报名参赛'
@@ -307,7 +291,7 @@ export default function TournamentsPage({ openModal, toast }) {
           <section className="section">
             <SectionHeader
               title={t('全站参赛情况')}
-              description={t('演示容量与队列')}
+              description={t('实时容量与队列状态')}
             />
             <div className="population-grid">
               {population.map(([label, value, progress]) => (

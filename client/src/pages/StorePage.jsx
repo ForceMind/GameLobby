@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { coinPacks } from '../data.js'
 import { SectionHeader } from '../ui.jsx'
-import { formatNumber } from '../format.js'
+import { formatNumber, formatUsdCents } from '../format.js'
 import { packSummary, validateDemoCode } from '../demoModel.js'
 import { useLocale } from '../useLocale.js'
+import { requestHost } from '../h5/hostBridge.js'
 
 export default function StorePage({ openModal, toast }) {
   const { t } = useLocale()
@@ -13,112 +14,153 @@ export default function StorePage({ openModal, toast }) {
   const [validatedCode, setValidatedCode] = useState('')
   const [receipts, setReceipts] = useState([])
   const [redeemed, setRedeemed] = useState(false)
-  const choosePack = (pack) => {
+  const [pendingSku, setPendingSku] = useState(null)
+  const [purchaseMessage, setPurchaseMessage] = useState('')
+  const purchaseLock = useRef(false)
+  const alive = useRef(true)
+  const latestTranslation = useRef(t)
+  useEffect(() => {
+    latestTranslation.current = t
+  }, [t])
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+    }
+  }, [])
+
+  const buyPack = (pack) => {
+    if (purchaseLock.current) return
     const summary = packSummary(pack)
     openModal({
       title: t('{coins} 金币礼包', { coins: formatNumber(pack.coins) }),
       kicker: t(pack.tag),
-      subtitle: t('支付金额 ￥{price}', { price: pack.price }),
+      subtitle: t('美元价格 {price}', {
+        price: formatUsdCents(summary.priceCents),
+      }),
       body: (
-        <div className="checkout-summary">
+        <div className="purchase-summary">
           <div>
-            <span>{t('基础金币')}</span>
-            <strong>{formatNumber(summary.baseCoins)}</strong>
-          </div>
-          <div>
-            <span>{t('加赠金币（{bonus}）', { bonus: pack.bonus })}</span>
-            <strong>{formatNumber(summary.bonusCoins)}</strong>
-          </div>
-          <div>
-            <span>{t('合计金币')}</span>
+            <span>{t('金币数量')}</span>
             <strong>{formatNumber(summary.totalCoins)}</strong>
           </div>
+          <div>
+            <span>{t('宝石赠礼')}</span>
+            <strong>+{formatNumber(summary.gems)}</strong>
+          </div>
+          <div>
+            <span>{t('原价')}</span>
+            <strong className="product-old-price">
+              {formatUsdCents(summary.baseCents)}
+            </strong>
+          </div>
+          <div>
+            <span>{t('折扣价')}</span>
+            <strong>{formatUsdCents(summary.priceCents)}</strong>
+          </div>
           <p>
-            {t('额外赠送 {gems} 宝石 · 支付金额 ￥{price}', {
-              gems: summary.gems,
-              price: pack.price,
+            {t('已优惠 {discount}%', {
+              discount: summary.discountPercent,
             })}
           </p>
-          <p>{t('这是静态网页演示，确认按钮不会支付，也不会改变真实余额。')}</p>
         </div>
       ),
-      confirmLabel: t('确认演示（不支付）'),
-      onConfirm: () => {
-        setReceipts((current) => [
-          {
-            id: current.length + 1,
-            titleKey: '{coins} 金币礼包',
-            titleValues: { coins: formatNumber(pack.coins) },
-            detailKey: '合计 {total} 金币 · 赠送 {gems} 宝石 · ￥{price}',
-            detailValues: {
-              total: formatNumber(summary.totalCoins),
-              gems: summary.gems,
-              price: pack.price,
+      confirmLabel: t('确认购买'),
+      onConfirm: async () => {
+        if (purchaseLock.current) return
+        purchaseLock.current = true
+        setPendingSku(pack.id)
+        setPurchaseMessage('正在处理购买请求…')
+        toast(t('正在处理购买请求…'))
+        let result
+        try {
+          result = await requestHost('purchase', {
+            sku: pack.id,
+            currency: 'USD',
+            priceCents: summary.priceCents,
+            coins: summary.totalCoins,
+            gems: summary.gems,
+          })
+        } catch {
+          result = { status: 'failed' }
+        }
+        if (!alive.current) return
+        const translate = latestTranslation.current
+        if (result?.code === 'timeout') {
+          setPurchaseMessage('购买结果仍在确认，请返回 App 查看。')
+          toast(translate('购买结果仍在确认，请返回 App 查看。'))
+          return
+        }
+        setPendingSku(null)
+        purchaseLock.current = false
+        if (result?.status === 'completed') {
+          setReceipts((current) => [
+            {
+              id: current.length + 1,
+              titleKey: '{coins} 金币礼包',
+              titleValues: { coins: formatNumber(pack.coins) },
+              detailKey: '已购买 {total} 金币 · 赠送 {gems} 宝石 · {price}',
+              detailValues: {
+                total: formatNumber(summary.totalCoins),
+                gems: summary.gems,
+                price: formatUsdCents(summary.priceCents),
+              },
             },
-          },
-          ...current,
-        ])
-        toast(t('礼包演示确认完成，未产生订单或扣款。'))
+            ...current,
+          ])
+          setPurchaseMessage('购买成功')
+          toast(translate('购买成功'))
+        } else if (result?.status === 'cancelled') {
+          setPurchaseMessage('购买已取消')
+          toast(translate('购买已取消'))
+        } else {
+          setPurchaseMessage('暂时无法完成购买，请稍后重试')
+          toast(translate('暂时无法完成购买，请稍后重试'))
+        }
       },
     })
   }
+
   const redeem = (event) => {
     event.preventDefault()
     const result = validateDemoCode(code)
     const normalized = code.trim().toUpperCase()
     if (redeemed && normalized === 'JOY-DEMO') {
       setValidatedCode('')
-      setCodeState({ type: 'error', message: '此兑换码已在本页演示中使用。' })
+      setCodeState({ type: 'error', message: '此兑换码已使用。' })
       return
     }
     setValidatedCode(result.type === 'success' ? normalized : '')
-    if (!normalized) setCodeState({ type: 'error', message: '请输入兑换码。' })
-    else if (normalized === 'USED-DEMO')
-      setCodeState({ type: 'error', message: '此兑换码已被使用。' })
-    else if (normalized === 'OLD-DEMO')
-      setCodeState({ type: 'error', message: '此兑换码已过期。' })
-    else if (result.type === 'success')
-      setCodeState({
-        type: 'success',
-        message: '校验成功：点击“演示兑换”完成一次本页兑换（未真实兑换）。',
-      })
-    else
-      setCodeState({
-        type: 'error',
-        message: '未找到该兑换码，请核对字符。',
-      })
+    setCodeState({
+      type: result.type,
+      message: !normalized
+        ? '请输入兑换码。'
+        : result.type === 'success'
+          ? '校验成功，可以兑换。'
+          : result.message,
+    })
   }
-  const redeemDemoCode = () => {
-    if (validatedCode !== 'JOY-DEMO') return
-    if (redeemed) {
-      setCodeState({
-        type: 'error',
-        message: '此兑换码已在本页演示中使用。',
-      })
-      return
-    }
+  const redeemCode = () => {
+    if (validatedCode !== 'JOY-DEMO' || redeemed) return
     setRedeemed(true)
     setValidatedCode('')
-    setCodeState({
-      type: 'success',
-      message: '演示兑换成功：未真实兑换，也未改变真实余额。',
-    })
+    setCodeState({ type: 'success', message: '兑换成功。' })
     setReceipts((current) => [
       {
         id: current.length + 1,
-        titleKey: '兑换码演示结果',
-        detailKey:
-          'JOY-DEMO 已兑换一次；未显示未知奖励数量，也未改变真实余额。',
+        titleKey: '兑换成功',
+        detailKey: '兑换码已使用一次。',
       },
       ...current,
     ])
   }
+
   return (
-    <>
+    <div className="store-page">
       <section className="page-head">
-        <p className="eyebrow">STORE · SAFE CHECKOUT</p>
+        <p className="eyebrow">STORE · SECURE CHECKOUT</p>
         <h1>{t('金币商城')}</h1>
-        <p>{t('核对礼包数量与价格，体验确认流程；不会触发真实支付。')}</p>
+        <p>{t('选择金币数量并确认购买。')}</p>
       </section>
       <section className="safety-strip card">
         <span className="feature-icon">
@@ -126,20 +168,23 @@ export default function StorePage({ openModal, toast }) {
         </span>
         <div>
           <strong>{t('购买保障')}</strong>
-          <p>
-            {t('金额与到账内容会在确认页再次展示；本静态版不会请求真实支付。')}
-          </p>
+          <p>{t('价格、金币和赠礼会在确认页再次展示。')}</p>
         </div>
         <span className="status">
           <span className="status-dot" />
-          {t('演示安全')}
+          {t('安全购买')}
         </span>
       </section>
+      {purchaseMessage && (
+        <p className="purchase-status" role="status">
+          {t(purchaseMessage)}
+        </p>
+      )}
       <section className="section">
         <SectionHeader
           title={t('金币礼包')}
-          description={t('不同档位包含独立加成与宝石赠礼')}
-          action={<span className="pill">{t('人民币计价演示')}</span>}
+          description={t('每档金币数量固定，折扣独立计算')}
+          action={<span className="pill">{t('USD')}</span>}
         />
         <div className="product-grid">
           {coinPacks.map((pack) => {
@@ -155,30 +200,24 @@ export default function StorePage({ openModal, toast }) {
                 </span>
                 <div className="product-amount">
                   <strong>{formatNumber(pack.coins)}</strong>
-                  <span>{t('基础金币')}</span>
+                  <span>{t('金币')}</span>
                 </div>
-                <p className="product-bonus">
-                  {t('加赠 {coins} 金币（{bonus}）', {
-                    coins: formatNumber(summary.bonusCoins),
-                    bonus: pack.bonus,
-                  })}
-                </p>
-                <p>
-                  {t('合计 {total} 金币 · 另赠 {gems} 宝石', {
-                    total: formatNumber(summary.totalCoins),
-                    gems: pack.gemBonus,
-                  })}
+                <p>{t('另赠 {gems} 宝石', { gems: pack.gemBonus })}</p>
+                <p className="product-discount">
+                  {t('优惠 {discount}%', { discount: summary.discountPercent })}
                 </p>
                 <div className="product-price">
-                  <span>{t('支付金额')}</span>
-                  <strong>{t('￥{price}', { price: pack.price })}</strong>
+                  <span>{t('购买价格')}</span>
+                  <strong>{formatUsdCents(summary.priceCents)}</strong>
+                  <del>{formatUsdCents(summary.baseCents)}</del>
                 </div>
                 <button
                   className={`btn ${pack.recommended ? 'btn-primary' : 'btn-secondary'}`}
                   type="button"
-                  onClick={() => choosePack(pack)}
+                  disabled={Boolean(pendingSku)}
+                  onClick={() => buyPack(pack)}
                 >
-                  {pack.recommended ? t('选择推荐礼包') : t('选择此礼包')}
+                  {pendingSku === pack.id ? t('购买处理中') : t('购买礼包')}
                 </button>
               </article>
             )
@@ -186,18 +225,14 @@ export default function StorePage({ openModal, toast }) {
         </div>
         <p className="fine-print">
           <Icon name="shield" />
-          {t('到账数量以确认页为准；本页确认按钮不支付。')}
+          {t('1 美元 = 10,000 金币')}
         </p>
       </section>
       {receipts.length > 0 && (
-        <section
-          className="section demo-receipts"
-          aria-labelledby="demo-receipts-title"
-        >
+        <section className="section store-receipts">
           <SectionHeader
-            title={t('本页演示记录')}
-            titleId="demo-receipts-title"
-            description={t('仅保留在当前页面会话，不是订单或余额记录')}
+            title={t('购买记录')}
+            description={t('最近完成的购买与兑换')}
           />
           <div className="detail-list">
             {receipts.map((receipt) => (
@@ -213,13 +248,13 @@ export default function StorePage({ openModal, toast }) {
         <section className="section">
           <SectionHeader
             title={t('月度特权卡')}
-            description={t('此处仅展示权益，暂未开放真实开通')}
-            action={<span className="status">{t('未开通')}</span>}
+            description={t('每日金币、宝石和免费旋转')}
+            action={<span className="status">{t('即将开放')}</span>}
           />
           <article className="membership-card card">
             <span className="pill">MONTHLY PASS</span>
             <h2>{t('每天都有明确到账的轻量权益')}</h2>
-            <p>{t('当前仅展示权益结构，不开放真实开通、续费或扣款。')}</p>
+            <p>{t('每天领取固定权益。')}</p>
             <div className="benefit-grid">
               <div>
                 <strong>1,000</strong>
@@ -235,19 +270,17 @@ export default function StorePage({ openModal, toast }) {
               </div>
             </div>
             <div className="section-footer">
-              <span className="pill">{t('展示有效期：30 天')}</span>
+              <span className="pill">{t('有效期：30 天')}</span>
               <button
                 className="btn btn-secondary"
                 type="button"
                 onClick={() =>
                   openModal({
                     title: t('月度特权卡'),
-                    subtitle: t('展示说明'),
+                    subtitle: t('权益详情'),
                     body: (
                       <p>
-                        {t(
-                          '本卡当前仅作界面展示，真实开通、续费、退款与漏领规则尚未开放。',
-                        )}
+                        {t('每日领取 1,000 金币、12 宝石和 2 次免费旋转。')}
                       </p>
                     ),
                     confirmLabel: t('知道了'),
@@ -264,7 +297,7 @@ export default function StorePage({ openModal, toast }) {
           <section className="section">
             <SectionHeader
               title={t('兑换码中心')}
-              description={t('输入后先校验，再进行一次本页演示兑换')}
+              description={t('输入兑换码并先校验')}
             />
             <form className="code-form card" onSubmit={redeem} noValidate>
               <label htmlFor="redemption-code">{t('兑换码')}</label>
@@ -280,9 +313,6 @@ export default function StorePage({ openModal, toast }) {
                   placeholder={t('输入运营发放的兑换码')}
                   autoComplete="off"
                   aria-invalid={codeState.type === 'error'}
-                  aria-describedby={
-                    codeState.message ? 'code-help code-feedback' : 'code-help'
-                  }
                 />
                 <button className="btn btn-secondary" type="submit">
                   {t('校验')}
@@ -290,18 +320,14 @@ export default function StorePage({ openModal, toast }) {
               </div>
               {validatedCode === 'JOY-DEMO' && !redeemed && (
                 <button
-                  className="btn btn-primary"
+                  className="btn btn-primary purchase-confirm"
                   type="button"
-                  onClick={redeemDemoCode}
+                  onClick={redeemCode}
                 >
-                  {t('演示兑换')}
+                  {t('确认兑换')}
                 </button>
               )}
-              <small id="code-help">
-                {t('体验码：JOY-DEMO；USED-DEMO / OLD-DEMO 可查看异常状态。')}
-              </small>
               <p
-                id="code-feedback"
                 className={
                   codeState.message
                     ? `form-feedback is-${codeState.type}`
@@ -316,6 +342,6 @@ export default function StorePage({ openModal, toast }) {
           </section>
         </aside>
       </div>
-    </>
+    </div>
   )
 }

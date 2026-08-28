@@ -1,13 +1,29 @@
 import common from './locales/common.js'
 import profileTournaments from './locales/profileTournaments.js'
 import eventsStore from './locales/eventsStore.js'
+import h5Product from './locales/h5Product.js'
+import storeProduct from './locales/storeProduct.js'
+import profileProduct from './locales/profileProduct.js'
+import activitiesProduct from './locales/activitiesProduct.js'
 
-export const catalogs = { common, profileTournaments, eventsStore }
+export const catalogs = {
+  common,
+  profileTournaments,
+  eventsStore,
+  h5Product,
+  storeProduct,
+  profileProduct,
+  activitiesProduct,
+}
 // Shared terminology wins if a page-specific catalog repeats a common label.
 export const englishMessages = {
   ...profileTournaments,
   ...eventsStore,
   ...common,
+  ...storeProduct,
+  ...profileProduct,
+  ...activitiesProduct,
+  ...h5Product,
 }
 export const supportedLocales = ['zh', 'en']
 

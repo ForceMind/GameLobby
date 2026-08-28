@@ -52,22 +52,20 @@ export default function EventsPage({ openModal, toast }) {
     ])
   const showRewardHistory = () =>
     openModal({
-      title: t('演示奖励记录'),
-      subtitle: t('仅本页会话 · 刷新后清空 · 未真实到账'),
+      title: t('奖励记录'),
+      subtitle: t('本次活动中获得的奖励'),
       body: rewardHistory.length ? (
         <ol className="reward-history">
           {rewardHistory.map((record) => (
             <li key={record.id}>
               <strong>{t(record.sourceKey)}</strong>
               <span>{t(record.rewardKey, record.rewardValues)}</span>
-              <small>{t('已记录 · 静态演示')}</small>
+              <small>{t('已记录')}</small>
             </li>
           ))}
         </ol>
       ) : (
-        <p>
-          {t('暂无演示记录。领取签到、任务奖励或完成转盘后，可在这里查看。')}
-        </p>
+        <p>{t('暂无记录。领取签到、任务奖励或完成转盘后，可在这里查看。')}</p>
       ),
       cancelLabel: null,
       confirmLabel: t('关闭记录'),
@@ -76,7 +74,7 @@ export default function EventsPage({ openModal, toast }) {
     if (checkinClaimed) return
     setCheckinClaimed(true)
     recordReward('D3 每日签到', '2,000 金币 + 5 宝石')
-    toast(t('已演示领取今日签到奖励，记录可在本页查看'))
+    toast(t('已领取今日签到奖励，记录可在这里查看'))
   }
   const spinWheel = () => {
     if (spinLocked.current || wheelCount <= 0) return
@@ -96,13 +94,13 @@ export default function EventsPage({ openModal, toast }) {
       setWheelSpinning(false)
       spinLocked.current = false
       setWheelAnnouncement({
-        key: '本次结果：{prize}；剩余 {count} 次。未真实到账。',
+        key: '本次结果：{prize}；剩余 {count} 次。',
         values: { prize, count: remaining },
       })
       recordReward('幸运转盘', prize)
       const translate = latestTranslation.current
       toast(
-        translate('演示抽取结果：{prize}（未真实到账）', {
+        translate('抽取结果：{prize}', {
           prize: translate(prize),
         }),
       )
@@ -126,7 +124,7 @@ export default function EventsPage({ openModal, toast }) {
       values,
     )
     toast(
-      t('已演示领取：{reward}', {
+      t('已领取：{reward}', {
         reward: t('{coins} 金币 + {gems} 宝石', values),
       }),
     )
@@ -136,7 +134,7 @@ export default function EventsPage({ openModal, toast }) {
       <section className="page-head">
         <p className="eyebrow">REWARDS · DAILY PLAY</p>
         <h1>{t('活动中心')}</h1>
-        <p>{t('今天能领什么、还差多少、奖励是否到账，都在这里清晰可追踪。')}</p>
+        <p>{t('领取奖励、查看进度和奖励记录。')}</p>
       </section>
       <section
         className="event-page-state card"
@@ -145,11 +143,7 @@ export default function EventsPage({ openModal, toast }) {
         hidden={claimable > 0}
       >
         <Icon name="gift" />
-        <p>
-          {t(
-            '今日可领取的签到与任务奖励已处理，可在演示记录中查看。未产生真实到账。',
-          )}
-        </p>
+        <p>{t('今日可领取的签到与任务奖励已处理，可在奖励记录中查看。')}</p>
       </section>
       <section
         className="event-overview card"
@@ -174,7 +168,7 @@ export default function EventsPage({ openModal, toast }) {
           <a className="overview-shortcut" href="#wheel">
             <span>{t('幸运转盘')}</span>
             <strong>{t('{count} 次可抽', { count: wheelCount })}</strong>
-            <small>{t('演示次数仅在本页有效')}</small>
+            <small>{t('每日机会')}</small>
           </a>
           <a className="overview-shortcut" href="#tasks">
             <span>{t('每日任务')}</span>
@@ -187,7 +181,7 @@ export default function EventsPage({ openModal, toast }) {
         <SectionHeader
           title={t('七日签到')}
           titleId="checkin-title"
-          description={t('按日领取奖励，大奖资格待正式规则确认')}
+          description={t('按对应日期领取奖励，已领取的奖励不可重复领取')}
           action={
             <span className="status">
               {checkinClaimed ? t('D3 已领取') : t('D3 可领取')}
@@ -218,9 +212,7 @@ export default function EventsPage({ openModal, toast }) {
                         ? t('漏签')
                         : state === 'today'
                           ? t('可领取')
-                          : day.grand
-                            ? t('规则待确认')
-                            : t('尚未解锁')}
+                          : t('尚未解锁')}
                   </small>
                 </div>
               )
@@ -228,18 +220,18 @@ export default function EventsPage({ openModal, toast }) {
           </div>
           <div className="section-footer">
             <div className="checkin-note">
-              <p>{t('漏签后的大奖资格尚待确认，当前仅演示当天奖励领取。')}</p>
+              <p>{t('每日签到按对应日期解锁，已领取的奖励不可重复领取。')}</p>
               <button
                 className="text-action"
                 type="button"
                 onClick={() =>
                   openModal({
                     title: t('签到规则说明'),
-                    subtitle: t('规则待确认项'),
+                    subtitle: t('每日签到规则'),
                     body: (
                       <p>
                         {t(
-                          '原型同时展示 D2 漏签与 D3 可领，但尚未说明漏签是否影响第七日大奖。本版保留当天领取的状态演示，不模拟补签、连续天数重置或大奖解锁。',
+                          '每日奖励按对应日期解锁；当天奖励领取后不可重复领取。',
                         )}
                       </p>
                     ),
@@ -291,7 +283,7 @@ export default function EventsPage({ openModal, toast }) {
           <div className="wheel-card card">
             <p className="sr-only" id="wheel-prizes">
               {t(
-                '转盘奖励包括 800、1,200、2,000、300 和 500 金币，2 或 5 宝石，以及 1 次免费旋转。静态演示结果不代表中奖概率。',
+                '转盘奖励包括 800、1,200、2,000、300 和 500 金币，2 或 5 宝石，以及 1 次免费旋转。',
               )}
             </p>
             <div className="wheel-wrap" aria-busy={wheelSpinning}>
@@ -336,9 +328,9 @@ export default function EventsPage({ openModal, toast }) {
                 onClick={showRewardHistory}
               >
                 <Icon name="clock" />
-                {t('查看演示奖励记录')}
+                {t('查看奖励记录')}
               </button>
-              <small>{t('固定演示结果 · 支持减少动态')}</small>
+              <small>{t('奖励结果会在记录中显示')}</small>
             </div>
           </div>
         </section>
