@@ -1,0 +1,55 @@
+.tournaments-compact-list {
+  display: grid;
+  gap: 10px;
+}
+.tournament-compact-card {
+  padding: 13px;
+}
+.tournaments-compact-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tournaments-compact-title h2 {
+  margin: 5px 0 0;
+  font-size: 0.95rem;
+}
+.tournaments-compact-title > svg {
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+.tournaments-compact-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 12px 0;
+}
+.tournaments-compact-metrics span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+.tournaments-compact-metrics strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 0.75rem;
+}
+.tournaments-compact-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 7px;
+}
+.tournaments-compact-actions .btn {
+  min-height: 34px;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+}
+.tournaments-compact-more {
+  align-self: center;
+}
+@container lobby (min-width: 701px) {
+  .tournaments-compact {
+    display: none;
+  }
+}

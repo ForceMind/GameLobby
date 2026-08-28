@@ -1,0 +1,78 @@
+/* Compact store content for the square half-screen lobby. Full mode is unchanged. */
+.compact-store-links {
+  display: none;
+}
+
+@container lobby (max-width: 700px) {
+  .h5-lobby.is-half .compact-store {
+    display: flex;
+    flex-direction: column;
+  }
+  .h5-lobby.is-half .compact-store > .page-head,
+  .h5-lobby.is-half .compact-store > .safety-strip,
+  .h5-lobby.is-half .compact-store .fine-print,
+  .h5-lobby.is-half .compact-store .store-receipts,
+  .h5-lobby.is-half .compact-store > .page-layout {
+    display: none;
+  }
+  .h5-lobby.is-half .compact-store > .section {
+    margin-bottom: 12px;
+  }
+  .h5-lobby.is-half .compact-store > .purchase-status {
+    padding: 8px 10px;
+    font-size: 0.72rem;
+    margin-bottom: 10px;
+  }
+  .h5-lobby.is-half .compact-store .section-head p {
+    display: none;
+  }
+  .h5-lobby.is-half .compact-store .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .h5-lobby.is-half .compact-store .product-card {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding: 10px;
+  }
+  .h5-lobby.is-half .compact-store .product-card .product-icon {
+    display: none;
+  }
+  .h5-lobby.is-half .compact-store .product-amount strong {
+    font-size: 1.1rem;
+  }
+  .h5-lobby.is-half .compact-store .product-card p {
+    margin: 0;
+    font-size: 0.64rem;
+  }
+  .h5-lobby.is-half .compact-store .product-price {
+    gap: 2px;
+    font-size: 0.64rem;
+  }
+  .h5-lobby.is-half .compact-store .product-price strong {
+    font-size: 0.9rem;
+  }
+  .h5-lobby.is-half .compact-store .product-card .btn {
+    min-height: 30px;
+    padding: 5px 7px;
+    font-size: 0.7rem;
+  }
+  .h5-lobby.is-half .compact-store .compact-store-links {
+    display: grid;
+    gap: 7px;
+    margin: 0 0 8px;
+  }
+  .h5-lobby.is-half .compact-store .compact-store-links button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    background: var(--surface);
+    font-size: 0.75rem;
+  }
+}

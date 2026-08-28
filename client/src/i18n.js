@@ -7,6 +7,7 @@ import profileProduct from './locales/profileProduct.js'
 import activitiesProduct from './locales/activitiesProduct.js'
 import entryProduct from './locales/entryProduct.js'
 import compactProduct from './locales/compactProduct.js'
+import compactAccountStore from './locales/compactAccountStore.js'
 
 export const catalogs = {
   common,
@@ -18,6 +19,7 @@ export const catalogs = {
   activitiesProduct,
   entryProduct,
   compactProduct,
+  compactAccountStore,
 }
 // Shared terminology wins if a page-specific catalog repeats a common label.
 export const englishMessages = {
@@ -30,6 +32,7 @@ export const englishMessages = {
   ...h5Product,
   ...entryProduct,
   ...compactProduct,
+  ...compactAccountStore,
 }
 export const supportedLocales = ['zh', 'en']
 
@@ -79,7 +82,8 @@ export function localizedHref(value, locale, displayMode) {
     queryIndex < 0 ? '' : target.slice(queryIndex + 1),
   )
   query.set('lang', supportedLocales.includes(locale) ? locale : 'zh')
-  if (['half', 'full'].includes(displayMode) && !query.has('mode')) {
+  // Business navigation keeps its layout; the independent entry omits this argument.
+  if (['half', 'full'].includes(displayMode)) {
     query.set('mode', displayMode)
   }
   return `${pathname}?${query.toString()}${hash}`

@@ -3,6 +3,7 @@ import { Icon } from '../icons.jsx'
 import { tournaments } from '../data.js'
 import { Progress, SectionHeader } from '../ui.jsx'
 import { useLocale } from '../useLocale.js'
+import '../h5/tournamentsCompact.css'
 
 const timeline = [
   ['13:00', '经典 Slot 冲榜场', '已结束 · 结算完成'],
@@ -23,7 +24,11 @@ const ruleRows = [
   ['medal', '结算依据', '以截止时的有效分数、服务端时间与风控复核结果为准。'],
 ]
 
-export default function TournamentsPage({ openModal, toast }) {
+export default function TournamentsPage({
+  openModal,
+  toast,
+  showFullEntryHint = () => {},
+}) {
   const { t } = useLocale()
   const [entries, setEntries] = useState({})
   const openRules = (tournament = null) =>
@@ -103,6 +108,89 @@ export default function TournamentsPage({ openModal, toast }) {
         } else toast(t('条件说明已查看'))
       },
     })
+  }
+  const isHalf =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('mode') === 'half'
+  if (isHalf) {
+    return (
+      <div className="tournaments-compact">
+        <section className="tournaments-compact-head">
+          <div>
+            <span className="eyebrow">{t('赛事')}</span>
+            <h1>{t('赛事精选')}</h1>
+          </div>
+          <span className="status">{t('3 场赛事')}</span>
+        </section>
+        <div className="tournaments-compact-list">
+          {tournaments.slice(0, 3).map((tournament) => {
+            const entered = entries[tournament.id]
+            return (
+              <article
+                className="tournament-compact-card card"
+                key={tournament.id}
+              >
+                <div className="tournaments-compact-title">
+                  <div>
+                    <span className="pill">{t(tournament.status)}</span>
+                    <h2>{t(tournament.title)}</h2>
+                  </div>
+                  <Icon name={tournament.icon} />
+                </div>
+                <div className="tournaments-compact-metrics">
+                  <span>
+                    {t('奖池')}
+                    <strong>{t(tournament.prize)}</strong>
+                  </span>
+                  <span>
+                    {t('报名费')}
+                    <strong>{t(tournament.fee)}</strong>
+                  </span>
+                  <span>
+                    {t('已报名')}
+                    <strong>
+                      {tournament.registered}/{tournament.capacity}
+                    </strong>
+                  </span>
+                </div>
+                <div className="tournaments-compact-actions">
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    onClick={() => openRules(tournament)}
+                  >
+                    {t('详细规则')}
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    disabled={Boolean(entered)}
+                    onClick={() => openTournament(tournament)}
+                  >
+                    {entered
+                      ? t(entered === 'waitlist' ? '已在候补' : '已报名')
+                      : t(
+                          tournament.id === 'casual'
+                            ? '加入候补'
+                            : tournament.id === 'slot-rank'
+                              ? '报名参赛'
+                              : '查看缺少条件',
+                        )}
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+        <button
+          className="tournaments-compact-more text-action"
+          type="button"
+          onClick={showFullEntryHint}
+        >
+          {t('查看更多赛事')}
+        </button>
+      </div>
+    )
   }
   return (
     <>

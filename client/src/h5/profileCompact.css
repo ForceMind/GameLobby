@@ -1,0 +1,96 @@
+/* Profile content for the square half-screen lobby. Full mode is unchanged. */
+.compact-account-links {
+  display: none;
+}
+
+@container lobby (max-width: 700px) {
+  .h5-lobby.is-half .compact-profile {
+    display: flex;
+    flex-direction: column;
+  }
+  .h5-lobby.is-half .compact-profile > .page-head {
+    display: none;
+  }
+  .h5-lobby.is-half .compact-profile > .profile-hero {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 80px;
+    gap: 9px;
+    margin-bottom: 14px;
+    padding: 12px;
+  }
+  .h5-lobby.is-half .compact-profile .profile-hero-summary {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .h5-lobby.is-half .compact-profile .profile-hero-actions {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .h5-lobby.is-half .compact-profile .profile-hero > .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+  }
+  .h5-lobby.is-half .compact-profile .profile-copy > .pill {
+    display: none;
+  }
+  .h5-lobby.is-half .compact-profile .profile-hero-actions .btn {
+    width: 100%;
+    min-height: 34px;
+  }
+  .h5-lobby.is-half .compact-profile > .section {
+    margin-bottom: 14px;
+  }
+  .h5-lobby.is-half .compact-profile > .section .section-head p,
+  .h5-lobby.is-half .compact-profile .asset-card-link p,
+  .h5-lobby.is-half .compact-profile .profile-achievements,
+  .h5-lobby.is-half .compact-profile .profile-records,
+  .h5-lobby.is-half .compact-profile .profile-layout > .side-rail {
+    display: none;
+  }
+  .h5-lobby.is-half .compact-profile .profile-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .h5-lobby.is-half .compact-profile .profile-stat-grid .stat-card {
+    min-width: 0;
+    padding: 8px 6px;
+  }
+  .h5-lobby.is-half .compact-profile .profile-stat-grid .stat-card > span {
+    overflow: hidden;
+    font-size: 0.65rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .h5-lobby.is-half .compact-profile .profile-stat-grid .stat-card > strong {
+    font-size: 0.8rem;
+  }
+  .h5-lobby.is-half .compact-profile .asset-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .h5-lobby.is-half .compact-profile .asset-card-link {
+    gap: 8px;
+    padding: 10px;
+  }
+  .h5-lobby.is-half .compact-profile .asset-card-link strong {
+    font-size: 1rem;
+  }
+  .h5-lobby.is-half .compact-profile .compact-account-links {
+    display: grid;
+    gap: 7px;
+    margin: 0 0 8px;
+  }
+  .h5-lobby.is-half .compact-profile .compact-account-links button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    background: var(--surface);
+    font-size: 0.75rem;
+  }
+}

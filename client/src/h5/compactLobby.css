@@ -89,6 +89,8 @@
     font-size: 0.75rem;
     font-weight: 750;
     text-decoration: none;
+    font-family: inherit;
+    cursor: pointer;
   }
 
   .h5-lobby.is-half .compact-games .page-head {

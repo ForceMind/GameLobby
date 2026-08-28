@@ -63,7 +63,11 @@ export default function LocaleProvider({ children }) {
       localizedHref(
         value,
         locale,
-        new URLSearchParams(window.location.search).get('mode'),
+        document.body.dataset.page === 'welcome'
+          ? undefined
+          : new URLSearchParams(window.location.search).get('mode') === 'half'
+            ? 'half'
+            : 'full',
       ),
   }
   return (

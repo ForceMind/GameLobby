@@ -7,10 +7,18 @@ import {
   recentRecords,
 } from '../data.js'
 import { Progress, SectionHeader } from '../ui.jsx'
-import { formatNumber } from '../format.js'
+import { formatNumber, formatWalletLabel } from '../format.js'
 import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
 import { isValidNickname } from '../demoModel.js'
+import '../h5/profileCompact.css'
+
+const compactStatLabels = {
+  总旋转次数: '旋转次数',
+  最高单次金币增加: '单局最高',
+  最长连续获奖记录: '最长连胜',
+  本周金币净变化: '本周净变',
+}
 
 function AccountAvatar({ account }) {
   const [failed, setFailed] = useState(false)
@@ -80,9 +88,14 @@ function ProfileEditor({ initialName, onSave }) {
   )
 }
 
-export default function ProfilePage({ openModal, toast, openWallet }) {
+export default function ProfilePage({
+  openModal,
+  toast,
+  openWallet,
+  showFullEntryHint = () => {},
+}) {
   const { t, locale, setLocale } = useLocale()
-  const { account: profile, wallet: balances } = useH5()
+  const { account: profile, wallet: balances, mode } = useH5()
   const [settings, setSettings] = useState({
     sound: true,
     vibration: false,
@@ -203,7 +216,7 @@ export default function ProfilePage({ openModal, toast, openWallet }) {
       onConfirm: () => {},
     })
   return (
-    <>
+    <div className="profile-page compact-profile">
       <section className="page-head">
         <p className="eyebrow">{t('PROFILE · ACCOUNT')}</p>
         <h1>{t('我的')}</h1>
@@ -247,7 +260,13 @@ export default function ProfilePage({ openModal, toast, openWallet }) {
         <div className="profile-stat-grid">
           {profileStats.map((stat) => (
             <article className="stat-card card" key={stat.label}>
-              <span>{t(stat.label)}</span>
+              <span title={t(stat.label)}>
+                {t(
+                  mode === 'half'
+                    ? (compactStatLabels[stat.label] ?? stat.label)
+                    : stat.label,
+                )}
+              </span>
               <strong className={stat.positive ? 'positive' : ''}>
                 {t(stat.value)}
               </strong>
@@ -274,7 +293,11 @@ export default function ProfilePage({ openModal, toast, openWallet }) {
                 </span>
                 <div>
                   <span>{t('金币')}</span>
-                  <strong>{balances.coinsLabel}</strong>
+                  <strong>
+                    {mode === 'half'
+                      ? formatWalletLabel(balances.coins, true)
+                      : balances.coinsLabel}
+                  </strong>
                   <p>{t('可用于开放的游戏与赛事')}</p>
                 </div>
               </button>
@@ -289,13 +312,17 @@ export default function ProfilePage({ openModal, toast, openWallet }) {
                 </span>
                 <div>
                   <span>{t('宝石')}</span>
-                  <strong>{balances.gemsLabel}</strong>
+                  <strong>
+                    {mode === 'half'
+                      ? formatWalletLabel(balances.gems, true)
+                      : balances.gemsLabel}
+                  </strong>
                   <p>{t('可用于指定赛事与活动')}</p>
                 </div>
               </button>
             </div>
           </section>
-          <section className="section">
+          <section className="section profile-achievements">
             <SectionHeader
               title={t('成就进度')}
               description={t('完成条件后由服务端确认解锁')}
@@ -334,7 +361,7 @@ export default function ProfilePage({ openModal, toast, openWallet }) {
               })}
             </div>
           </section>
-          <section className="section" id="records">
+          <section className="section profile-records" id="records">
             <SectionHeader
               title={t('最近战绩')}
               description={t('最近五条游戏与赛事记录')}
@@ -463,6 +490,16 @@ export default function ProfilePage({ openModal, toast, openWallet }) {
           </section>
         </aside>
       </div>
-    </>
+      <div className="compact-account-links" aria-label={t('更多账号内容')}>
+        <button type="button" onClick={showFullEntryHint}>
+          <span>{t('成就与战绩')}</span>
+          <Icon name="chevronRight" />
+        </button>
+        <button type="button" onClick={showFullEntryHint}>
+          <span>{t('账号安全与设置')}</span>
+          <Icon name="chevronRight" />
+        </button>
+      </div>
+    </div>
   )
 }

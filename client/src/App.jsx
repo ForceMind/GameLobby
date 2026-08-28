@@ -6,7 +6,6 @@ import { Modal } from './ui.jsx'
 import { useLocale } from './useLocale.js'
 import { useH5 } from './h5/useH5.js'
 import EntryGate from './h5/EntryGate.jsx'
-import FullScreenPrompt from './h5/FullScreenPrompt.jsx'
 import WalletDetails from './h5/WalletDetails.jsx'
 import GameSession from './h5/GameSession.jsx'
 import EventsPage from './pages/EventsPage.jsx'
@@ -193,24 +192,20 @@ export default function App() {
       body: <WalletDetails currency={currency} />,
       actions: (
         <>
-          <a className="btn btn-secondary" href={href('events.html?mode=full')}>
+          <a className="btn btn-secondary" href={href('events.html')}>
             {t('获得')}
           </a>
-          <a className="btn btn-primary" href={href('store.html?mode=full')}>
+          <a className="btn btn-primary" href={href('store.html')}>
             {t('充值')}
           </a>
         </>
       ),
     })
 
+  const showFullEntryHint = () => toast(t('请从全屏入口查看完整内容。'))
+
   const renderPage = () => {
-    const props = { openModal: setModal, toast, openWallet }
-    if (
-      mode === 'half' &&
-      ['tournaments', 'events', 'store', 'profile'].includes(page)
-    ) {
-      return <FullScreenPrompt page={page} />
-    }
+    const props = { openModal: setModal, toast, openWallet, showFullEntryHint }
     if (page === 'games') return <GamesPage {...props} />
     if (page === 'tournaments') return <TournamentsPage {...props} />
     if (page === 'events') return <EventsPage {...props} />

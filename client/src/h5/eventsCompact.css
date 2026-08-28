@@ -1,0 +1,64 @@
+.events-compact,
+.tournaments-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.events-compact-head,
+.tournaments-compact-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px;
+}
+.events-compact-head h1,
+.tournaments-compact-head h1 {
+  margin: 3px 0 0;
+  font-size: 1.35rem;
+}
+.events-compact-count {
+  margin-left: auto;
+  color: var(--primary);
+  font-size: 1.7rem;
+}
+.events-compact-card {
+  padding: 14px;
+}
+.events-compact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.events-compact-card h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.events-compact-card p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.events-compact-card .text-action {
+  margin-top: 10px;
+}
+.events-compact-tasks {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.events-compact-task {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+.events-compact-task small {
+  color: var(--muted);
+}
+@container lobby (min-width: 701px) {
+  .events-compact {
+    display: none;
+  }
+}

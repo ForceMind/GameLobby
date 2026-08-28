@@ -6,8 +6,13 @@ import { formatNumber, formatUsdCents } from '../format.js'
 import { packSummary, validateDemoCode } from '../demoModel.js'
 import { useLocale } from '../useLocale.js'
 import { requestHost } from '../h5/hostBridge.js'
+import '../h5/storeCompact.css'
 
-export default function StorePage({ openModal, toast }) {
+export default function StorePage({
+  openModal,
+  toast,
+  showFullEntryHint = () => {},
+}) {
   const { t } = useLocale()
   const [code, setCode] = useState('')
   const [codeState, setCodeState] = useState({ type: '', message: '' })
@@ -156,7 +161,7 @@ export default function StorePage({ openModal, toast }) {
   }
 
   return (
-    <div className="store-page">
+    <div className="store-page compact-store">
       <section className="page-head">
         <p className="eyebrow">STORE · SECURE CHECKOUT</p>
         <h1>{t('金币商城')}</h1>
@@ -341,6 +346,16 @@ export default function StorePage({ openModal, toast }) {
             </form>
           </section>
         </aside>
+      </div>
+      <div className="compact-store-links" aria-label={t('更多商城内容')}>
+        <button type="button" onClick={showFullEntryHint}>
+          <span>{t('月度特权卡')}</span>
+          <Icon name="chevronRight" />
+        </button>
+        <button type="button" onClick={showFullEntryHint}>
+          <span>{t('兑换码中心')}</span>
+          <Icon name="chevronRight" />
+        </button>
       </div>
     </div>
   )

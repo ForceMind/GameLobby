@@ -25,7 +25,6 @@ const sourceFiles = [
   'h5/GameSession.jsx',
   'h5/H5Provider.jsx',
   'h5/EntryGate.jsx',
-  'h5/FullScreenPrompt.jsx',
 ]
 const hasChinese = (value) => /[\u3400-\u9fff]/u.test(value)
 const placeholders = (value) =>
@@ -146,6 +145,7 @@ test('说明首页独立保留，大厅无全局同意门槛、缩放按钮或�
   assert.doesNotMatch(entry, /type="checkbox"|acknowledged|disabled=/)
   assert.doesNotMatch(entry, /sessionStorage|localStorage|location.search/)
   assert.doesNotMatch(app, /lobby-mode-button|asset-add/)
+  assert.doesNotMatch(app, /FullScreenPrompt/)
   assert.doesNotMatch(provider, /sessionStorage|accepted|enterLobby/)
   for (const key of [
     '进入游戏大厅前',
@@ -189,7 +189,15 @@ test('语言与展示配置的跨页链接保留筛选和锚点', () => {
   )
   assert.equal(
     localizedHref('games.html?mode=full', 'zh', 'half'),
-    'games.html?mode=full&lang=zh',
+    'games.html?mode=half&lang=zh',
+  )
+  assert.equal(
+    localizedHref('lobby.html?mode=full', 'zh'),
+    'lobby.html?mode=full&lang=zh',
+  )
+  assert.equal(
+    localizedHref('games.html?mode=half', 'en', 'full'),
+    'games.html?mode=full&lang=en',
   )
   assert.equal(
     localizedHref('https://example.com', 'en'),

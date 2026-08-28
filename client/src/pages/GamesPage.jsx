@@ -2,8 +2,8 @@ import { GameCatalog } from '../GameCatalog.jsx'
 import { useLocale } from '../useLocale.js'
 import '../h5/compactLobby.css'
 
-export default function GamesPage({ openModal, toast }) {
-  const { t, href } = useLocale()
+export default function GamesPage({ openModal, toast, showFullEntryHint }) {
+  const { t } = useLocale()
   return (
     <div className="games-page compact-games">
       <section className="page-head">
@@ -16,12 +16,13 @@ export default function GamesPage({ openModal, toast }) {
         </p>
       </section>
       <GameCatalog variant="library" openModal={openModal} toast={toast} />
-      <a
+      <button
         className="compact-fullscreen-entry"
-        href={href('games.html?mode=full')}
+        type="button"
+        onClick={showFullEntryHint}
       >
-        <span>{t('全屏查看更多')}</span>
-      </a>
+        <span>{t('更多内容')}</span>
+      </button>
     </div>
   )
 }

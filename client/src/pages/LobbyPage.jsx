@@ -14,7 +14,7 @@ const winnerRows = [
   ['CloudNine', '连续 8 局获奖', '+42,900'],
 ]
 
-export default function LobbyPage({ openModal, toast }) {
+export default function LobbyPage({ openModal, toast, showFullEntryHint }) {
   const { t, href } = useLocale()
   const { mode } = useH5()
   const [bannerIndex, setBannerIndex] = useState(0)
@@ -188,13 +188,14 @@ export default function LobbyPage({ openModal, toast }) {
           ))}
         </div>
       </section>
-      <a
+      <button
         className="compact-fullscreen-entry"
-        href={href('lobby.html?mode=full')}
+        type="button"
+        onClick={showFullEntryHint}
       >
-        <span>{t('全屏查看更多')}</span>
+        <span>{t('更多内容')}</span>
         <Icon name="chevronRight" />
-      </a>
+      </button>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { formatNumber } from '../format.js'
 import { nextWheelAngle } from '../demoModel.js'
 import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
+import '../h5/eventsCompact.css'
 
 const wheelPrizes = [
   '800 金币',
@@ -23,7 +24,7 @@ const missionTitles = {
   分享一次中奖记录: '分享一次中奖记录',
 }
 
-export default function EventsPage({ openModal, toast }) {
+export default function EventsPage({ openModal, toast, showFullEntryHint }) {
   const { t, href } = useLocale()
   const latestTranslation = useRef(t)
   useEffect(() => {
@@ -127,6 +128,118 @@ export default function EventsPage({ openModal, toast }) {
       t('已领取：{reward}', {
         reward: t('{coins} 金币 + {gems} 宝石', values),
       }),
+    )
+  }
+  const isHalf =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('mode') === 'half'
+  if (isHalf) {
+    return (
+      <div className="events-compact">
+        <section className="events-compact-head">
+          <div>
+            <span className="eyebrow">{t('活动中心')}</span>
+            <h1>{t('今日奖励')}</h1>
+          </div>
+          <strong className="events-compact-count">{claimable}</strong>
+          <span>{t('项待领取')}</span>
+        </section>
+        <section
+          className="events-compact-card card"
+          aria-labelledby="compact-checkin-title"
+        >
+          <div className="events-compact-row">
+            <div>
+              <h2 id="compact-checkin-title">{t('今日签到')}</h2>
+              <p>{t('2,000 金币 + 5 宝石')}</p>
+            </div>
+            <button
+              className="btn btn-primary"
+              type="button"
+              disabled={checkinClaimed}
+              onClick={claimCheckin}
+            >
+              {checkinClaimed ? t('已领取') : t('领取')}
+            </button>
+          </div>
+        </section>
+        <section
+          className="events-compact-card card"
+          aria-labelledby="compact-wheel-title"
+        >
+          <div className="events-compact-row">
+            <div>
+              <h2 id="compact-wheel-title">{t('幸运转盘')}</h2>
+              <p>{t('剩余 {count} 次', { count: wheelCount })}</p>
+            </div>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              disabled={wheelSpinning || wheelCount === 0}
+              onClick={spinWheel}
+            >
+              {wheelSpinning
+                ? t('抽取中')
+                : wheelCount
+                  ? t('免费旋转')
+                  : t('今日已用完')}
+            </button>
+          </div>
+          <button
+            className="text-action"
+            type="button"
+            disabled={wheelSpinning}
+            onClick={showRewardHistory}
+          >
+            <Icon name="clock" /> {t('查看奖励记录')}
+          </button>
+        </section>
+        <section
+          className="events-compact-card card"
+          aria-labelledby="compact-tasks-title"
+        >
+          <div className="events-compact-row">
+            <h2 id="compact-tasks-title">{t('每日任务')}</h2>
+            <span className="status">
+              {t('{count} 项待领取', { count: claimableTasks })}
+            </span>
+          </div>
+          <div className="events-compact-tasks">
+            {dailyMissions.slice(0, 2).map((mission) => {
+              const done = claimedTasks.has(mission.id)
+              const complete =
+                mission.current >= mission.total && !mission.expired
+              return (
+                <div className="events-compact-task" key={mission.id}>
+                  <span>
+                    {t(missionTitles[mission.title] || mission.title)}
+                  </span>
+                  <small>
+                    {mission.current}/{mission.total}
+                  </small>
+                  {complete && (
+                    <button
+                      className="text-action"
+                      type="button"
+                      disabled={done}
+                      onClick={() => claimTask(mission)}
+                    >
+                      {done ? t('已领取') : t('领取')}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <button
+            className="text-action"
+            type="button"
+            onClick={showFullEntryHint}
+          >
+            {t('更多任务')}
+          </button>
+        </section>
+      </div>
     )
   }
   return (
