@@ -99,7 +99,6 @@ export default function ProfilePage({
   const [settings, setSettings] = useState({
     sound: true,
     vibration: false,
-    autoplay: false,
   })
   const [editedName, setDisplayName] = useState(null)
   const displayName = editedName ?? profile.name
@@ -410,7 +409,7 @@ export default function ProfilePage({
               description={t('账号安全由 App 管理')}
             />
             <div className="security-list card">
-              {profileSecurity.map((item, index) => (
+              {profileSecurity.map((item) => (
                 <button
                   type="button"
                   key={item.label}
@@ -421,11 +420,7 @@ export default function ProfilePage({
                   })}
                 >
                   <span className="list-icon">
-                    <Icon
-                      name={
-                        index === 0 ? 'phone' : index === 1 ? 'shield' : 'lock'
-                      }
-                    />
+                    <Icon name="shield" />
                   </span>
                   <span>
                     <strong>{t(item.label)}</strong>
@@ -448,7 +443,6 @@ export default function ProfilePage({
               {[
                 ['sound', '音效', 'gamepad'],
                 ['vibration', '震动反馈', 'bolt'],
-                ['autoplay', '自动旋转', 'refresh'],
               ].map(([key, label, icon]) => (
                 <button
                   type="button"

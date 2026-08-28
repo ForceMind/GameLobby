@@ -125,7 +125,9 @@ window.JoyloopHost.request = async ({
 { version: 1, requestId, action: 'closeLobby', payload: {} }
 ```
 
-宿主收到后关闭当前 H5 容器或返回 App。大厅的返回 App/关闭控件只在宿主可用时提供；浏览器预览不应提供无效的退出动作。页面跳转到新的入口文档后，宿主必须重新注入 bridge/context；旧文档的回调必须丢弃。
+宿主收到后关闭当前 H5 容器或返回 App。左上角入口始终显示：业务子页返回当前布局的大厅；大厅有宿主时调用 `closeLobby`，无宿主的浏览器预览返回独立说明首页。该操作不是退出登录。
+
+六个业务页之间的普通链接使用 History API，只切换 React 内容，不重建 H5Provider，不重复初始化宿主展示模式，bridge/context 保持有效。说明首页进入或退出、刷新、直接打开和新窗口仍创建新的文档；这些情况下宿主必须重新注入 bridge/context，旧文档的回调必须丢弃。
 
 ## 5. 购买
 

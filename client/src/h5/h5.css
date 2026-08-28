@@ -59,10 +59,20 @@ body,
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 24px 20px 30px;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
+  scrollbar-gutter: stable;
 }
 .h5-lobby .header-inner {
   gap: 12px;
+}
+.h5-lobby .page-shell:focus {
+  outline: none;
+}
+@media (min-width: 1024px) {
+  .h5-lobby.is-full .exit-button {
+    flex: 0 0 128px;
+    min-width: 0;
+  }
 }
 .h5-lobby .bottom-nav {
   position: relative;

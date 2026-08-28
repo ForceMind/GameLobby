@@ -404,8 +404,5 @@ export const tabs = navItems
 export const heroBanners = banners
 export const missionSeed = dailyMissions
 export const profileSecurity = [
-  { label: '手机号绑定', value: '138****2096', status: '已绑定' },
-  { label: '登录保护', value: '新设备需二次验证', status: '已开启' },
-  { label: '支付密码', value: '上次更新于 30 天前', status: '管理' },
   { label: '异常登录检测', value: '近 30 天无异常', status: '安全' },
 ]

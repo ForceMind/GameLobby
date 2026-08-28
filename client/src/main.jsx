@@ -4,13 +4,16 @@ import './index.css'
 import App from './App.jsx'
 import LocaleProvider from './LocaleProvider.jsx'
 import H5Provider from './h5/H5Provider.jsx'
+import NavigationProvider from './NavigationProvider.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <LocaleProvider>
-      <H5Provider>
-        <App />
-      </H5Provider>
-    </LocaleProvider>
+    <NavigationProvider>
+      <LocaleProvider>
+        <H5Provider>
+          <App />
+        </H5Provider>
+      </LocaleProvider>
+    </NavigationProvider>
   </StrictMode>,
 )

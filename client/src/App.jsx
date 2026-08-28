@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
 import { navItems } from './data.js'
 import { Icon } from './icons.jsx'
@@ -16,6 +16,8 @@ import StorePage from './pages/StorePage.jsx'
 import TournamentsPage from './pages/TournamentsPage.jsx'
 import './h5/h5.css'
 import { formatWalletLabel } from './format.js'
+import { useNavigation } from './useNavigation.js'
+import { headerBack } from './navigation.js'
 
 function MainNav({ page, mobile = false }) {
   const { t, href } = useLocale()
@@ -55,19 +57,20 @@ function MainNav({ page, mobile = false }) {
 function AppHeader({ page, openWallet }) {
   const { t, href } = useLocale()
   const { mode, closeLobby, canCloseLobby, wallet: balances } = useH5()
+  const back = headerBack(page, canCloseLobby)
   return (
     <header className="app-header">
       <div className="header-inner">
-        {page === 'games' ? (
+        {back.href ? (
           <a
             className="exit-button"
-            href={href('lobby.html')}
-            aria-label={t('返回大厅')}
+            href={href(back.href)}
+            aria-label={t(back.label)}
           >
             <Icon name="chevronLeft" />
-            <span>{t('返回大厅')}</span>
+            <span>{t(back.label)}</span>
           </a>
-        ) : canCloseLobby ? (
+        ) : (
           <button
             className="exit-button"
             type="button"
@@ -77,7 +80,7 @@ function AppHeader({ page, openWallet }) {
             <Icon name="chevronLeft" />
             <span>{t('退出大厅')}</span>
           </button>
-        ) : null}
+        )}
         <a
           className="brand"
           href={href('lobby.html')}
@@ -134,18 +137,9 @@ function AppHeader({ page, openWallet }) {
 export default function App() {
   const { t, locale, href } = useLocale()
   const { mode, game, closeGame, account } = useH5()
-  const documentPage = document.body.dataset.page
-  const page = [
-    'welcome',
-    'lobby',
-    'games',
-    'tournaments',
-    'events',
-    'store',
-    'profile',
-  ].includes(documentPage)
-    ? documentPage
-    : 'lobby'
+  const { page, url: routeUrl, action: navigationAction } = useNavigation()
+  const mainRef = useRef(null)
+  const scrollPositions = useRef(new Map())
   const [modal, setModal] = useState(null)
   const [toastMessage, setToastMessage] = useState(null)
   const toastLocale = useRef(locale)
@@ -157,6 +151,26 @@ export default function App() {
   )
 
   useEffect(() => {
+    const clearOverlays = () => {
+      scrollPositions.current.set(routeUrl, mainRef.current?.scrollTop ?? 0)
+      setModal(null)
+      setToastMessage(null)
+    }
+    window.addEventListener('joyloop:navigate', clearOverlays)
+    return () => window.removeEventListener('joyloop:navigate', clearOverlays)
+  }, [routeUrl])
+
+  useLayoutEffect(() => {
+    const main = mainRef.current
+    if (!main) return
+    main.scrollTo({
+      top: navigationAction === 'pop' ? scrollPositions.current.get(routeUrl) ?? 0 : 0,
+      behavior: 'instant',
+    })
+    if (navigationAction !== 'load') main.focus({ preventScroll: true })
+  }, [routeUrl, navigationAction])
+
+  useEffect(() => {
     toastLocale.current = locale
   }, [locale])
   useEffect(() => {
@@ -165,7 +179,7 @@ export default function App() {
         const id = decodeURIComponent(window.location.hash.slice(1))
         const target = id && document.getElementById(id)
         if (target) {
-          target.scrollIntoView({ block: 'start', behavior: 'auto' })
+          target.scrollIntoView({ block: 'start', behavior: 'instant' })
           target.tabIndex = -1
           target.focus({ preventScroll: true })
         }
@@ -179,7 +193,7 @@ export default function App() {
       window.cancelAnimationFrame(frame)
       window.removeEventListener('hashchange', scrollToHash)
     }
-  }, [])
+  }, [routeUrl])
   useEffect(() => {
     if (!toastMessage) return undefined
     const timer = window.setTimeout(() => setToastMessage(null), 2800)
@@ -206,12 +220,13 @@ export default function App() {
 
   const renderPage = () => {
     const props = { openModal: setModal, toast, openWallet, showFullEntryHint }
-    if (page === 'games') return <GamesPage {...props} />
+    const catalogKey = new URL(routeUrl).searchParams.get('category') ?? ''
+    if (page === 'games') return <GamesPage key={catalogKey} {...props} />
     if (page === 'tournaments') return <TournamentsPage {...props} />
     if (page === 'events') return <EventsPage {...props} />
     if (page === 'store') return <StorePage {...props} />
     if (page === 'profile') return <ProfilePage key={account.id} {...props} />
-    return <LobbyPage {...props} />
+    return <LobbyPage key={catalogKey} {...props} />
   }
 
   if (page === 'welcome') return <EntryGate />
@@ -230,7 +245,7 @@ export default function App() {
               <span />
             </div>
             <AppHeader page={page} openWallet={openWallet} />
-            <main className="page-shell" id="main">
+            <main className="page-shell" id="main" ref={mainRef} tabIndex={-1}>
               {renderPage()}
             </main>
             <MainNav page={page} mobile />

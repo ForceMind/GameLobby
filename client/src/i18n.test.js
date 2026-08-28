@@ -13,6 +13,7 @@ import * as data from './data.js'
 const sourceFiles = [
   'App.jsx',
   'LocaleProvider.jsx',
+  'navigation.js',
   'ui.jsx',
   'GameCatalog.jsx',
   'pages/LobbyPage.jsx',

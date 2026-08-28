@@ -6,6 +6,7 @@ import {
   supportedLocales,
 } from './i18n.js'
 import { LocaleContext } from './useLocale.js'
+import { useNavigation } from './useNavigation.js'
 
 const pageTitles = {
   welcome: '原型说明',
@@ -18,7 +19,8 @@ const pageTitles = {
 }
 
 export default function LocaleProvider({ children }) {
-  const [locale, updateLocale] = useState(() => {
+  const { page } = useNavigation()
+  const [savedLocale, updateLocale] = useState(() => {
     let saved = 'zh'
     try {
       saved = window.localStorage.getItem('joyloop.locale') || 'zh'
@@ -27,6 +29,7 @@ export default function LocaleProvider({ children }) {
     }
     return resolveLocale(window.location.search, saved)
   })
+  const locale = resolveLocale(window.location.search, savedLocale)
   const t = useMemo(() => createTranslator(locale), [locale])
 
   const setLocale = (next) => {
@@ -45,15 +48,16 @@ export default function LocaleProvider({ children }) {
   useEffect(() => {
     document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'
     document.documentElement.dataset.locale = locale
-    document.title = `${t(pageTitles[document.body.dataset.page] ?? '大厅')} · Joyloop`
+    document.body.dataset.page = page
+    document.title = `${t(pageTitles[page] ?? '大厅')} · Joyloop`
     const description = document.querySelector('meta[name="description"]')
     if (description)
       description.content = t(
-        document.body.dataset.page === 'welcome'
+        page === 'welcome'
           ? 'Joyloop 高保真原型的展示范围与交互说明。'
           : 'Joyloop 游戏大厅，发现游戏、参与活动。',
       )
-  }, [locale, t])
+  }, [locale, t, page])
 
   const value = {
     t,
@@ -63,7 +67,7 @@ export default function LocaleProvider({ children }) {
       localizedHref(
         value,
         locale,
-        document.body.dataset.page === 'welcome'
+        page === 'welcome'
           ? undefined
           : new URLSearchParams(window.location.search).get('mode') === 'half'
             ? 'half'
