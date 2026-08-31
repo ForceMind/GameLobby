@@ -5,7 +5,6 @@ import { SectionHeader } from '../ui.jsx'
 import { GameCatalog, RecentGames } from '../GameCatalog.jsx'
 import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
-import SocialActivities from '../components/SocialActivities.jsx'
 import '../h5/compactLobby.css'
 
 const winnerRows = [
@@ -61,8 +60,6 @@ export default function LobbyPage({
   return (
     <div className="lobby-page compact-lobby">
       {mode !== 'half' && <RecentGames openModal={openModal} toast={toast} recentVisibility={privacySettings.shareRecentGames} />}
-
-      {mode !== 'half' && <SocialActivities openModal={openModal} toast={toast} />}
 
       <div className="page-layout lobby-games-row">
         <GameCatalog variant="popular" openModal={openModal} toast={toast} />

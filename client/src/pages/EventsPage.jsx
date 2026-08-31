@@ -5,6 +5,7 @@ import { formatNumber } from '../format.js'
 import { nextWheelAngle } from '../demoModel.js'
 import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
+import SocialActivities from '../components/SocialActivities.jsx'
 import '../h5/eventsCompact.css'
 
 const wheelPrizes = [
@@ -290,6 +291,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           </a>
         </nav>
       </section>
+      <SocialActivities openModal={openModal} toast={toast} />
       <section className="section" id="checkin" aria-labelledby="checkin-title">
         <SectionHeader
           title={t('七日签到')}
