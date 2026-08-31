@@ -27,6 +27,7 @@ export default function StorePage({
   const [vaultRefreshTime, setVaultRefreshTime] = useState('18:00')
   const [vaultTimeOpen, setVaultTimeOpen] = useState(false)
   const [vaultTimeChanged, setVaultTimeChanged] = useState(false)
+  const [vaultPurchased, setVaultPurchased] = useState(false)
   const purchaseLock = useRef(false)
   const alive = useRef(true)
   const latestTranslation = useRef(t)
@@ -177,7 +178,7 @@ export default function StorePage({
         <div className="vault-heading">
           <span className="vault-icon"><Icon name="lock" /></span>
           <div><span className="eyebrow">{t('昨日结算 · 活动权益')}</span><h2>{t('破产保险箱')}</h2><p>{t('昨日净损达到门槛后，按活动规则随机返还金币。')}</p></div>
-          <span className="status"><span className="status-dot" />{t('待结算')}</span>
+          <span className={`status ${vaultPurchased ? '' : 'vault-status-locked'}`}><span className="status-dot" />{t(vaultPurchased ? '已购买 · 待结算' : '待购买')}</span>
         </div>
         <div className="vault-stats">
           <div><span>{t('昨日净损')}</span><strong className="negative">-8,800</strong><small>{t('金币')}</small></div>
@@ -187,8 +188,9 @@ export default function StorePage({
         <div className="vault-footer">
           <div className="vault-probability"><span>{t('返还概率')}</span><span><b>60%</b> · 20%</span><span><b>30%</b> · 50%</span><span><b>10%</b> · 80%</span></div>
           <div className="vault-actions">
+            <button className={`btn ${vaultPurchased ? 'btn-secondary' : 'btn-primary'}`} type="button" disabled={vaultPurchased} onClick={() => openModal({ title: t('购买破产保险箱'), subtitle: t('500 金币 / 天'), body: <div className="vault-rule-modal"><p>{t('购买后可参与次日净损返还，是否命中和返还比例按活动概率计算。')}</p><p>{t('确认不会扣除真实金币，本月购买保持有效。')}</p></div>, confirmLabel: t('确认购买'), onConfirm: () => { setVaultPurchased(true); toast(t('破产保险箱已购买，等待次日结算')) } })}>{t(vaultPurchased ? '已购买' : '购买保险箱 · 500 金币')}</button>
             <div className="vault-time-picker">
-              <button className="btn btn-secondary" type="button" aria-haspopup="listbox" aria-expanded={vaultTimeOpen} disabled={vaultTimeChanged} onClick={() => setVaultTimeOpen((value) => !value)}><Icon name="clock" />{t('每日 {time} 刷新', { time: vaultRefreshTime })}<Icon name="chevronRight" /></button>
+              <button className="btn btn-secondary" type="button" aria-haspopup="listbox" aria-expanded={vaultTimeOpen} disabled={vaultTimeChanged || !vaultPurchased} onClick={() => setVaultTimeOpen((value) => !value)}><Icon name="clock" />{t(!vaultPurchased ? '购买后设置刷新时间' : '每日 {time} 刷新', { time: vaultRefreshTime })}<Icon name="chevronRight" /></button>
               {vaultTimeOpen && !vaultTimeChanged && <div className="vault-time-menu" role="listbox" aria-label={t('选择每日刷新时间')}>{vaultRefreshOptions.map((time) => <button key={time} type="button" role="option" aria-selected={time === vaultRefreshTime} onClick={() => { setVaultRefreshTime(time); setVaultTimeChanged(true); setVaultTimeOpen(false); toast(t('刷新时间已设置，下月可再次调整')) }}>{time}{time === vaultRefreshTime ? ' ✓' : ''}</button>)}</div>}
             </div>
             <button className="btn btn-primary" type="button" onClick={() => openModal({ title: t('破产保险箱规则'), subtitle: t('当前仅展示规则，不产生真实返还。'), body: <div className="vault-rule-modal"><p>{t('每日到达刷新时间后统计前一天的净损，约 3 小时后刷新至保险箱。')}</p><p>{t('返还比例和是否命中按活动概率计算，实际规则需由服务端配置。')}</p><p>{t('刷新时间每月只能调整 1 次；当前设置为 {time}。', { time: vaultRefreshTime })}</p></div>, confirmLabel: t('知道了'), cancelLabel: null })}>{t('查看规则')}</button>
