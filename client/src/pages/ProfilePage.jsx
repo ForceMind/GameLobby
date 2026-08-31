@@ -11,6 +11,7 @@ import { formatNumber, formatWalletLabel } from '../format.js'
 import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
 import { isValidNickname } from '../demoModel.js'
+import LanguagePicker from '../components/LanguagePicker.jsx'
 import '../h5/profileCompact.css'
 
 const compactStatLabels = {
@@ -212,19 +213,10 @@ export default function ProfilePage({
       title: t('语言设置'),
       subtitle: t(locale === 'en' ? '当前语言：英文' : '当前语言：简体中文'),
       body: (
-        <label className="form-field">
+        <div className="language-dialog form-field">
           <span>{t('语言')}</span>
-          <select
-            value={locale}
-            onChange={(event) => {
-              setLocale(event.target.value)
-              openModal(null)
-            }}
-          >
-            <option value="zh">{t('简体中文')}</option>
-            <option value="en">{t('英文')}</option>
-          </select>
-        </label>
+          <LanguagePicker locale={locale} onChange={(value) => { setLocale(value); openModal(null) }} />
+        </div>
       ),
       confirmLabel: t('关闭'),
       cancelLabel: null,

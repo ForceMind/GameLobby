@@ -1,0 +1,11 @@
+.language-picker { position: relative; min-width: 0; }
+.language-picker-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 12px; color: var(--ink); background: #fff; cursor: pointer; font: inherit; font-size: .82rem; font-weight: 650; text-align: left; }
+.language-picker-trigger:hover { border-color: #aebdd5; background: var(--surface-soft); }
+.language-picker-trigger svg { flex: 0 0 auto; color: var(--muted); font-size: .7rem; transform: rotate(90deg); }
+.language-picker-menu { position: absolute; z-index: 10; right: 0; left: 0; display: grid; gap: 3px; margin-top: 6px; padding: 6px; border: 1px solid var(--line-strong); border-radius: 13px; background: #fff; box-shadow: var(--shadow-md); }
+.language-picker-menu button { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding: 0 10px; border: 0; border-radius: 9px; color: var(--ink-soft); background: transparent; cursor: pointer; font: inherit; font-size: .76rem; text-align: left; }
+.language-picker-menu button:hover, .language-picker-menu button.is-selected { color: var(--primary); background: var(--primary-soft); }
+.language-picker-check { font-weight: 850; }
+.language-picker.is-compact { min-width: 76px; }
+.language-picker.is-compact .language-picker-trigger { min-height: 34px; padding: 0 9px; border-color: #d3deee; border-radius: 9px; font-size: .76rem; }
+.language-picker.is-compact .language-picker-menu { min-width: 142px; right: 0; left: auto; }

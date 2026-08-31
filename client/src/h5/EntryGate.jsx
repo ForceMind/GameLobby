@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useLocale } from '../useLocale.js'
 import { Icon } from '../icons.jsx'
+import LanguagePicker from '../components/LanguagePicker.jsx'
 import './entry.css'
 
 export default function EntryGate() {
@@ -17,17 +18,7 @@ export default function EntryGate() {
             <span />
           </span>
           <strong>Joyloop</strong>
-          <label className="prototype-entry-language">
-            <span className="sr-only">{t('界面语言')}</span>
-            <select
-              aria-label={t('界面语言')}
-              value={locale}
-              onChange={(event) => setLocale(event.target.value)}
-            >
-              <option value="zh">{t('简中')}</option>
-              <option value="en">EN</option>
-            </select>
-          </label>
+          <div className="prototype-entry-language"><LanguagePicker locale={locale} onChange={setLocale} compact /></div>
         </div>
         <p className="eyebrow">{t('原型评审')}</p>
         <h1 id="prototype-title">{t('Joyloop 游戏大厅')}</h1>

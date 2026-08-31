@@ -143,7 +143,7 @@ function AppHeader({ page, openWallet }) {
 
 export default function App() {
   const { t, locale, href } = useLocale()
-  const { mode, game, closeGame, account } = useH5()
+  const { mode, game, closeGame, account, openGame } = useH5()
   const { page, url: routeUrl, action: navigationAction } = useNavigation()
   const mainRef = useRef(null)
   const scrollPositions = useRef(new Map())
@@ -261,7 +261,7 @@ export default function App() {
               <span />
             </div>
             <AppHeader page={page} openWallet={openWallet} />
-            <WinnerFeed privacy={privacySettings} href={href} />
+            <WinnerFeed privacy={privacySettings} onOpenGame={(gameId) => openGame(gameId)} />
             <main className="page-shell" id="main" ref={mainRef} tabIndex={-1}>
               {renderPage()}
             </main>
