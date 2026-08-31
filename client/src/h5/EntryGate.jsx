@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocale } from '../useLocale.js'
 import { Icon } from '../icons.jsx'
 import LanguagePicker from '../components/LanguagePicker.jsx'
+import { appVersion } from '../version.js'
 import './entry.css'
 
 export default function EntryGate() {
@@ -17,7 +18,7 @@ export default function EntryGate() {
           <span className="brand-mark" aria-hidden="true">
             <span />
           </span>
-          <strong>Joyloop</strong>
+          <span className="prototype-entry-brand-copy"><strong>Joyloop</strong><small>v{appVersion}</small></span>
           <div className="prototype-entry-language"><LanguagePicker locale={locale} onChange={setLocale} compact /></div>
         </div>
         <p className="eyebrow">{t('原型评审')}</p>

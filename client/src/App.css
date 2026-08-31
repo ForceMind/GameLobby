@@ -289,6 +289,13 @@ section[id] {
   letter-spacing: 0.04em;
 }
 
+.brand-copy .brand-version {
+  color: var(--primary);
+  font-size: 0.55rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
 .desktop-nav {
   display: flex;
   align-items: center;
@@ -2545,7 +2552,7 @@ section[id] {
     padding-inline: 10px;
   }
   html[data-locale='en'] .exit-button span,
-  html[data-locale='en'] .brand-copy small {
+  html[data-locale='en'] .brand-copy small:not(.brand-version) {
     display: none;
   }
   html[data-locale='en'] .desktop-nav a {
@@ -2651,6 +2658,9 @@ section[id] {
   }
   .brand-copy small {
     display: none;
+  }
+  .brand-copy .brand-version {
+    display: block;
   }
   .asset-chip {
     min-width: 0;

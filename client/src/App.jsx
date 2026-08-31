@@ -19,6 +19,7 @@ import { formatWalletLabel } from './format.js'
 import { useNavigation } from './useNavigation.js'
 import { headerBack } from './navigation.js'
 import WinnerFeed from './components/WinnerFeed.jsx'
+import { appVersion } from './version.js'
 
 const defaultPrivacySettings = {
   receiveWinNotifications: true,
@@ -99,6 +100,7 @@ function AppHeader({ page, openWallet }) {
           <span className="brand-copy">
             <strong>Joyloop</strong>
             <small>Play on the bright side.</small>
+            <small className="brand-version">v{appVersion}</small>
           </span>
         </a>
         <MainNav page={page} />

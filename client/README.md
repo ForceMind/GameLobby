@@ -1,5 +1,7 @@
 # Joyloop 内嵌 H5 v0.3.0 高保真原型
 
+顶部 Joyloop 品牌下方显示当前构建版本号 `v0.3.0`，入口页和业务页保持一致。
+
 这是 Joyloop 游戏大厅的 React + Vite 静态前端，面向内置在 App 中的 H5，也可独立作为 Cloudflare Pages 静态站点预览。当前代码不连接真实数据库、鉴权、游戏引擎或支付服务；宿主接入方式见 [HOST-INTEGRATION.md](HOST-INTEGRATION.md)。
 
 ## v0.2.5 已有能力
