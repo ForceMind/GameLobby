@@ -13,6 +13,8 @@
 - 家族 / 派对活动模块位于活动页面总览下方；大厅首页保留游戏列表和赢家榜，半屏活动页按游戏优先策略隐藏该模块。
 - 大厅精选活动 Banner 支持鼠标拖拽和触摸左右滑动切换，也可使用原有圆点与自动轮播控制。
 
+直播间导流方案（Hot Live Rooms、直播 Banner、游戏详情页“找房间一起玩”及 `from=game_center` 归因）属于下一阶段待评审范围，不是当前 v0.2.5 的已实现能力。
+
 ## 页面入口
 
 Vite 会生成七个入口：`index.html`（独立原型说明首页）、`lobby.html`、`games.html`、`tournaments.html`、`events.html`、`store.html` 和 `profile.html`。生产输出位于 `dist/`。
