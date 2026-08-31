@@ -21,7 +21,7 @@ npm ci
 npm run package:pages
 ```
 
-脚本会在仓库根目录生成 `artifacts/joyloop-cf-pages-<date>-<gitshort>.zip`、SHA-256 文件和 manifest。ZIP 顶层直接包含七个页面 HTML、当前版本的新入口、`404.html`、`assets/` 和 `_headers`，没有多余的 `dist/` 外壳。
+脚本会在仓库根目录生成 `artifacts/joyloop-cf-pages-<date>-<gitshort>.zip`、SHA-256 文件和 manifest。ZIP 顶层直接包含八个页面 HTML、当前版本的新入口、`404.html`、`assets/` 和 `_headers`，没有多余的 `dist/` 外壳。
 
 在 Cloudflare 控制台进入 **Workers & Pages → 创建 Pages 应用 → Direct Upload / 直接上传**，上传 ZIP 并确认部署。已有 Git 集成项目不能用控制台拖拽覆盖，应使用 Git 构建流程，或另建 Direct Upload 项目。[Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)
 

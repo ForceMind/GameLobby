@@ -26,6 +26,7 @@ export default function EntryGate() {
         <p className="prototype-entry-intro">
           {t('用于评审页面设计、主要交互与全屏／半屏体验。')}
         </p>
+        <a className="prototype-doc-link" href={href('docs.html')}><Icon name="calendar" />{t('查看产品与运营文档')} <Icon name="chevronRight" /></a>
         <ul className="prototype-entry-notes">
           <li>
             <Icon name="gamepad" />

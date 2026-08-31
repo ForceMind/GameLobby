@@ -3,6 +3,7 @@ export const businessPages = ['lobby', 'games', 'tournaments', 'events', 'store'
 export function pageFromUrl(value) {
   const url = new URL(value, 'https://joyloop.invalid/')
   const name = url.pathname.split('/').filter(Boolean).at(-1)?.replace(/\.html$/, '')
+  if (name === 'docs') return 'docs'
   return businessPages.includes(name) ? name : name === 'index' || !name ? 'welcome' : null
 }
 

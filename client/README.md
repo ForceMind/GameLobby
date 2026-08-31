@@ -30,7 +30,7 @@
 
 ## 页面入口
 
-Vite 会生成七个入口：`index.html`（独立原型说明首页）、`lobby.html`、`games.html`、`tournaments.html`、`events.html`、`store.html` 和 `profile.html`。生产输出位于 `dist/`。
+Vite 会生成八个入口：`index.html`（独立原型说明首页）、`docs.html`（产品与运营文档）、`lobby.html`、`games.html`、`tournaments.html`、`events.html`、`store.html` 和 `profile.html`。生产输出位于 `dist/`。
 
 v0.3.0 另生成带随机后缀的 `start-v0.3.0-<token>.html`（与说明首页完全一致的新 URL），用于部署后避开旧入口缓存；JS/CSS 放在 `assets/release-0.3.0-<token>/`，同一包内所有 HTML 共用这一批版本化资源。每次生产构建都会重新生成 16 位随机十六进制 token。所有响应配置 `Cache-Control: no-store`，移除原来覆盖 `/assets/*` 的一年 immutable 缓存。根目录 `404.html` 让 Pages 对不存在的路径返回 404，不再将缺失脚本替换成首页的 200 HTML。不能通过更改 HTML 的 MIME 类型伪装修复脚本缺失。
 

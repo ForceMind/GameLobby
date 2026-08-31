@@ -20,6 +20,7 @@ import { useNavigation } from './useNavigation.js'
 import { headerBack } from './navigation.js'
 import WinnerFeed from './components/WinnerFeed.jsx'
 import { appVersion } from './version.js'
+import DocsPage from './pages/DocsPage.jsx'
 
 const defaultPrivacySettings = {
   receiveWinNotifications: true,
@@ -248,6 +249,7 @@ export default function App() {
   }
 
   if (page === 'welcome') return <EntryGate />
+  if (page === 'docs') return <DocsPage />
 
   return (
     <div className="h5-stage">

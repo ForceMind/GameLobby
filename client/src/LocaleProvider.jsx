@@ -16,6 +16,7 @@ const pageTitles = {
   events: '活动中心',
   store: '金币商城',
   profile: '我的',
+  docs: '产品与运营文档',
 }
 
 export default function LocaleProvider({ children }) {

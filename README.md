@@ -1,6 +1,6 @@
 # Joyloop 游戏大厅
 
-Joyloop 是一个可部署到 Cloudflare Pages 的 React + Vite 内嵌 H5 游戏大厅，当前维护版本为 **v0.3.1 高保真原型**。支持简体中文与英文，包含原型说明首页、大厅、全部游戏、赛事、活动、商城和个人中心七个页面。业务页之间只切换内容，不重新加载大厅外框；左上角返回始终可用。此版每次构建生成版本号加随机后缀的新入口和资源目录，禁止持久缓存，并提供独立 404 页面。
+Joyloop 是一个可部署到 Cloudflare Pages 的 React + Vite 内嵌 H5 游戏大厅，当前维护版本为 **v0.3.1 高保真原型**。支持简体中文与英文，包含原型说明首页、产品与运营文档、大厅、全部游戏、赛事、活动、商城和个人中心八个页面。业务页之间只切换内容，不重新加载大厅外框；左上角返回始终可用。此版每次构建生成版本号加随机后缀的新入口和资源目录，禁止持久缓存，并提供独立 404 页面。
 
 ```bash
 cd client
@@ -14,6 +14,7 @@ npm run package:pages
 
 ## 阅读路径
 
+- 产品与运营文档：`client/docs.html`（也可从原型首页进入）
 - 页面结构、运行与维护：[client/README.md](client/README.md)
 - Cloudflare Pages 上传与 Git 构建：[部署指南](client/DEPLOY-CF-PAGES.md)
 - 宿主 App 身份、容器尺寸与购买回调：[宿主接入契约](client/HOST-INTEGRATION.md)

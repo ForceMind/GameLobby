@@ -17,6 +17,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: resolve(projectDirectory, 'index.html'),
+        docs: resolve(projectDirectory, 'docs.html'),
         lobby: resolve(projectDirectory, 'lobby.html'),
         games: resolve(projectDirectory, 'games.html'),
         tournaments: resolve(projectDirectory, 'tournaments.html'),

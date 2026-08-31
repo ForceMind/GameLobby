@@ -36,6 +36,7 @@ const distDir = resolve(clientDir, 'dist')
 const artifactDir = resolve(repoDir, 'artifacts')
 const entryFiles = [
   'index.html',
+  'docs.html',
   'lobby.html',
   'games.html',
   'tournaments.html',

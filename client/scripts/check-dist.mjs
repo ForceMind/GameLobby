@@ -7,6 +7,7 @@ import { releaseAssets, releaseEntry, releaseToken } from './release-config.mjs'
 const output = fileURLToPath(new URL('../dist/', import.meta.url))
 const pages = {
   index: 'welcome',
+  docs: 'docs',
   lobby: 'lobby',
   games: 'games',
   tournaments: 'tournaments',
@@ -66,5 +67,5 @@ assert.equal(
   'Fresh release entry must match the normal entry',
 )
 console.log(
-  '✓ Seven pages, fresh release entry, versioned assets, 404 and no-store headers verified.',
+  '✓ Eight pages, fresh release entry, versioned assets, 404 and no-store headers verified.',
 )
