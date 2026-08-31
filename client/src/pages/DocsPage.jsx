@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { appVersion } from '../version.js'
 import './docs.css'
@@ -6,10 +7,12 @@ const toc = [
   ['overview', '文档说明'],
   ['pages', '页面与功能地图'],
   ['global', '全局交互规范'],
+  ['development', '开发实现说明'],
   ['games', '游戏中心与直播间'],
   ['events', '活动、家族与派对'],
   ['store', '商城与破产保险箱'],
   ['admin', '后台管理与运营配置'],
+  ['backend', '后台与运营操作说明'],
   ['data', '数据、逻辑与状态'],
   ['ops', '运营流程与风险'],
   ['qa', '验收清单'],
@@ -24,6 +27,46 @@ function StatusChip({ children, tone = 'current' }) {
 }
 
 export default function DocsPage() {
+  const [activeSection, setActiveSection] = useState('overview')
+  const handleSectionNav = (event, id) => {
+    event.preventDefault()
+    const page = document.querySelector('.docs-page')
+    const target = document.getElementById(id)
+    if (!page || !target) return
+    const top = target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - 20
+    page.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${id}`)
+    setActiveSection(id)
+  }
+  useEffect(() => {
+    const page = document.querySelector('.docs-page')
+    if (!page) return undefined
+    const updateActiveSection = () => {
+      const marker = page.getBoundingClientRect().top + 130
+      let current = toc[0][0]
+      toc.forEach(([id]) => {
+        const target = document.getElementById(id)
+        if (target && target.getBoundingClientRect().top <= marker) current = id
+      })
+      setActiveSection(current)
+    }
+    const initialHash = decodeURIComponent(window.location.hash.slice(1))
+    const frame = window.requestAnimationFrame(() => {
+      if (initialHash && toc.some(([id]) => id === initialHash)) {
+        const target = document.getElementById(initialHash)
+        const top = target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - 20
+        page.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
+        setActiveSection(initialHash)
+      } else updateActiveSection()
+    })
+    page.addEventListener('scroll', updateActiveSection, { passive: true })
+    window.addEventListener('resize', updateActiveSection)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      page.removeEventListener('scroll', updateActiveSection)
+      window.removeEventListener('resize', updateActiveSection)
+    }
+  }, [])
   return (
     <main className="docs-page">
       <header className="docs-header">
@@ -37,7 +80,7 @@ export default function DocsPage() {
           <div className="docs-sidebar-card">
             <span className="eyebrow">PRODUCT · OPS</span>
             <strong>目录</strong>
-            <nav aria-label="文档目录">{toc.map(([id, label]) => <a href={`#${id}`} key={id}>{label}</a>)}</nav>
+            <nav aria-label="文档目录">{toc.map(([id, label]) => <a className={activeSection === id ? 'is-active' : ''} aria-current={activeSection === id ? 'location' : undefined} href={`#${id}`} onClick={(event) => handleSectionNav(event, id)} key={id}>{label}</a>)}</nav>
           </div>
         </aside>
         <article className="docs-content">
@@ -74,6 +117,12 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
+            <SectionTitle id="development" eyebrow="04 · DEVELOPMENT" title="开发实现说明" description="这一节用自然语言说明开发时各层分别负责什么，以及功能如何从入口走到结果。" />
+            <div className="docs-prose"><p>前端的第一责任是把用户当前能做什么说清楚。页面负责布局、按钮、筛选、弹窗和状态反馈，不能把本地静态数据当成账户事实。账号、余额、游戏可用性、直播房间、活动资格和最终结算都应由宿主或服务端提供，前端只负责按照契约渲染。</p><p>页面之间的跳转由统一导航层处理。普通业务页通过 History API 切换内容，并保留当前语言、展示模式和滚动位置；游戏和直播间属于需要宿主接管的动作，必须经过桥接层生成请求。桥接层负责补齐来源、房间和游戏标识，处理宿主不存在、宿主拒绝、超时和异常，不允许前端直接把“请求已发送”显示成“已经成功”。</p><p>每个高风险功能都需要有明确的状态机。以直播间为例，房间会经历加载、直播中、已结束、游戏维护、麦位已满和无权限；以商城活动为例，会经历未购买、已生效、等待结算、结算完成和失败。状态变化应由服务端事件或明确的响应推动，页面刷新后不应凭空恢复成功状态。</p><p>开发实现还要为后续真实数据留下替换点：列表字段使用稳定 ID，展示文案通过翻译键，金额使用数值字段而不是拼接后的字符串，时间带上时区或服务端时间，操作请求带 requestId 或业务唯一键。这样静态原型可以直接替换为 API，而不需要重写页面结构。</p></div>
+            <div className="docs-rule-list docs-rule-list-wide"><div><span>组件边界</span><strong>展示组件不直接修改钱包、订单或结算事实</strong></div><div><span>接口边界</span><strong>前端只依赖已定义字段和明确错误码</strong></div><div><span>状态边界</span><strong>加载、成功、失败、过期和未授权都可恢复</strong></div><div><span>数据边界</span><strong>金额、时间、ID 和状态分开传递</strong></div><div><span>可观测性</span><strong>曝光、点击、跳转、结果和异常可关联</strong></div><div><span>测试边界</span><strong>正常路径与失败路径同等验收</strong></div></div>
+          </section>
+
+          <section className="docs-section">
             <SectionTitle id="games" eyebrow="04 · GAME CENTER" title="游戏中心与直播间" description="直播入口要可发现，但不能让 Banner 成为唯一入口。" />
             <div className="docs-grid docs-grid-3"><div><h3>Hot Live Rooms</h3><p>位于 GamesPage 顶部，支持全部、家族厅、派对房、单人游戏房筛选；直播中优先，再按参与人数、在线人数和房间 ID 稳定排序。</p></div><div><h3>大厅快速入口</h3><p>位于大厅“最近在玩”下方，展示最多 3 个具体房间，显示房名、主播、游戏、房型和在线人数。</p></div><div><h3>Banner</h3><p>直播 Banner 只推荐一个具体房间；完整直播专区从独立入口进入，不占用热门游戏列表。</p></div></div>
             <div className="docs-code"><code>from=game_center<br />entry=hot_rooms | live_teaser | banner | game_detail<br />room_id=xxx · game_id=xxx · mode=full|half · lang=zh|en</code></div>
@@ -100,6 +149,12 @@ export default function DocsPage() {
             <SectionTitle id="admin" eyebrow="07 · ADMIN CONSOLE" title="后台管理与运营配置" description="后台是活动、游戏和直播展示的唯一配置源。" />
             <div className="docs-admin-grid"><article><span className="docs-admin-icon"><Icon name="calendar" /></span><h3>活动配置</h3><dl><dt>基础</dt><dd>活动 ID、名称、周期、时区、状态、展示渠道</dd><dt>任务</dt><dd>任务类型、目标值、每日上限、资格人群</dd><dt>奖励</dt><dd>金币、宝石、礼物、宝箱、库存、过期时间</dd><dt>发布</dt><dd>草稿 → 灰度 → 生效 → 暂停 → 结束，记录操作人</dd></dl></article><article><span className="docs-admin-icon"><Icon name="gamepad" /></span><h3>游戏上下架</h3><dl><dt>目录</dt><dd>游戏 ID、名称、分类、封面、地区白名单、年龄限制</dd><dt>状态</dt><dd>即将上线、可进入、维护中、下架；前台按钮随状态变化</dd><dt>排序</dt><dd>热门、实时、活动推荐和运营置顶分层配置</dd><dt>联动</dt><dd>下架时同步移除 Banner、直播房和活动任务入口</dd></dl></article><article><span className="docs-admin-icon"><Icon name="users" /></span><h3>直播展示规则</h3><dl><dt>房间</dt><dd>房间 ID、房型、主播、游戏、封面、在线人数、麦位</dd><dt>筛选</dt><dd>地区、游戏权限、家族/派对/单人类型</dd><dt>排序</dt><dd>直播状态、参与人数、在线人数、质量分、稳定 ID</dd><dt>安全</dt><dd>房间结束、游戏不匹配、权限变更必须实时下线</dd></dl></article></div>
             <div className="docs-admin-grid"><article><span className="docs-admin-icon"><Icon name="coin" /></span><h3>定价与结算</h3><dl><dt>金币礼包</dt><dd>SKU、金币、折扣、赠送宝石、展示状态</dd><dt>保险箱</dt><dd>购买价、有效期、预计返还展示、结算延迟</dd><dt>限制</dt><dd>每日/每月次数、地区、账号等级、风控标签</dd><dt>审计</dt><dd>价格变更、规则变更、手工补发和撤销全量留痕</dd></dl></article><article><span className="docs-admin-icon"><Icon name="eye" /></span><h3>展示与隐私</h3><dl><dt>获胜弹幕</dt><dd>接收、发送、好友展示开关和脱敏策略</dd><dt>中奖列表</dt><dd>展示时长、昵称处理、头像来源、刷新频率</dd><dt>Banner</dt><dd>图片、文案、CTA 类型、目标房间、优先级、时间段</dd><dt>降级</dt><dd>数据为空或服务异常时隐藏入口并保留基础页面</dd></dl></article><article><span className="docs-admin-icon"><Icon name="shield" /></span><h3>权限与运营</h3><dl><dt>角色</dt><dd>产品、运营、审核、客服、财务、只读</dd><dt>审批</dt><dd>高风险概率、价格、结算规则需双人审批</dd><dt>监控</dt><dd>曝光、点击、进房、开局、归因、异常率和投诉</dd><dt>回滚</dt><dd>支持按活动、游戏、地区和房间维度快速暂停</dd></dl></article></div>
+          </section>
+
+          <section className="docs-section">
+            <SectionTitle id="backend" eyebrow="08 · BACK OFFICE OPERATIONS" title="后台与运营操作说明" description="后台不是简单的开关集合，而是从配置、审核、发布到结算复盘的一条责任链。" />
+            <div className="docs-prose"><p>运营创建活动时，先填写活动目标和适用人群，再配置入口、任务、奖励、展示时间和结束条件。草稿阶段允许反复修改；进入审核后，价格、概率、库存、地区和结算字段应被锁定，任何修改都产生新版本并重新审核。发布时优先使用小流量或地区灰度，确认数据和文案正确后再扩大范围。</p><p>游戏上下架要从目录、活动、Banner、直播房和任务五个方向联动处理。游戏下架或进入维护时，列表要停止推荐，相关活动入口要同步隐藏，已进入的用户要得到可解释的提示。恢复上架后，排序、封面和权限需要重新校验，不能只恢复一个“可见”开关。</p><p>直播运营需要持续检查房间和游戏的匹配关系。房间结束、主播离线、麦位变化、地区权限变化或游戏维护，都应从推荐列表中及时移除。快速入口、Banner、游戏详情和 Hot Live Rooms 必须使用同一份房间事实，不能出现同一个房间在一个入口可进入、另一个入口却显示不可用的情况。</p><p>活动结束后，运营要先冻结数据快照，再核对参与人数、任务完成、奖励发放、退款/撤销、异常账号和客服申诉。只有完成复盘，活动才进入归档状态。任何人工补发、规则调整或结算修正都应记录原因、操作者、审批人和影响范围。</p></div>
+            <ol className="docs-steps"><li><b>配置</b><span>建立草稿并填写完整字段，禁止直接改线上生效版本。</span></li><li><b>审核</b><span>产品核对流程，运营核对资源，风控/财务核对价格和结算。</span></li><li><b>灰度</b><span>限制地区或用户组，观察曝光、点击、完成和异常。</span></li><li><b>发布</b><span>扩大范围并持续监控，出现异常时按维度暂停。</span></li><li><b>归档</b><span>冻结快照、完成结算复核，保留版本和审计记录。</span></li></ol>
           </section>
 
           <section className="docs-section">
