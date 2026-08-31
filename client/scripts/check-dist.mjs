@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile, access } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
-import { releaseAssets, releaseEntry } from './release-config.mjs'
+import { releaseAssets, releaseEntry, releaseToken } from './release-config.mjs'
 
 const output = fileURLToPath(new URL('../dist/', import.meta.url))
 const pages = {
@@ -55,6 +55,8 @@ const headers = await readFile(resolve(output, '_headers'), 'utf8')
 assert.match(headers, /X-Content-Type-Options: nosniff/)
 assert.match(headers, /Cache-Control: no-store/)
 assert.doesNotMatch(headers, /immutable|max-age=31536000/)
+assert.match(releaseAssets, /^assets\/release-\d+\.\d+\.\d+-[a-f0-9]{16}$/)
+assert.match(releaseToken, /^[a-f0-9]{16}$/)
 const notFound = await readFile(resolve(output, '404.html'), 'utf8')
 assert.match(notFound, /Page not found/)
 assert.doesNotMatch(notFound, /<script/i, '404 recovery must not depend on JS')

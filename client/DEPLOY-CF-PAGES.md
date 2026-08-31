@@ -5,8 +5,8 @@
 ## v0.2.4 白屏问题修正包
 
 1. 将新 ZIP **完整上传为一次新部署**，不要只替换 HTML 或混用旧版 assets。
-2. 部署成功后先打开 `https://joyloop.xincreates.com/start-v0.2.4.html`，此 URL 不复用旧首页缓存。
-3. Network 中应请求 `/assets/release-0.2.4/main-*.js`，状态 200、Content-Type 为 JavaScript，响应不是 HTML。样式同目录且为 `text/css`。
+2. 部署成功后从本次 ZIP 的文件列表复制 `start-v0.2.4-<随机后缀>.html` 打开；不要手输旧入口。这个 URL 和资源目录每次构建都会变化，不复用旧首页缓存。
+3. Network 中应请求 `/assets/release-0.2.4-<同一随机后缀>/main-*.js`，状态 200、Content-Type 为 JavaScript，响应不是 HTML。样式同目录且为 `text/css`。
 4. 新包的所有响应应带 `Cache-Control: no-store`。如果自定义域名有强制缓存、Worker 或重写规则，检查它们是否覆盖 Pages 行为；必要时针对该站点旧缓存 URL 清除缓存，避免影响其他站点。
 5. 请求一个确定不存在的脚本，例如 `/assets/release-0.2.4/not-present.js`，应得到 404，而不是首页 200。404 的 HTML 内容是正常错误页，不能将它伪装为 JavaScript。
 

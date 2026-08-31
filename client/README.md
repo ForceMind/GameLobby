@@ -6,7 +6,7 @@
 
 Vite 会生成七个入口：`index.html`（独立原型说明首页）、`lobby.html`、`games.html`、`tournaments.html`、`events.html`、`store.html` 和 `profile.html`。生产输出位于 `dist/`。
 
-v0.2.4 另生成 `start-v0.2.4.html`（与说明首页完全一致的新 URL），用于部署后避开旧入口缓存；JS/CSS 放在 `assets/release-0.2.4/`。所有响应配置 `Cache-Control: no-store`，移除原来覆盖 `/assets/*` 的一年 immutable 缓存。根目录 `404.html` 让 Pages 对不存在的路径返回 404，不再将缺失脚本替换成首页的 200 HTML。不能通过更改 HTML 的 MIME 类型伪装修复脚本缺失。
+v0.2.4 另生成带随机后缀的 `start-v0.2.4-<token>.html`（与说明首页完全一致的新 URL），用于部署后避开旧入口缓存；JS/CSS 放在 `assets/release-0.2.4-<token>/`，同一包内所有 HTML 共用这一批版本化资源。每次生产构建都会重新生成 16 位随机十六进制 token。所有响应配置 `Cache-Control: no-store`，移除原来覆盖 `/assets/*` 的一年 immutable 缓存。根目录 `404.html` 让 Pages 对不存在的路径返回 404，不再将缺失脚本替换成首页的 200 HTML。不能通过更改 HTML 的 MIME 类型伪装修复脚本缺失。
 
 此策略优先保证频繁更新的原型一致性，会增加重新打开页面时的资源下载。旧浏览器或 CDN 已存储的响应不能由新包追溯删除，因此发布后请先用新入口验证；若自定义域名有强制缓存或重写规则，需另行在 Cloudflare 控制台调整，不能靠 ZIP 覆盖这些规则。
 
