@@ -62,6 +62,8 @@ export default function LobbyPage({
     <div className="lobby-page compact-lobby">
       {mode !== 'half' && <RecentGames openModal={openModal} toast={toast} recentVisibility={privacySettings.shareRecentGames} />}
 
+      {mode !== 'half' && <SocialActivities openModal={openModal} toast={toast} />}
+
       <div className="page-layout lobby-games-row">
         <GameCatalog variant="popular" openModal={openModal} toast={toast} />
 
@@ -93,7 +95,6 @@ export default function LobbyPage({
         </aside>
       </div>
 
-      {mode !== 'half' && <SocialActivities openModal={openModal} toast={toast} />}
 
       {mode === 'half' && <RecentGames openModal={openModal} toast={toast} recentVisibility={privacySettings.shareRecentGames} />}
 

@@ -9,7 +9,7 @@
     flex-direction: column;
   }
   .h5-lobby.is-half .compact-store > .page-head,
-  .h5-lobby.is-half .compact-store > .safety-strip,
+  .h5-lobby.is-half .compact-store > .recovery-vault,
   .h5-lobby.is-half .compact-store .fine-print,
   .h5-lobby.is-half .compact-store .store-receipts,
   .h5-lobby.is-half .compact-store > .page-layout {
