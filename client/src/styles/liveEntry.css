@@ -1,0 +1,78 @@
+/* Shared live-room entry treatments. The banner keeps the existing layout while
+   giving the live slide a warmer, broadcast-like emphasis. */
+.banner-live {
+  background:
+    radial-gradient(circle at 82% 22%, rgba(255, 220, 128, 0.35), transparent 28%),
+    linear-gradient(125deg, #45206f, #b84e73 58%, #ef9c45);
+}
+
+.banner-live-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(29, 13, 61, 0.22);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffe08c;
+  box-shadow: 0 0 0 4px rgba(255, 224, 140, 0.18);
+}
+
+@media (max-width: 720px) {
+  .banner-live-meta {
+    margin-top: 14px;
+    font-size: 0.68rem;
+  }
+}
+
+/* In-game live-room discovery action. It is intentionally secondary to play. */
+.game-live-room-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 226, 161, 0.46);
+  border-radius: 13px;
+  color: #ffe8af;
+  background: rgba(255, 255, 255, 0.08);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.game-live-room-action:hover {
+  border-color: rgba(255, 226, 161, 0.8);
+  background: rgba(255, 220, 124, 0.16);
+  transform: translateY(-1px);
+}
+
+.game-live-room-action:focus-visible {
+  outline: 3px solid rgba(255, 225, 145, 0.65);
+  outline-offset: 3px;
+}
+
+.game-live-room-action small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.game-live-room-action[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}

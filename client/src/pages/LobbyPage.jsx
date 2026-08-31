@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../icons.jsx'
-import { banners } from '../data.js'
+import { banners, games, liveRooms } from '../data.js'
 import { SectionHeader } from '../ui.jsx'
 import { GameCatalog, RecentGames } from '../GameCatalog.jsx'
 import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
 import '../h5/compactLobby.css'
+import '../styles/liveEntry.css'
 
 const winnerRows = [
   ['NovaRay', '累积大奖 · Golden Pharaoh', '+268,800'],
@@ -26,6 +27,20 @@ export default function LobbyPage({
   const [paused, setPaused] = useState(false)
   const [interacting, setInteracting] = useState(false)
   const swipeStart = useRef(null)
+  const liveRoomCount = liveRooms.filter((room) => room.status === 'live').length
+  const liveBanner = {
+    title: '正在直播',
+    subtitle: t('{count} 个房间正在游戏，进房一起玩。', { count: liveRoomCount }),
+    badge: 'Hot Live Rooms',
+    cta: '查看直播房间',
+    accent: 'live',
+    isLive: true,
+  }
+  const liveRoomNames = liveRooms
+    .filter((room) => room.status === 'live')
+    .slice(0, 2)
+    .map((room) => games.find((game) => game.id === room.gameId)?.name ?? room.gameId)
+  const bannerSlides = [...banners, liveBanner]
 
   useEffect(() => {
     if (
@@ -36,13 +51,13 @@ export default function LobbyPage({
     )
       return undefined
     const timer = window.setInterval(
-      () => setBannerIndex((current) => (current + 1) % banners.length),
+      () => setBannerIndex((current) => (current + 1) % bannerSlides.length),
       5600,
     )
     return () => window.clearInterval(timer)
-  }, [mode, paused, interacting])
+  }, [mode, paused, interacting, bannerSlides.length])
 
-  const banner = banners[bannerIndex]
+  const banner = bannerSlides[bannerIndex] ?? bannerSlides[0]
   const startBannerSwipe = (event) => {
     if (event.target.closest('a,button')) return
     swipeStart.current = { x: event.clientX }
@@ -56,7 +71,7 @@ export default function LobbyPage({
     if (!start) return
     const distance = event.clientX - start.x
     if (Math.abs(distance) < 48) return
-    setBannerIndex((current) => (current + (distance < 0 ? 1 : banners.length - 1)) % banners.length)
+    setBannerIndex((current) => (current + (distance < 0 ? 1 : bannerSlides.length - 1)) % bannerSlides.length)
   }
   const renderWinners = () => (
     <div className="winner-list card">
@@ -141,12 +156,20 @@ export default function LobbyPage({
                 8,880,000 <small>{t('金币奖池')}</small>
               </strong>
             )}
+            {banner.isLive && (
+              <div className="banner-live-meta" aria-label={t('正在直播')}>
+                <span className="live-dot" aria-hidden="true" />
+                <span>{liveRoomNames.join(' · ')}</span>
+              </div>
+            )}
           </div>
           <div className="banner-actions">
             <a
               className="btn btn-light"
               href={href(
-                bannerIndex === 0
+                banner.isLive
+                  ? 'games.html?from=game_center&entry=banner#live-rooms'
+                  : bannerIndex === 0
                   ? 'events.html#wheel'
                   : `games.html?category=${bannerIndex === 1 ? 'slots' : 'casual'}#game-catalog`,
               )}
@@ -158,7 +181,7 @@ export default function LobbyPage({
             </a>
           </div>
           <div className="banner-controls" aria-label={t('活动轮播控制')}>
-            {banners.map((item, index) => (
+            {bannerSlides.map((item, index) => (
               <button
                 key={item.title}
                 type="button"

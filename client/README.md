@@ -1,8 +1,8 @@
-# Joyloop 内嵌 H5 v0.2.5 高保真原型
+# Joyloop 内嵌 H5 v0.3.0 高保真原型
 
 这是 Joyloop 游戏大厅的 React + Vite 静态前端，面向内置在 App 中的 H5，也可独立作为 Cloudflare Pages 静态站点预览。当前代码不连接真实数据库、鉴权、游戏引擎或支付服务；宿主接入方式见 [HOST-INTEGRATION.md](HOST-INTEGRATION.md)。
 
-## v0.2.5 社交获胜动态
+## v0.2.5 已有能力
 
 - 屏幕内容层上方约 30% 的区域显示获胜弹幕，最多同时显示四行；消息格式为“用户昵称 + 游戏名称 + 赢得金币”，每条消息附带“我也要玩”入口并直接打开对应游戏。消息按随机间隔投放：当前行仍在显示时才占用下一行，四行满后排队等待最先空出的行；开启减少动态效果时暂停动画。
 - PC 全屏大厅的热门游戏与今日赢家榜使用独立同排布局；半屏仍优先展示游戏目录。
@@ -13,13 +13,18 @@
 - 家族 / 派对活动模块位于活动页面总览下方；大厅首页保留游戏列表和赢家榜，半屏活动页按游戏优先策略隐藏该模块。
 - 大厅精选活动 Banner 支持鼠标拖拽和触摸左右滑动切换，也可使用原有圆点与自动轮播控制。
 
-直播间导流方案（Hot Live Rooms、直播 Banner、游戏详情页“找房间一起玩”及 `from=game_center` 归因）属于下一阶段待评审范围，不是当前 v0.2.5 的已实现能力。
+## v0.3.0 直播间入口
+
+- GamesPage 顶部提供 Hot Live Rooms，支持全部 / 家族厅 / 派对房 / 单人游戏房筛选，直播中优先、在线人数次序和房间 ID 稳定排序。
+- 大厅 Banner 增加“正在直播”入口；游戏运行层增加“找房间一起玩”，按当前 `gameId` 匹配房间。
+- 入口归因统一携带 `from=game_center`、`entry`、`room_id`、`game_id`、`mode`、`lang`。无宿主桥时返回静态预览状态；宿主可接入 `jump2native` 或 `pageJump`。
+- 当前房间数据、封面、在线人数和状态均为静态原型，不代表真实直播、Game Revenue Share 或收益承诺。
 
 ## 页面入口
 
 Vite 会生成七个入口：`index.html`（独立原型说明首页）、`lobby.html`、`games.html`、`tournaments.html`、`events.html`、`store.html` 和 `profile.html`。生产输出位于 `dist/`。
 
-v0.2.5 另生成带随机后缀的 `start-v0.2.5-<token>.html`（与说明首页完全一致的新 URL），用于部署后避开旧入口缓存；JS/CSS 放在 `assets/release-0.2.5-<token>/`，同一包内所有 HTML 共用这一批版本化资源。每次生产构建都会重新生成 16 位随机十六进制 token。所有响应配置 `Cache-Control: no-store`，移除原来覆盖 `/assets/*` 的一年 immutable 缓存。根目录 `404.html` 让 Pages 对不存在的路径返回 404，不再将缺失脚本替换成首页的 200 HTML。不能通过更改 HTML 的 MIME 类型伪装修复脚本缺失。
+v0.3.0 另生成带随机后缀的 `start-v0.3.0-<token>.html`（与说明首页完全一致的新 URL），用于部署后避开旧入口缓存；JS/CSS 放在 `assets/release-0.3.0-<token>/`，同一包内所有 HTML 共用这一批版本化资源。每次生产构建都会重新生成 16 位随机十六进制 token。所有响应配置 `Cache-Control: no-store`，移除原来覆盖 `/assets/*` 的一年 immutable 缓存。根目录 `404.html` 让 Pages 对不存在的路径返回 404，不再将缺失脚本替换成首页的 200 HTML。不能通过更改 HTML 的 MIME 类型伪装修复脚本缺失。
 
 此策略优先保证频繁更新的原型一致性，会增加重新打开页面时的资源下载。旧浏览器或 CDN 已存储的响应不能由新包追溯删除，因此发布后请先用新入口验证；若自定义域名有强制缓存或重写规则，需另行在 Cloudflare 控制台调整，不能靠 ZIP 覆盖这些规则。
 

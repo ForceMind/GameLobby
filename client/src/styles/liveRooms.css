@@ -1,0 +1,271 @@
+.live-rooms {
+  scroll-margin-top: 20px;
+}
+
+.live-rooms-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.live-rooms-status i,
+.live-room-state i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #22b27d;
+  box-shadow: 0 0 0 4px rgba(34, 178, 125, 0.13);
+}
+
+.live-room-filters {
+  display: flex;
+  gap: 8px;
+  margin: 2px 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.live-room-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.live-room-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.live-room-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(27, 52, 96, 0.09);
+  background: #fff;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.live-room-card:not(.is-unavailable):hover,
+.live-room-card:not(.is-unavailable):focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(34, 67, 125, 0.13);
+}
+
+.live-room-card.is-unavailable {
+  opacity: 0.72;
+}
+
+.live-room-cover {
+  position: relative;
+  height: 132px;
+  overflow: hidden;
+  background: linear-gradient(145deg, #1d3d83, #5f8bf0);
+}
+
+.live-room-cover .game-art {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.live-room-cover .game-art.is-compact {
+  border-radius: 0;
+}
+
+.live-room-cover::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(180deg, rgba(8, 18, 42, 0.04), rgba(8, 18, 42, 0.58));
+  pointer-events: none;
+}
+
+.live-room-state,
+.live-room-type {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #fff;
+  background: rgba(10, 24, 57, 0.62);
+  font-size: 0.68rem;
+  font-weight: 760;
+  backdrop-filter: blur(8px);
+}
+
+.live-room-state {
+  left: 10px;
+}
+
+.live-room-state.is-muted {
+  color: #f6f8fc;
+}
+
+.live-room-state.is-muted::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f5b74f;
+  content: '';
+}
+
+.live-room-type {
+  right: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #233b72;
+}
+
+.live-room-body {
+  display: grid;
+  gap: 10px;
+  padding: 13px 14px 14px;
+}
+
+.live-room-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.live-room-heading h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.93rem;
+  line-height: 1.3;
+}
+
+.live-room-heading p {
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-room-viewers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.live-room-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.live-room-meta span {
+  border-radius: 6px;
+  padding: 4px 7px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.live-room-enter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 0.76rem;
+}
+
+.live-room-enter svg {
+  font-size: 0.7rem;
+}
+
+.live-room-empty {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 34px 18px;
+  text-align: center;
+}
+
+.live-room-empty > svg {
+  color: var(--primary);
+  font-size: 1.4rem;
+}
+
+.live-room-empty h3,
+.live-room-empty p {
+  margin: 0;
+}
+
+.live-room-empty p {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.live-room-skeleton {
+  height: 300px;
+  background: linear-gradient(110deg, #edf2fb 30%, #f8faff 45%, #edf2fb 60%);
+  background-size: 220% 100%;
+  animation: live-room-shimmer 1.5s linear infinite;
+}
+
+@keyframes live-room-shimmer {
+  to { background-position: -220% 0; }
+}
+
+@media (max-width: 900px) {
+  .live-room-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .live-room-grid {
+    display: flex;
+    gap: 10px;
+    margin-inline: -2px;
+    overflow-x: auto;
+    padding: 2px 2px 8px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .live-room-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .live-room-card {
+    flex: 0 0 min(82vw, 290px);
+    scroll-snap-align: start;
+  }
+
+  .live-room-cover {
+    height: 124px;
+  }
+}
+
+@container lobby (max-width: 700px) {
+  .h5-lobby.is-half .live-rooms {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-room-card {
+    transition: none;
+  }
+
+  .live-room-skeleton {
+    animation: none;
+  }
+}

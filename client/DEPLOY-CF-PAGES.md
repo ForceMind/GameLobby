@@ -2,13 +2,13 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。当前未代为创建 Cloudflare 项目或执行线上部署。
 
-## v0.2.5 社交动态与白屏修正包
+## v0.3.0 直播入口、社交动态与白屏修正包
 
 1. 将新 ZIP **完整上传为一次新部署**，不要只替换 HTML 或混用旧版 assets。
-2. 部署成功后从本次 ZIP 的文件列表复制 `start-v0.2.5-<随机后缀>.html` 打开；不要手输旧入口。这个 URL 和资源目录每次构建都会变化，不复用旧首页缓存。
-3. Network 中应请求 `/assets/release-0.2.5-<同一随机后缀>/main-*.js`，状态 200、Content-Type 为 JavaScript，响应不是 HTML。样式同目录且为 `text/css`。
+2. 部署成功后从本次 ZIP 的文件列表复制 `start-v0.3.0-<随机后缀>.html` 打开；不要手输旧入口。这个 URL 和资源目录每次构建都会变化，不复用旧首页缓存。
+3. Network 中应请求 `/assets/release-0.3.0-<同一随机后缀>/main-*.js`，状态 200、Content-Type 为 JavaScript，响应不是 HTML。样式同目录且为 `text/css`。
 4. 新包的所有响应应带 `Cache-Control: no-store`。如果自定义域名有强制缓存、Worker 或重写规则，检查它们是否覆盖 Pages 行为；必要时针对该站点旧缓存 URL 清除缓存，避免影响其他站点。
-5. 请求一个确定不存在的脚本，例如 `/assets/release-0.2.5/not-present.js`，应得到 404，而不是首页 200。404 的 HTML 内容是正常错误页，不能将它伪装为 JavaScript。
+5. 请求一个确定不存在的脚本，例如 `/assets/release-0.3.0/not-present.js`，应得到 404，而不是首页 200。404 的 HTML 内容是正常错误页，不能将它伪装为 JavaScript。
 
 根目录 `404.html` 用于关闭 Pages 默认的 SPA 首页回退；业务页均有真实 HTML 文件，原有前端 History 导航不受影响。参见 [Pages 路由与缓存说明](https://developers.cloudflare.com/pages/configuration/serving-pages/)。新包无法清除手机此前已经缓存的响应，也无法修改账号级缓存规则；若新入口仍失败，记录失败请求的完整 URL、状态码与响应类型。
 

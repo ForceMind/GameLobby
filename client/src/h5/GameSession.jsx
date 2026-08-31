@@ -3,12 +3,20 @@ import { createPortal } from 'react-dom'
 import { Icon } from '../icons.jsx'
 import GameIllustration from '../GameIllustration.jsx'
 import { useLocale } from '../useLocale.js'
+import { liveRooms } from '../data.js'
 import { loadingProgress } from './model.js'
+import { openLiveRoom } from './liveRoomBridge.js'
+import '../styles/liveEntry.css'
 
 const reelSymbols = ['gem', 'coin', 'star', 'jackpot', 'bolt']
 
 export default function GameSession({ game, onClose }) {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
+  const liveRoom = liveRooms.find(
+    (room) =>
+      (room.gameId === game.id || room.game === game.id) &&
+      (room.status ?? 'live') === 'live',
+  )
   const [phase, setPhase] = useState('loading')
   const [progress, setProgress] = useState(0)
   const [rounds, setRounds] = useState(0)
@@ -16,6 +24,7 @@ export default function GameSession({ game, onClose }) {
   const [spinning, setSpinning] = useState(false)
   const [reels, setReels] = useState(['gem', 'star', 'coin'])
   const [clearedBubbles, setClearedBubbles] = useState([])
+  const [liveRoomState, setLiveRoomState] = useState('idle')
   const backRef = useRef(null)
   const closeRef = useRef(null)
   const playTimer = useRef(null)
@@ -100,6 +109,19 @@ export default function GameSession({ game, onClose }) {
     setScore((value) => value + 20)
   }
 
+  const findLiveRoom = async () => {
+    if (!liveRoom || liveRoomState === 'opening') return
+    setLiveRoomState('opening')
+    const result = await openLiveRoom({
+      roomId: liveRoom.id,
+      gameId: liveRoom.gameId ?? game.id,
+      entry: 'game_detail',
+      mode: new URLSearchParams(window.location.search).get('mode') ?? 'full',
+      lang: locale,
+    })
+    setLiveRoomState(result?.status === 'failed' ? 'failed' : 'opened')
+  }
+
   return createPortal(
     <section
       className={`game-session game-theme-${game.id}`}
@@ -155,6 +177,20 @@ export default function GameSession({ game, onClose }) {
           <div className="game-play-heading">
             <span className="game-kicker">JOYLOOP GAMES</span>
             <h1>{game.name}</h1>
+            <button
+              className="game-live-room-action"
+              type="button"
+              onClick={findLiveRoom}
+              disabled={!liveRoom || liveRoomState === 'opening'}
+              aria-describedby="game-live-room-status"
+            >
+              <span className="live-dot" aria-hidden="true" />
+              {t(liveRoomState === 'opening' ? '正在进入房间' : '找房间一起玩')}
+              {!liveRoom && <small>{t('暂无匹配房间')}</small>}
+            </button>
+            <span className="sr-only" id="game-live-room-status" role="status" aria-live="polite">
+              {liveRoomState === 'failed' ? t('进入房间失败，请稍后再试') : liveRoomState === 'opened' ? t('已打开直播间预览') : ''}
+            </span>
           </div>
           <div className="game-scoreboard">
             <span>

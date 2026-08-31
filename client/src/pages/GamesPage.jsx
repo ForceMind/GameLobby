@@ -1,5 +1,6 @@
 import { GameCatalog } from '../GameCatalog.jsx'
 import { useLocale } from '../useLocale.js'
+import LiveRooms from '../components/LiveRooms.jsx'
 import '../h5/compactLobby.css'
 
 export default function GamesPage({ openModal, toast, showFullEntryHint }) {
@@ -15,6 +16,7 @@ export default function GamesPage({ openModal, toast, showFullEntryHint }) {
           })}
         </p>
       </section>
+      <LiveRooms openModal={openModal} toast={toast} />
       <GameCatalog variant="library" openModal={openModal} toast={toast} />
       <button
         className="compact-fullscreen-entry"
