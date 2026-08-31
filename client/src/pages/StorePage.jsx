@@ -204,14 +204,15 @@ export default function StorePage({
       <section className={`recovery-vault card ${vaultPurchased ? 'is-purchased' : 'is-locked'}`}>
         <div className="vault-heading">
           <span className="vault-icon"><Icon name="lock" /></span>
-          <div><span className="eyebrow">{t('昨日结算 · 活动权益')}</span><h2>{t('破产保险箱')}</h2><p>{t(vaultPurchased ? '已生效：预计可恢复 1,760–7,040 金币。本月有效；每日按刷新时间统计，约 3 小时后更新。' : '预计可恢复 1,760–7,040 金币；购买后立即生效，本月有效。每日按刷新时间统计，约 3 小时后更新。')}</p></div>
+          <div><span className="eyebrow">{t('昨日结算 · 活动权益')}</span><h2>{t('破产保险箱')}</h2><p>{t(vaultPurchased ? '已生效：预计可恢复 1,760–7,040 金币。本月有效；每日按刷新时间统计，约 3 小时后更新。' : '昨日净损有机会返还一部分金币；购买后立即生效，本月有效。每日按刷新时间统计，约 3 小时后更新。')}</p></div>
           <div className="vault-heading-actions"><span className={`status ${vaultPurchased ? '' : 'vault-status-locked'}`}><span className="status-dot" />{t(vaultPurchased ? '已生效 · 等待结算' : '待购买')}</span><button className="icon-btn vault-settings-button" type="button" aria-label={t('保险箱设置')} disabled={!vaultPurchased} onClick={openVaultSettings}><Icon name="gear" /></button></div>
         </div>
         <div className="vault-stats">
           <div><span>{t('昨日净损')}</span><strong className="negative">-8,800</strong><small>{t('金币')}</small></div>
-          <div><span>{t('返还状态')}</span><strong>{vaultPurchased ? t('等待抽取') : t('购买后立即生效')}</strong><small>{t('按活动规则结算')}</small></div>
+          <div><span>{t(vaultPurchased ? '返还状态' : '预计可返还')}</span><strong>{vaultPurchased ? t('等待抽取') : '1,760–7,040'}</strong><small>{t(vaultPurchased ? '按活动规则结算' : '金币')}</small></div>
           <div><span>{t('预计刷新')}</span><strong>{vaultPurchased ? `${vaultRefreshTime} + 3h` : t('购买后设置')}</strong><small>{t('统计后到账')}</small></div>
         </div>
+        {!vaultPurchased && <div className="vault-explainer"><strong>{t('购买后，昨日净损可获得金币返还')}</strong><p>{t('每天按你设置的时间统计前一天净损，约 3 小时后更新结果；命中后按活动规则返还金币。')}</p><div className="vault-explainer-steps"><span><b>1</b>{t('购买保险箱')}</span><span><b>2</b>{t('设置每日刷新时间')}</span><span><b>3</b>{t('等待结算结果')}</span></div></div>}
         <div className="vault-footer">
           <div className="vault-probability"><span>{t(vaultPurchased ? '今日权益已生效，等待结算结果' : '购买后可参与次日返还')}</span></div>
           <div className="vault-actions">
