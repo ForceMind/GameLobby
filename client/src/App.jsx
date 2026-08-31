@@ -18,6 +18,13 @@ import './h5/h5.css'
 import { formatWalletLabel } from './format.js'
 import { useNavigation } from './useNavigation.js'
 import { headerBack } from './navigation.js'
+import WinnerFeed from './components/WinnerFeed.jsx'
+
+const defaultPrivacySettings = {
+  receiveWinNotifications: true,
+  allowSendWins: true,
+  shareRecentGames: true,
+}
 
 function MainNav({ page, mobile = false }) {
   const { t, href } = useLocale()
@@ -142,6 +149,7 @@ export default function App() {
   const scrollPositions = useRef(new Map())
   const [modal, setModal] = useState(null)
   const [toastMessage, setToastMessage] = useState(null)
+  const [privacySettings, setPrivacySettings] = useState(defaultPrivacySettings)
   const toastLocale = useRef(locale)
   const closeModal = useCallback(() => setModal(null), [])
   const toast = useCallback(
@@ -219,7 +227,15 @@ export default function App() {
   const showFullEntryHint = () => toast(t('请从全屏入口查看完整内容。'))
 
   const renderPage = () => {
-    const props = { openModal: setModal, toast, openWallet, showFullEntryHint }
+    const props = {
+      openModal: setModal,
+      toast,
+      openWallet,
+      showFullEntryHint,
+      privacySettings,
+      onTogglePrivacy: (key) =>
+        setPrivacySettings((current) => ({ ...current, [key]: !current[key] })),
+    }
     const catalogKey = new URL(routeUrl).searchParams.get('category') ?? ''
     if (page === 'games') return <GamesPage key={catalogKey} {...props} />
     if (page === 'tournaments') return <TournamentsPage {...props} />
@@ -245,6 +261,7 @@ export default function App() {
               <span />
             </div>
             <AppHeader page={page} openWallet={openWallet} />
+            <WinnerFeed privacy={privacySettings} href={href} />
             <main className="page-shell" id="main" ref={mainRef} tabIndex={-1}>
               {renderPage()}
             </main>

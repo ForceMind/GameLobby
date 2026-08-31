@@ -93,6 +93,12 @@ export default function ProfilePage({
   toast,
   openWallet,
   showFullEntryHint = () => {},
+  privacySettings = {
+    receiveWinNotifications: true,
+    allowSendWins: true,
+    shareRecentGames: true,
+  },
+  onTogglePrivacy = () => {},
 }) {
   const { t, locale, setLocale } = useLocale()
   const { account: profile, wallet: balances, mode } = useH5()
@@ -116,6 +122,16 @@ export default function ProfilePage({
   const toggleSetting = (key, label) => {
     const next = !settings[key]
     setSettings((current) => ({ ...current, [key]: next }))
+    toast(
+      t('设置状态更新 {label} {state}', {
+        label: t(label),
+        state: t(next ? '已开启' : '已关闭'),
+      }),
+    )
+  }
+  const togglePrivacy = (key, label) => {
+    const next = !privacySettings[key]
+    onTogglePrivacy(key)
     toast(
       t('设置状态更新 {label} {state}', {
         label: t(label),
@@ -434,7 +450,7 @@ export default function ProfilePage({
               ))}
             </div>
           </section>
-          <section className="section">
+          <section className="section" id="settings">
             <SectionHeader
               title={t('设置')}
               description={t('按你的习惯设置游戏体验')}
@@ -464,6 +480,23 @@ export default function ProfilePage({
                   >
                     <i />
                   </span>
+                </button>
+              ))}
+              {[
+                ['receiveWinNotifications', '接收他人获胜通知'],
+                ['allowSendWins', '允许发送我的获胜通知'],
+                ['shareRecentGames', '向好友展示最近玩的游戏'],
+              ].map(([key, label]) => (
+                <button
+                  type="button"
+                  key={key}
+                  role="switch"
+                  aria-checked={privacySettings[key]}
+                  onClick={() => togglePrivacy(key, label)}
+                >
+                  <span className="list-icon"><Icon name={key === 'shareRecentGames' ? 'clock' : 'trophy'} /></span>
+                  <span><strong>{t(label)}</strong><small>{t(privacySettings[key] ? '已开启' : '已关闭')}</small></span>
+                  <span className={`switch ${privacySettings[key] ? 'is-on' : ''}`} aria-hidden="true"><i /></span>
                 </button>
               ))}
               <button

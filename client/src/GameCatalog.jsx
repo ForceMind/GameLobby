@@ -92,7 +92,7 @@ function GameCard({ game, openModal }) {
   )
 }
 
-export function RecentGames({ openModal }) {
+export function RecentGames({ openModal, recentVisibility = true }) {
   const { t } = useLocale()
   const { openGame } = useH5()
   const onKeyDown = (event) => {
@@ -120,6 +120,7 @@ export function RecentGames({ openModal }) {
             {t('滑动或用方向键浏览，点击开始游戏。')}
           </p>
         </div>
+        <span className="recent-visibility"><Icon name="users" />{t(recentVisibility ? '好友可见' : '仅自己可见')}</span>
       </div>
       <div
         className="recent-list"

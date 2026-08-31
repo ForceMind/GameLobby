@@ -595,6 +595,25 @@ section[id] {
   line-height: 1.5;
 }
 
+.recent-visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.64);
+  font-size: 0.65rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.recent-visibility svg {
+  color: var(--primary);
+  font-size: 0.62rem;
+}
+
 .card {
   border: 1px solid rgba(203, 214, 231, 0.82);
   border-radius: var(--radius-md);
@@ -773,6 +792,18 @@ section[id] {
   grid-template-columns: minmax(0, 2.1fr) minmax(270px, 0.9fr);
   align-items: start;
   gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .lobby-games-row {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+
+  .lobby-games-row > .section,
+  .lobby-games-row > .side-rail {
+    min-width: 0;
+  }
 }
 
 .side-rail,

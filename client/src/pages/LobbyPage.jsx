@@ -5,6 +5,7 @@ import { SectionHeader } from '../ui.jsx'
 import { GameCatalog, RecentGames } from '../GameCatalog.jsx'
 import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
+import SocialActivities from '../components/SocialActivities.jsx'
 import '../h5/compactLobby.css'
 
 const winnerRows = [
@@ -14,7 +15,12 @@ const winnerRows = [
   ['CloudNine', '连续 8 局获奖', '+42,900'],
 ]
 
-export default function LobbyPage({ openModal, toast, showFullEntryHint }) {
+export default function LobbyPage({
+  openModal,
+  toast,
+  showFullEntryHint,
+  privacySettings = { shareRecentGames: true },
+}) {
   const { t, href } = useLocale()
   const { mode } = useH5()
   const [bannerIndex, setBannerIndex] = useState(0)
@@ -54,9 +60,9 @@ export default function LobbyPage({ openModal, toast, showFullEntryHint }) {
 
   return (
     <div className="lobby-page compact-lobby">
-      {mode !== 'half' && <RecentGames openModal={openModal} toast={toast} />}
+      {mode !== 'half' && <RecentGames openModal={openModal} toast={toast} recentVisibility={privacySettings.shareRecentGames} />}
 
-      <div className="page-layout">
+      <div className="page-layout lobby-games-row">
         <GameCatalog variant="popular" openModal={openModal} toast={toast} />
 
         <aside className="side-rail lobby-winners">
@@ -87,7 +93,9 @@ export default function LobbyPage({ openModal, toast, showFullEntryHint }) {
         </aside>
       </div>
 
-      {mode === 'half' && <RecentGames openModal={openModal} toast={toast} />}
+      {mode !== 'half' && <SocialActivities openModal={openModal} toast={toast} />}
+
+      {mode === 'half' && <RecentGames openModal={openModal} toast={toast} recentVisibility={privacySettings.shareRecentGames} />}
 
       <section className="section lobby-promotions" aria-label={t('精选活动')}>
         <div
