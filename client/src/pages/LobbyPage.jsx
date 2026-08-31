@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { banners } from '../data.js'
 import { SectionHeader } from '../ui.jsx'
@@ -25,6 +25,7 @@ export default function LobbyPage({
   const [bannerIndex, setBannerIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const [interacting, setInteracting] = useState(false)
+  const swipeStart = useRef(null)
 
   useEffect(() => {
     if (
@@ -42,6 +43,21 @@ export default function LobbyPage({
   }, [mode, paused, interacting])
 
   const banner = banners[bannerIndex]
+  const startBannerSwipe = (event) => {
+    if (event.target.closest('a,button')) return
+    swipeStart.current = { x: event.clientX }
+    setInteracting(true)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+  const endBannerSwipe = (event) => {
+    const start = swipeStart.current
+    swipeStart.current = null
+    setInteracting(false)
+    if (!start) return
+    const distance = event.clientX - start.x
+    if (Math.abs(distance) < 48) return
+    setBannerIndex((current) => (current + (distance < 0 ? 1 : banners.length - 1)) % banners.length)
+  }
   const renderWinners = () => (
     <div className="winner-list card">
       {winnerRows.map(([name, detail, prize], index) => (
@@ -108,6 +124,9 @@ export default function LobbyPage({
             if (!event.currentTarget.contains(event.relatedTarget))
               setInteracting(false)
           }}
+          onPointerDown={startBannerSwipe}
+          onPointerUp={endBannerSwipe}
+          onPointerCancel={() => { swipeStart.current = null; setInteracting(false) }}
         >
           <div
             className="banner-copy"

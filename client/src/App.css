@@ -1179,6 +1179,7 @@ section[id] {
   border: 0;
   background: linear-gradient(125deg, #192d67, #4f61d7);
   box-shadow: 0 24px 55px rgba(35, 58, 126, 0.22);
+  touch-action: pan-y;
 }
 
 .banner::before,
