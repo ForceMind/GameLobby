@@ -95,3 +95,14 @@ test('兼容直接传入房间对象与第二参数入口配置', () => {
   assert.equal(result.payload.entry, 'banner')
   assert.equal(result.payload.room_id, 'room-object')
 })
+
+test('保留大厅独立直播快速入口的归因来源', () => {
+  const url = new URL(buildLiveRoomUrl({
+    roomId: 'room-1',
+    gameId: 'golden-pharaoh',
+    entry: 'live_teaser',
+    target: { location: { href: 'https://joyloop.test/lobby.html?mode=full' } },
+  }))
+  assert.equal(url.searchParams.get('entry'), 'live_teaser')
+  assert.equal(url.searchParams.get('from'), 'game_center')
+})

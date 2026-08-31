@@ -5,7 +5,7 @@
 // state and emits a browser event that the UI can use to open its preview
 // modal.  A native/web host can opt in by supplying pageJump or jump2native.
 
-const ENTRY_VALUES = new Set(['hot_rooms', 'banner', 'game_detail'])
+const ENTRY_VALUES = new Set(['hot_rooms', 'banner', 'game_detail', 'live_teaser'])
 const MODE_VALUES = new Set(['full', 'half'])
 
 function stringValue(value) {

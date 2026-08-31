@@ -8,6 +8,7 @@ import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
 import '../h5/compactLobby.css'
 import '../styles/liveEntry.css'
+import '../styles/winnerLeaderboard.css'
 import { openLiveRoom } from '../h5/liveRoomBridge.js'
 
 const winnerRows = [
@@ -16,6 +17,16 @@ const winnerRows = [
   ['BlueFin', '休闲挑战 · Fish Hunter', '+65,200'],
   ['CloudNine', '连续 8 局获奖', '+42,900'],
 ]
+
+// Static prototype state for the signed-in player. Keeping this separate from
+// the public rows lets the same personal status render in the inline rail and
+// the full leaderboard modal without changing the top-four visual treatment.
+const myWinnerStatus = {
+  state: 'ranked-out',
+  rank: 28,
+  coins: '1,240,000',
+  gap: '86,000',
+}
 
 export default function LobbyPage({
   openModal,
@@ -103,6 +114,27 @@ export default function LobbyPage({
           <strong className="positive">{prize}</strong>
         </div>
       ))}
+      <div
+        className="winner-self"
+        data-status={myWinnerStatus.state}
+        aria-label={t('我的排名')}
+      >
+        <span className="winner-self-rank">{myWinnerStatus.rank}</span>
+        <span className="winner-self-copy">
+          <strong>{t('我的排名')}</strong>
+          <small>
+            {t('未进前十 · 第 {rank} 名 · {coins} 金币', {
+              rank: myWinnerStatus.rank,
+              coins: myWinnerStatus.coins,
+            })}
+          </small>
+        </span>
+        <span className="winner-self-gap">
+          <b>{t('距前十还差')}</b>
+          <strong>{myWinnerStatus.gap}</strong>
+          <small>{t('金币')}</small>
+        </span>
+      </div>
     </div>
   )
 
@@ -110,7 +142,7 @@ export default function LobbyPage({
     <div className="lobby-page compact-lobby">
       {mode !== 'half' && <RecentGames openModal={openModal} toast={toast} recentVisibility={privacySettings.shareRecentGames} />}
 
-      {mode !== 'half' && <LiveRoomsTeaser href={href} />}
+      {mode !== 'half' && <LiveRoomsTeaser href={href} toast={toast} />}
 
       <div className="page-layout lobby-games-row">
         <GameCatalog variant="popular" openModal={openModal} toast={toast} />

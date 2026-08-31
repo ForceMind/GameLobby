@@ -26,6 +26,10 @@ const sourceFiles = [
   'h5/GameSession.jsx',
   'h5/H5Provider.jsx',
   'h5/EntryGate.jsx',
+  'components/LatestWins.jsx',
+  'components/LiveRooms.jsx',
+  'components/LiveRoomsTeaser.jsx',
+  'components/WinnerFeed.jsx',
 ]
 const hasChinese = (value) => /[\u3400-\u9fff]/u.test(value)
 const placeholders = (value) =>

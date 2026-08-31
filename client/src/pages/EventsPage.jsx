@@ -6,6 +6,7 @@ import { nextWheelAngle } from '../demoModel.js'
 import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
 import SocialActivities from '../components/SocialActivities.jsx'
+import LatestWins from '../components/LatestWins.jsx'
 import '../h5/eventsCompact.css'
 
 const wheelPrizes = [
@@ -532,6 +533,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           </div>
         </section>
       </div>
+      <LatestWins openModal={openModal} toast={toast} />
     </>
   )
 }

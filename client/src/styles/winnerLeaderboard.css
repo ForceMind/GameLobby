@@ -1,0 +1,79 @@
+/* Personal position is intentionally a compact, sticky-looking footer so it
+   remains visible below the public winners without changing their row layout. */
+.winner-self {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 8px -7px -1px;
+  padding: 10px 9px;
+  border: 1px solid rgba(54, 103, 238, .23);
+  border-radius: 12px;
+  background: linear-gradient(110deg, rgba(238, 244, 255, .96), rgba(247, 250, 255, .8));
+}
+
+.winner-self-rank {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  color: var(--primary);
+  background: rgba(54, 103, 238, .12);
+  font-size: .7rem;
+  font-weight: 850;
+}
+
+.winner-self-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.winner-self-copy strong {
+  color: var(--ink);
+  font-size: .76rem;
+}
+
+.winner-self-copy small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .64rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.winner-self-gap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.winner-self-gap b {
+  font-size: .59rem;
+  font-weight: 650;
+}
+
+.winner-self-gap strong {
+  color: var(--primary);
+  font-size: .73rem;
+}
+
+.winner-self-gap small {
+  font-size: .58rem;
+}
+
+@media (max-width: 719px) {
+  .winner-self {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 8px;
+    padding: 9px 8px;
+  }
+
+  .winner-self-gap {
+    grid-column: 2;
+    margin-top: -2px;
+  }
+}

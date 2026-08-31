@@ -1,6 +1,6 @@
-# Joyloop 内嵌 H5 v0.3.0 高保真原型
+# Joyloop 内嵌 H5 v0.3.1 高保真原型
 
-顶部 Joyloop 品牌下方显示当前构建版本号 `v0.3.0`，入口页和业务页保持一致。
+顶部 Joyloop 品牌下方显示当前构建版本号 `v0.3.1`，入口页和业务页保持一致。
 
 这是 Joyloop 游戏大厅的 React + Vite 静态前端，面向内置在 App 中的 H5，也可独立作为 Cloudflare Pages 静态站点预览。当前代码不连接真实数据库、鉴权、游戏引擎或支付服务；宿主接入方式见 [HOST-INTEGRATION.md](HOST-INTEGRATION.md)。
 
@@ -22,6 +22,11 @@
 - 大厅“最近在玩”下方提供独立“正在直播”入口卡，直接进入完整 Hot Live Rooms；Banner 的直播卡只打开一个具体房间预览。
 - 入口归因统一携带 `from=game_center`、`entry`、`room_id`、`game_id`、`mode`、`lang`。无宿主桥时返回静态预览状态；宿主可接入 `jump2native` 或 `pageJump`。
 - 当前房间数据、封面、在线人数和状态均为静态原型，不代表真实直播、Game Revenue Share 或收益承诺。
+
+## v0.3.1 中奖与直播发现增强
+
+- 赢家榜底部显示当前用户的排名、金币和距前十差值；活动页末尾新增最新中奖列表，支持直接进入对应游戏。
+- 大厅最近在玩下方显示最多 3 个直播房间的快速入口；Banner 的直播卡继续只推荐一个房间。
 
 ## 页面入口
 
