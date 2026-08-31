@@ -1,4 +1,4 @@
-.docs-page { min-height: 100dvh; color: var(--ink); background: linear-gradient(145deg,#f5f8ff,#eaf0fb); }
+.docs-page { height: 100dvh; min-height: 100dvh; overflow-y: auto; overscroll-behavior: contain; color: var(--ink); background: linear-gradient(145deg,#f5f8ff,#eaf0fb); }
 .docs-header { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid rgba(203,214,231,.78); background: rgba(250,252,255,.92); backdrop-filter: blur(16px); }
 .docs-header-inner { display:flex; align-items:center; justify-content:space-between; gap:16px; width:min(1240px,calc(100% - 32px)); min-height:68px; margin:0 auto; }
 .docs-brand { display:inline-flex; align-items:center; gap:10px; }.docs-brand > span:last-child { display:grid; gap:2px; }.docs-brand strong { font-size:1.05rem; }.docs-brand small { color:var(--primary); font-size:.56rem; font-weight:800; letter-spacing:.08em; }.docs-home-link { min-height:36px; font-size:.72rem; }
