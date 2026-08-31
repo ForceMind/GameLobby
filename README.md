@@ -22,7 +22,7 @@ npm run package:pages
 
 ## 当前交付边界
 
-v0.2.5 的获胜弹幕、破产保险箱、家族 / 派对活动和隐私设置能力继续保留；v0.3.0 在此基础上增加 GamesPage Hot Live Rooms、直播 Banner 和游戏层“找房间一起玩”入口，并统一携带 `from=game_center` 归因参数。直播入口仅在游戏中心目录和相关详情链路出现，不挤占大厅首页游戏列表。
+v0.2.5 的获胜弹幕、破产保险箱、家族 / 派对活动和隐私设置能力继续保留；v0.3.0 在此基础上增加大厅“正在直播”独立入口卡、GamesPage Hot Live Rooms、单房间直播 Banner 和游戏层“找房间一起玩”入口，并统一携带 `from=game_center` 归因参数。完整直播专区不挤占大厅首页游戏列表，Banner 只负责推荐一个具体房间。
 
 v0.3.0 已加入直播间导流原型：GamesPage 顶部 Hot Live Rooms 专区、大厅 Banner“正在直播”入口和游戏运行层“找房间一起玩”入口。所有入口生成 `from=game_center`、`entry`、`room_id`、`game_id`、`mode`、`lang` 参数；无宿主桥时只打开静态预览状态，不代表真实直播或分成结算。
 

@@ -3,10 +3,12 @@ import { Icon } from '../icons.jsx'
 import { banners, games, liveRooms } from '../data.js'
 import { SectionHeader } from '../ui.jsx'
 import { GameCatalog, RecentGames } from '../GameCatalog.jsx'
+import LiveRoomsTeaser from '../components/LiveRoomsTeaser.jsx'
 import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
 import '../h5/compactLobby.css'
 import '../styles/liveEntry.css'
+import { openLiveRoom } from '../h5/liveRoomBridge.js'
 
 const winnerRows = [
   ['NovaRay', '累积大奖 · Golden Pharaoh', '+268,800'],
@@ -58,6 +60,22 @@ export default function LobbyPage({
   }, [mode, paused, interacting, bannerSlides.length])
 
   const banner = bannerSlides[bannerIndex] ?? bannerSlides[0]
+  const featuredLiveRoom = liveRooms.find((room) => room.status === 'live')
+  const openFeaturedLiveRoom = () => {
+    if (!featuredLiveRoom) return
+    openModal({
+      title: t('进入直播间'),
+      kicker: t('家族厅'),
+      subtitle: t('房间预览 · 即将进入'),
+      body: <p>{t('正在进入 {name}，房间预览即将打开。', { name: featuredLiveRoom.title })}</p>,
+      confirmLabel: t('进入房间'),
+      cancelLabel: t('继续浏览'),
+      onConfirm: () => {
+        const result = openLiveRoom({ roomId: featuredLiveRoom.id, gameId: featuredLiveRoom.gameId, entry: 'banner' })
+        toast(t(result?.preview ? '已打开直播间预览' : '正在打开 {name}', { name: featuredLiveRoom.title }))
+      },
+    })
+  }
   const startBannerSwipe = (event) => {
     if (event.target.closest('a,button')) return
     swipeStart.current = { x: event.clientX }
@@ -91,6 +109,8 @@ export default function LobbyPage({
   return (
     <div className="lobby-page compact-lobby">
       {mode !== 'half' && <RecentGames openModal={openModal} toast={toast} recentVisibility={privacySettings.shareRecentGames} />}
+
+      {mode !== 'half' && <LiveRoomsTeaser href={href} />}
 
       <div className="page-layout lobby-games-row">
         <GameCatalog variant="popular" openModal={openModal} toast={toast} />
@@ -164,18 +184,7 @@ export default function LobbyPage({
             )}
           </div>
           <div className="banner-actions">
-            <a
-              className="btn btn-light"
-              href={href(
-                banner.isLive
-                  ? 'games.html?from=game_center&entry=banner#live-rooms'
-                  : bannerIndex === 0
-                  ? 'events.html#wheel'
-                  : `games.html?category=${bannerIndex === 1 ? 'slots' : 'casual'}#game-catalog`,
-              )}
-            >
-              {t(banner.cta)}
-            </a>
+            {banner.isLive ? <button className="btn btn-light" type="button" onClick={openFeaturedLiveRoom}>{t('进入房间')}</button> : <a className="btn btn-light" href={href(bannerIndex === 0 ? 'events.html#wheel' : `games.html?category=${bannerIndex === 1 ? 'slots' : 'casual'}#game-catalog`)}>{t(banner.cta)}</a>}
             <a className="btn btn-ghost-light" href={href('events.html')}>
               {t('活动中心')}
             </a>

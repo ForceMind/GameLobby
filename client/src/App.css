@@ -811,6 +811,12 @@ section[id] {
   .lobby-games-row > .side-rail {
     min-width: 0;
   }
+
+  .lobby-games-row > .section > .section-head,
+  .lobby-games-row > .side-rail > .section > .section-head {
+    min-height: 68px;
+    align-items: flex-start;
+  }
 }
 
 .side-rail,

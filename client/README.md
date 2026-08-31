@@ -19,6 +19,7 @@
 
 - GamesPage 顶部提供 Hot Live Rooms，支持全部 / 家族厅 / 派对房 / 单人游戏房筛选，直播中优先、在线人数次序和房间 ID 稳定排序。
 - 大厅 Banner 增加“正在直播”入口；游戏运行层增加“找房间一起玩”，按当前 `gameId` 匹配房间。
+- 大厅“最近在玩”下方提供独立“正在直播”入口卡，直接进入完整 Hot Live Rooms；Banner 的直播卡只打开一个具体房间预览。
 - 入口归因统一携带 `from=game_center`、`entry`、`room_id`、`game_id`、`mode`、`lang`。无宿主桥时返回静态预览状态；宿主可接入 `jump2native` 或 `pageJump`。
 - 当前房间数据、封面、在线人数和状态均为静态原型，不代表真实直播、Game Revenue Share 或收益承诺。
 
