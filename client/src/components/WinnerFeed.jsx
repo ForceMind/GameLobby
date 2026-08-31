@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
 import '../styles/winnerFeed.css'
@@ -23,22 +22,18 @@ export default function WinnerFeed({ privacy, href }) {
   return (
     <aside className="winner-danmaku" aria-label={t('全局获胜动态')}>
       <div className="winner-danmaku-track" aria-live="polite">
-        {visibleUpdates.map((update, itemIndex) => (
+        {visibleUpdates.slice(0, 4).map((update, itemIndex) => (
           <span
             className="winner-danmaku-item"
             key={`${update.name}-${update.game}`}
-            style={{ '--danmaku-delay': `${itemIndex * 3.2}s` }}
+            style={{ '--danmaku-row': itemIndex, '--danmaku-delay': `${itemIndex * 2.8}s` }}
           >
             <strong>{t(update.name)}</strong>
             <span>{t('在 {game} 赢得', { game: t(update.game) })}</span>
             <b>{update.coins} {t('金币')}</b>
+            <a className="winner-danmaku-play" href={href('games.html')}>{t('我也要玩')}</a>
           </span>
         ))}
-      </div>
-      <div className="winner-danmaku-toolbar">
-        <span className="winner-danmaku-label"><Icon name="trophy" />{t('获胜动态')}</span>
-        <span className="winner-danmaku-audience"><Icon name="users" />{t(privacy.shareRecentGames ? '好友可见' : '仅自己可见')}</span>
-        <a className="winner-danmaku-settings" href={href('profile.html#settings')}>{t('隐私设置')} <Icon name="chevronRight" /></a>
       </div>
     </aside>
   )

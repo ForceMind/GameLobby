@@ -167,6 +167,7 @@ export default {
   查看样例记录: 'View sample results',
   全局获胜动态: 'Global win feed',
   获胜动态: 'Win feed',
+  我也要玩: 'Play too',
   '在 {game} 赢得': 'won in {game}',
   隐私设置: 'Privacy settings',
   好友可见: 'Friends can see',
