@@ -88,12 +88,12 @@ export default function DocsPage() {
             <StatusChip>{appVersion} 当前基线</StatusChip>
             <h1>游戏大厅产品与运营文档</h1>
             <p>面向产品、设计、研发、测试和运营的统一说明。本文档同时记录已实现的原型能力、后台配置规则和真实接入前需要确认的服务端契约。</p>
-            <div className="docs-hero-meta"><span><Icon name="calendar" />更新于 2026-08-31</span><span><Icon name="users" />适用角色：产品 / 研发 / 运营</span><span><Icon name="shield" />当前版本：静态原型</span></div>
+            <div className="docs-hero-meta"><span><Icon name="calendar" />更新于 2026-09-01</span><span><Icon name="users" />适用角色：产品 / 研发 / 运营</span><span><Icon name="shield" />当前版本：前台 + 后台静态原型</span></div>
           </section>
 
           <section className="docs-section" aria-labelledby="overview-title">
             <SectionTitle id="overview" eyebrow="01 · READ FIRST" title="文档说明" description="先确认哪些是当前原型，哪些需要后台或服务端接入。" />
-            <div className="docs-callout"><Icon name="eye" /><div><strong>状态标记</strong><p><StatusChip>当前原型</StatusChip> 已在 v{appVersion} 页面中可操作；<StatusChip tone="planned">后台配置</StatusChip> 描述目标管理能力；<StatusChip tone="server">待接入</StatusChip> 需要 App、API、实时数据或结算服务支持。</p></div></div>
+            <div className="docs-callout"><Icon name="eye" /><div><strong>状态标记</strong><p><StatusChip>当前原型</StatusChip> 已在 v{appVersion} 页面中可操作；<StatusChip tone="planned">后台配置</StatusChip> 描述目标管理能力；<StatusChip tone="server">待接入</StatusChip> 需要 App、API、实时数据或结算服务支持。</p><p><a className="docs-inline-link" href="admin.html"><Icon name="gauge" />打开运营后台原型 <Icon name="chevronRight" /></a></p></div></div>
             <div className="docs-grid docs-grid-3"><div><strong>当前事实</strong><p>React + Vite 静态前端，支持中文/英文、full/half 两种展示模式。</p></div><div><strong>数据边界</strong><p>账号、余额、游戏、直播房间、中奖和活动数据均可由宿主或服务端替换。</p></div><div><strong>不在当前包</strong><p>真实概率、扣款、金币返还、直播推送、分成结算和后台权限系统。</p></div></div>
           </section>
 
@@ -147,6 +147,8 @@ export default function DocsPage() {
 
           <section className="docs-section">
             <SectionTitle id="admin" eyebrow="07 · ADMIN CONSOLE" title="后台管理与运营配置" description="后台是活动、游戏和直播展示的唯一配置源。" />
+            <div className="docs-callout docs-callout-success"><Icon name="play" /><div><strong>后台原型已可操作</strong><p>当前版本新增 <code>admin.html</code>，覆盖仪表盘、游戏、活动、赛事、直播、商城、玩家、数据、风控和系统设置菜单。页面使用 Mock 数据，支持搜索、状态筛选、详情抽屉、新建草稿和提交审核演示。</p></div></div>
+            <div className="docs-grid docs-grid-2"><div><h3>游戏版本发布</h3><p>游戏列表、游戏版本、上传记录、测试环境和生产环境已经拆分为独立菜单。上传版本支持文件选择、版本号、构建号、自动检查、测试发布、审核、灰度、生产发布和回滚的流程预览。</p></div><div><h3>目录与后台用户</h3><p>游戏目录提供表格/卡片双视图和拖拽排序草稿；后台用户与玩家管理分离，支持角色、数据范围、环境权限和账号状态的原型展示。</p></div></div>
             <div className="docs-admin-grid"><article><span className="docs-admin-icon"><Icon name="calendar" /></span><h3>活动配置</h3><dl><dt>基础</dt><dd>活动 ID、名称、周期、时区、状态、展示渠道</dd><dt>任务</dt><dd>任务类型、目标值、每日上限、资格人群</dd><dt>奖励</dt><dd>金币、宝石、礼物、宝箱、库存、过期时间</dd><dt>发布</dt><dd>草稿 → 灰度 → 生效 → 暂停 → 结束，记录操作人</dd></dl></article><article><span className="docs-admin-icon"><Icon name="gamepad" /></span><h3>游戏上下架</h3><dl><dt>目录</dt><dd>游戏 ID、名称、分类、封面、地区白名单、年龄限制</dd><dt>状态</dt><dd>即将上线、可进入、维护中、下架；前台按钮随状态变化</dd><dt>排序</dt><dd>热门、实时、活动推荐和运营置顶分层配置</dd><dt>联动</dt><dd>下架时同步移除 Banner、直播房和活动任务入口</dd></dl></article><article><span className="docs-admin-icon"><Icon name="users" /></span><h3>直播展示规则</h3><dl><dt>房间</dt><dd>房间 ID、房型、主播、游戏、封面、在线人数、麦位</dd><dt>筛选</dt><dd>地区、游戏权限、家族/派对/单人类型</dd><dt>排序</dt><dd>直播状态、参与人数、在线人数、质量分、稳定 ID</dd><dt>安全</dt><dd>房间结束、游戏不匹配、权限变更必须实时下线</dd></dl></article></div>
             <div className="docs-admin-grid"><article><span className="docs-admin-icon"><Icon name="coin" /></span><h3>定价与结算</h3><dl><dt>金币礼包</dt><dd>SKU、金币、折扣、赠送宝石、展示状态</dd><dt>保险箱</dt><dd>购买价、有效期、预计返还展示、结算延迟</dd><dt>限制</dt><dd>每日/每月次数、地区、账号等级、风控标签</dd><dt>审计</dt><dd>价格变更、规则变更、手工补发和撤销全量留痕</dd></dl></article><article><span className="docs-admin-icon"><Icon name="eye" /></span><h3>展示与隐私</h3><dl><dt>获胜弹幕</dt><dd>接收、发送、好友展示开关和脱敏策略</dd><dt>中奖列表</dt><dd>展示时长、昵称处理、头像来源、刷新频率</dd><dt>Banner</dt><dd>图片、文案、CTA 类型、目标房间、优先级、时间段</dd><dt>降级</dt><dd>数据为空或服务异常时隐藏入口并保留基础页面</dd></dl></article><article><span className="docs-admin-icon"><Icon name="shield" /></span><h3>权限与运营</h3><dl><dt>角色</dt><dd>产品、运营、审核、客服、财务、只读</dd><dt>审批</dt><dd>高风险概率、价格、结算规则需双人审批</dd><dt>监控</dt><dd>曝光、点击、进房、开局、归因、异常率和投诉</dd><dt>回滚</dt><dd>支持按活动、游戏、地区和房间维度快速暂停</dd></dl></article></div>
           </section>

@@ -24,6 +24,7 @@ export default defineConfig({
         events: resolve(projectDirectory, 'events.html'),
         store: resolve(projectDirectory, 'store.html'),
         profile: resolve(projectDirectory, 'profile.html'),
+        admin: resolve(projectDirectory, 'admin.html'),
       },
     },
   },

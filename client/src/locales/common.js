@@ -71,6 +71,7 @@ export default {
   界面语言: 'Interface language',
   '产品与运营文档': 'Product & operations docs',
   查看产品与运营文档: 'View product & operations docs',
+  进入运营后台原型: 'Open admin console prototype',
   简中: '简中',
   返回大厅: 'Back to lobby',
   退出演示: 'Exit demo',

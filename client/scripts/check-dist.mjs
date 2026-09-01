@@ -14,6 +14,7 @@ const pages = {
   events: 'events',
   store: 'store',
   profile: 'profile',
+  admin: 'admin',
 }
 
 for (const [file, page] of Object.entries(pages)) {
@@ -25,7 +26,7 @@ for (const [file, page] of Object.entries(pages)) {
   )
   assert.match(
     html,
-    /<title>[^<]*Joyloop<\/title>/,
+    /<title>[^<]*Joyloop[^<]*<\/title>/,
     `${file}: brand title is missing`,
   )
   const assets = [...html.matchAll(/(?:src|href)="(\.\/assets\/[^"]+)"/g)].map(
@@ -67,5 +68,5 @@ assert.equal(
   'Fresh release entry must match the normal entry',
 )
 console.log(
-  '✓ Eight pages, fresh release entry, versioned assets, 404 and no-store headers verified.',
+  '✓ Nine pages, fresh release entry, versioned assets, 404 and no-store headers verified.',
 )

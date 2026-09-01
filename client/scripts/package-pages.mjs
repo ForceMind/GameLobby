@@ -43,6 +43,7 @@ const entryFiles = [
   'events.html',
   'store.html',
   'profile.html',
+  'admin.html',
   releaseEntry,
 ]
 const omittedBuildFiles = new Set(['vite.svg'])

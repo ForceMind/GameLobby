@@ -51,6 +51,9 @@
   margin-bottom: 22px;
 }
 .prototype-doc-link { display:inline-flex; align-items:center; gap:6px; width:fit-content; margin:-8px 0 17px; color:var(--primary); font-size:.74rem; font-weight:780; }.prototype-doc-link svg:first-child { font-size:.68rem; }.prototype-doc-link svg:last-child { font-size:.58rem; }
+.prototype-admin-link { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:42px; margin:0 0 18px; border:1px solid #cbd8fb; border-radius:12px; background:#eef3ff; color:#315fc7; font-size:.78rem; font-weight:780; text-decoration:none; transition:background .18s ease, border-color .18s ease; }
+.prototype-admin-link:hover { background:#e2ebff; border-color:#aabff4; }
+.prototype-admin-link svg:first-child { font-size:.72rem; }.prototype-admin-link svg:last-child { font-size:.58rem; }
 .prototype-entry-notes {
   display: grid;
   gap: 16px;
