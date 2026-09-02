@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0",
+  "nav": [
+    { "id": "lobby", "labelKey": "nav.lobby", "href": "lobby.html" },
+    { "id": "games", "labelKey": "nav.games", "href": "games.html" },
+    { "id": "activities", "labelKey": "nav.activities", "href": "events.html" },
+    { "id": "store", "labelKey": "nav.store", "href": "store.html" },
+    { "id": "profile", "labelKey": "nav.profile", "href": "profile.html" }
+  ],
+  "games": [
+    { "id": "golden-pharaoh", "nameKey": "game.golden_pharaoh.name", "categoryKeys": ["game.category.slots", "game.category.realtime"], "cover": "golden-pharaoh-v2.png", "tagKeys": ["game.tag.jackpot"], "sortOrder": 10 }
+  ],
+  "activities": [
+    { "id": "checkin-7d", "titleKey": "activity.checkin.title", "descriptionKey": "activity.checkin.description" },
+    { "id": "daily-wheel", "titleKey": "activity.wheel.title", "descriptionKey": "activity.wheel.description" },
+    { "id": "daily-missions", "titleKey": "activity.missions.title", "descriptionKey": "activity.missions.description" }
+  ],
+  "products": [
+    { "id": "monthly-pass", "nameKey": "product.monthly_pass.name", "type": "monthly_pass", "descriptionKey": "product.monthly_pass.description" },
+    { "id": "loss-recovery-chest", "nameKey": "product.loss_recovery_chest.name", "type": "loss_recovery_chest", "descriptionKey": "product.loss_recovery_chest.description" }
+  ]
+}

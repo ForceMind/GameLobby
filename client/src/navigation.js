@@ -1,4 +1,4 @@
-export const businessPages = ['lobby', 'games', 'tournaments', 'events', 'store', 'profile']
+export const businessPages = ['lobby', 'games', 'events', 'store', 'profile']
 
 export function pageFromUrl(value) {
   const url = new URL(value, 'https://joyloop.invalid/')

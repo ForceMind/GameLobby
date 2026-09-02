@@ -1,14 +1,37 @@
 // Static prototype content. Keep this module free of UI/runtime dependencies so it
 // can be reused by every route in the Pages build.
 
+// Dynamic values should be loaded through this seam; bundled pages provide the
+// JSON fallback while production can replace it with the API response.
+export const contentApi = {
+  async get(path, fallback) {
+    if (typeof window === 'undefined' || !window.fetch) return fallback
+    try {
+      const response = await window.fetch(path, { headers: { Accept: 'application/json' } })
+      if (!response.ok) return fallback
+      return await response.json()
+    } catch { return fallback }
+  },
+  async post(path, payload, fallback = null) {
+    if (typeof window === 'undefined' || !window.fetch) return fallback
+    try {
+      const response = await window.fetch(path, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) return fallback
+      return await response.json()
+    } catch { return fallback }
+  },
+}
+
 export const navItems = [
   { id: 'lobby', label: '大厅', icon: 'home', href: 'lobby.html' },
-  {
-    id: 'tournaments',
-    label: '赛事',
-    icon: 'trophy',
-    href: 'tournaments.html',
-  },
+  { id: 'games', label: '游戏', icon: 'gamepad', href: 'games.html' },
   {
     id: 'events',
     label: '活动',
@@ -244,8 +267,8 @@ export const banners = [
   },
   {
     title: '经典老虎机周挑战',
-    subtitle: '经典老虎机挑战，与高手同场竞技。',
-    badge: '赛事精选',
+    subtitle: '经典老虎机主题，随时开启轻松一局。',
+    badge: '老虎机精选',
     cta: '浏览老虎机',
     accent: 'cyan',
   },

@@ -8,6 +8,7 @@ import activitiesProduct from './locales/activitiesProduct.js'
 import entryProduct from './locales/entryProduct.js'
 import compactProduct from './locales/compactProduct.js'
 import compactAccountStore from './locales/compactAccountStore.js'
+import engagementMessages from './data/engagementMessages.json' with { type: 'json' }
 
 export const catalogs = {
   common,
@@ -60,10 +61,10 @@ export function resolveLocale(search = '', savedLocale = 'zh') {
 export function createTranslator(locale) {
   return (source, values = {}) => {
     if (typeof source !== 'string') return source
-    const template =
+    const template = engagementMessages[locale]?.[source] ?? (
       locale === 'en'
         ? (englishMessages[source] ?? source)
-        : (chineseTerms[source] ?? source)
+        : (chineseTerms[source] ?? source))
     return template.replace(/\{(\w+)\}/g, (match, key) =>
       Object.hasOwn(values, key) ? String(values[key]) : match,
     )

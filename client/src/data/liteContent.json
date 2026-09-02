@@ -1,0 +1,67 @@
+{
+  "version": "lite-v1",
+  "defaultLocale": "zh",
+  "supportedLocales": ["zh", "en"],
+  "navigation": ["lobby", "games", "events", "store", "profile"],
+  "products": {
+    "tomorrowChest": {
+      "titleKey": "chest.title",
+      "descriptionKey": "chest.explain",
+      "productId": "tomorrow-chest-single"
+    },
+    "monthlyPass": {
+      "title": "月度特权卡",
+      "priceUsdCents": 990,
+      "validDays": 30,
+      "dailyCoins": 2000,
+      "dailyGems": 1
+    }
+  },
+  "events": {
+    "wheelFreeSpins": 3,
+    "checkinDays": 7,
+    "dailyMissionCount": 3
+  },
+  "gameDetails": {
+    "golden-pharaoh": {
+      "descriptionKey": "经典埃及主题老虎机，包含扩展 Wild 和累积大奖玩法。",
+      "winRate": "4.8%",
+      "rtp": "96.12%",
+      "winRange": "20–500,000 金币",
+      "maxMultiplier": "x5,000"
+    },
+    "ocean-777": {
+      "descriptionKey": "深海寻宝主题老虎机，支持瀑布消除和宝藏奖励回合。",
+      "winRate": "4.2%",
+      "rtp": "95.86%",
+      "winRange": "20–300,000 金币",
+      "maxMultiplier": "x3,000"
+    },
+    "fruit-party": {
+      "descriptionKey": "缤纷水果主题老虎机，包含连消、倍数和免费旋转。",
+      "winRate": "5.1%",
+      "rtp": "96.30%",
+      "winRange": "10–200,000 金币",
+      "maxMultiplier": "x2,500"
+    },
+    "wild-west-deluxe": {
+      "descriptionKey": "西部主题老虎机，包含堆叠图标、Wild 重转和边境奖励。",
+      "winRate": "4.5%",
+      "rtp": "96.05%",
+      "winRange": "20–400,000 金币",
+      "maxMultiplier": "x4,000"
+    },
+    "fish-hunter": {
+      "descriptionKey": "实时休闲捕鱼游戏，瞄准、射击并使用限时强化道具收集鱼群。"
+    },
+    "bubble-pop": {
+      "descriptionKey": "轻松的连线消除游戏，通过连续反应获得组合奖励。"
+    },
+    "dice-merge": {
+      "descriptionKey": "休闲合成解谜游戏，匹配骰子并解锁更高价值组合。"
+    },
+    "mini-golf-rush": {
+      "descriptionKey": "短局迷你高尔夫挑战，完成小球场并争取精准得分。"
+    }
+  }
+}

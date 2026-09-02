@@ -10,7 +10,6 @@ const pages = {
   docs: 'docs',
   lobby: 'lobby',
   games: 'games',
-  tournaments: 'tournaments',
   events: 'events',
   store: 'store',
   profile: 'profile',
@@ -68,5 +67,5 @@ assert.equal(
   'Fresh release entry must match the normal entry',
 )
 console.log(
-  '✓ Nine pages, fresh release entry, versioned assets, 404 and no-store headers verified.',
+  '✓ Eight pages, fresh release entry, versioned assets, 404 and no-store headers verified.',
 )

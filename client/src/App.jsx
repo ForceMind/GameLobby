@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
-import { navItems } from './data.js'
+import { navItems, games } from './data.js'
 import { Icon } from './icons.jsx'
 import { Modal } from './ui.jsx'
 import { useLocale } from './useLocale.js'
@@ -13,24 +13,26 @@ import GamesPage from './pages/GamesPage.jsx'
 import LobbyPage from './pages/LobbyPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import StorePage from './pages/StorePage.jsx'
-import TournamentsPage from './pages/TournamentsPage.jsx'
 import './h5/h5.css'
 import { formatWalletLabel } from './format.js'
 import { useNavigation } from './useNavigation.js'
 import { headerBack } from './navigation.js'
-import WinnerFeed from './components/WinnerFeed.jsx'
 import { appVersion } from './version.js'
 import DocsPage from './pages/DocsPage.jsx'
+import WinnerFeed from './components/WinnerFeed.jsx'
+import useGameDetails from './useGameDetails.jsx'
+import { EngagementContext, useEngagement } from './engagement/useEngagement.js'
+import { createExitAction } from './h5/exitAction.js'
 
-const defaultPrivacySettings = {
-  receiveWinNotifications: true,
+const loadingPrivacySettings = {
+  receiveWinNotifications: false,
   allowSendWins: true,
   shareRecentGames: true,
 }
 
 function MainNav({ page, mobile = false }) {
   const { t, href } = useLocale()
-  const navPage = page === 'games' ? 'lobby' : page
+  const navPage = page
   return (
     <nav
       className={mobile ? 'bottom-nav' : 'desktop-nav'}
@@ -48,9 +50,7 @@ function MainNav({ page, mobile = false }) {
           }
           aria-current={
             navPage === item.id
-              ? page === 'games'
-                ? 'location'
-                : 'page'
+              ? 'page'
               : undefined
           }
         >
@@ -63,14 +63,14 @@ function MainNav({ page, mobile = false }) {
   )
 }
 
-function AppHeader({ page, openWallet }) {
+function AppHeader({ page, openWallet, onExit }) {
   const { t, href } = useLocale()
-  const { mode, closeLobby, canCloseLobby, wallet: balances } = useH5()
+  const { mode, canCloseLobby, wallet: balances } = useH5()
   const back = headerBack(page, canCloseLobby)
   return (
     <header className="app-header">
       <div className="header-inner">
-        {back.href ? (
+        {page !== 'lobby' ? (
           <a
             className="exit-button"
             href={href(back.href)}
@@ -83,7 +83,7 @@ function AppHeader({ page, openWallet }) {
           <button
             className="exit-button"
             type="button"
-            onClick={closeLobby}
+            onClick={onExit}
             aria-label={t('退出大厅')}
           >
             <Icon name="chevronLeft" />
@@ -144,15 +144,52 @@ function AppHeader({ page, openWallet }) {
   )
 }
 
+function PrototypeLanguageSwitcher({ source, mode }) {
+  const { t, locale } = useLocale()
+  const changeLocale = (event, next) => {
+    event.preventDefault()
+    const url = new URL(window.location.href)
+    url.searchParams.set('lang', next)
+    window.location.href = url.toString()
+  }
+  return (
+    <aside className={`prototype-language-float is-${mode}`} aria-label={t('界面语言')}>
+      <span>{t('语言')}</span>
+      {source === 'preview' && <small>{t('preview.source')}</small>}
+      <nav aria-label={t('界面语言')}>
+        <a className={locale === 'zh' ? 'is-active' : ''} href="?lang=zh" onClick={(event) => changeLocale(event, 'zh')}>{t('简中')}</a>
+        <a className={locale === 'en' ? 'is-active' : ''} href="?lang=en" onClick={(event) => changeLocale(event, 'en')}>EN</a>
+      </nav>
+    </aside>
+  )
+}
+
 export default function App() {
   const { t, locale, href } = useLocale()
-  const { mode, game, closeGame, account, openGame } = useH5()
+  const { mode, game, closeGame, closeLobby, account } = useH5()
   const { page, url: routeUrl, action: navigationAction } = useNavigation()
   const mainRef = useRef(null)
   const scrollPositions = useRef(new Map())
   const [modal, setModal] = useState(null)
   const [toastMessage, setToastMessage] = useState(null)
-  const [privacySettings, setPrivacySettings] = useState(defaultPrivacySettings)
+  const engagement = useEngagement(account.id)
+  const privacySettings = engagement.preferences ?? loadingPrivacySettings
+  const [exitAction] = useState(() => createExitAction({
+    hasHost: () => typeof window.JoyloopHost?.request === 'function',
+    closeHost: () => closeLobby(),
+    navigate: () => {
+      const current = new URL(window.location.href)
+      const destination = new URL('index.html', current)
+      for (const key of ['lang', 'mode']) if (current.searchParams.has(key)) destination.searchParams.set(key, current.searchParams.get(key))
+      window.location.assign(destination.href)
+    },
+  }))
+  const showGameDetails = useGameDetails(setModal)
+  const playWin = (id) => {
+    const selected = games.find(item => item.id === id)
+    if (selected) showGameDetails(selected)
+    else toast(t('wins.status'))
+  }
   const toastLocale = useRef(locale)
   const closeModal = useCallback(() => setModal(null), [])
   const toast = useCallback(
@@ -160,6 +197,28 @@ export default function App() {
       setToastMessage({ text: message, locale: toastLocale.current }),
     [],
   )
+
+  // Restore the openExit -> existing Modal -> confirmed action flow from 50c8b32.
+  // H5 integration in 70c5e0a bypassed it; only the final action now targets the host/entry.
+  const openExit = () => setModal({
+    title: t('exit.title'), body: <p>{t('exit.body')}</p>,
+    confirmLabel: t('exit.confirm'), cancelLabel: t('exit.stay'),
+    onConfirm: async () => {
+      toast(t('exit.pending'))
+      const result = await exitAction()
+      if (!['completed', 'pending', 'cancelled'].includes(result?.status)) toast(t('exit.failed'))
+    },
+  })
+
+  const requestClose = useEffectEvent(() => {
+    if (game) closeGame()
+    else if (modal) closeModal()
+    else openExit()
+  })
+  useEffect(() => {
+    window.addEventListener('joyloop:request-close', requestClose)
+    return () => window.removeEventListener('joyloop:request-close', requestClose)
+  }, [])
 
   useEffect(() => {
     const clearOverlays = () => {
@@ -236,12 +295,11 @@ export default function App() {
       openWallet,
       showFullEntryHint,
       privacySettings,
-      onTogglePrivacy: (key) =>
-        setPrivacySettings((current) => ({ ...current, [key]: !current[key] })),
+      engagement,
+      onPlayWin: playWin,
     }
     const catalogKey = new URL(routeUrl).searchParams.get('category') ?? ''
     if (page === 'games') return <GamesPage key={catalogKey} {...props} />
-    if (page === 'tournaments') return <TournamentsPage {...props} />
     if (page === 'events') return <EventsPage {...props} />
     if (page === 'store') return <StorePage {...props} />
     if (page === 'profile') return <ProfilePage key={account.id} {...props} />
@@ -252,7 +310,7 @@ export default function App() {
   if (page === 'docs') return <DocsPage />
 
   return (
-    <div className="h5-stage">
+    <EngagementContext.Provider value={engagement}><div className="h5-stage">
       <div className={`h5-lobby is-${mode}`} data-display-mode={mode}>
         <div className="app-root">
           <div className="app-surface" inert={modal || game ? true : undefined}>
@@ -264,13 +322,13 @@ export default function App() {
               <span />
               <span />
             </div>
-            <AppHeader page={page} openWallet={openWallet} />
-            <WinnerFeed privacy={privacySettings} onOpenGame={(gameId) => openGame(gameId)} />
+            <AppHeader page={page} openWallet={openWallet} onExit={openExit} />
             <main className="page-shell" id="main" ref={mainRef} tabIndex={-1}>
               {renderPage()}
             </main>
             <MainNav page={page} mobile />
           </div>
+          <WinnerFeed privacy={privacySettings} onPlay={playWin} events={engagement.winners?.events} paused={Boolean(modal || game)} />
           {toastMessage && toastMessage.locale === locale && (
             <div className="toast" role="status">
               <Icon name="star" />
@@ -280,7 +338,8 @@ export default function App() {
           <Modal modal={modal} onClose={closeModal} />
         </div>
       </div>
-      {game && <GameSession key={game.id} game={game} onClose={closeGame} />}
-    </div>
+      {!game && !modal && <PrototypeLanguageSwitcher source={engagement.source} mode={mode} />}
+      {game && <GameSession key={game.id} game={game} onClose={closeGame} onRoundComplete={engagement.completeRound} />}
+    </div></EngagementContext.Provider>
   )
 }

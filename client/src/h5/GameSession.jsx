@@ -9,8 +9,9 @@ import { openLiveRoom } from './liveRoomBridge.js'
 import '../styles/liveEntry.css'
 
 const reelSymbols = ['gem', 'coin', 'star', 'jackpot', 'bolt']
+const bubbleCount = 12
 
-export default function GameSession({ game, onClose }) {
+export default function GameSession({ game, onClose, onRoundComplete = () => {} }) {
   const { t, locale } = useLocale()
   const liveRoom = liveRooms.find(
     (room) =>
@@ -95,6 +96,7 @@ export default function GameSession({ game, onClose }) {
           ),
         )
         setRounds((value) => value + 1)
+        onRoundComplete()
         setScore((value) => value + 120)
         setSpinning(false)
         playLock.current = false
@@ -107,6 +109,7 @@ export default function GameSession({ game, onClose }) {
     if (clearedBubbles.includes(index)) return
     setClearedBubbles((current) => [...current, index])
     setScore((value) => value + 20)
+    if (clearedBubbles.length === bubbleCount - 1) onRoundComplete()
   }
 
   const findLiveRoom = async () => {
@@ -217,7 +220,7 @@ export default function GameSession({ game, onClose }) {
             </div>
           ) : (
             <div className="game-bubble-board" aria-label={t('游戏区域')}>
-              {Array.from({ length: 12 }, (_, index) => (
+              {Array.from({ length: bubbleCount }, (_, index) => (
                 <button
                   className={`play-bubble bubble-${index % 4} ${clearedBubbles.includes(index) ? 'is-cleared' : ''}`}
                   key={index}

@@ -20,7 +20,6 @@ export default defineConfig({
         docs: resolve(projectDirectory, 'docs.html'),
         lobby: resolve(projectDirectory, 'lobby.html'),
         games: resolve(projectDirectory, 'games.html'),
-        tournaments: resolve(projectDirectory, 'tournaments.html'),
         events: resolve(projectDirectory, 'events.html'),
         store: resolve(projectDirectory, 'store.html'),
         profile: resolve(projectDirectory, 'profile.html'),

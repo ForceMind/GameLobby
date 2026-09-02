@@ -1,48 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Icon } from './icons.jsx'
 import { gameCategories, games, recentGames } from './data.js'
+import useGameDetails from './useGameDetails.jsx'
 import { GameArtwork, SectionHeader } from './ui.jsx'
 import { filterGames } from './demoModel.js'
 import { useLocale } from './useLocale.js'
-import { useH5 } from './h5/useH5.js'
-
-function gameStatusCopy(status) {
-  return (
-    {
-      maintenance: '正在维护，当前无法进入。',
-      upcoming: '即将上线，可以先记下它。',
-      unavailable: '当前不可用，请稍后再试。',
-    }[status] ?? '状态暂不可用，请稍后查看。'
-  )
-}
-
-function openGameDetails(game, openModal, t, openGame) {
-  const isReady = game.status === 'ready'
-  if (isReady) {
-    openGame(game)
-    return
-  }
-  openModal({
-    title: game.name,
-    kicker: t(game.categoryLabel),
-    subtitle: t('游戏暂不可用'),
-    body: (
-      <div className="game-preview">
-        <GameArtwork game={game} />
-        <div>
-          <h3>{t(gameStatusCopy(game.status))}</h3>
-          <p>{t('请稍后再来，或选择其他游戏。')}</p>
-        </div>
-      </div>
-    ),
-    confirmLabel: t('返回浏览'),
-    cancelLabel: null,
-  })
-}
 
 function GameCard({ game, openModal }) {
   const { t } = useLocale()
-  const { openGame } = useH5()
+  const showGameDetails = useGameDetails(openModal)
   const badgeLabels = {
     HOT: '热门',
     TREND: '流行',
@@ -54,7 +20,7 @@ function GameCard({ game, openModal }) {
     <button
       className={`game-card card game-status-${game.status}`}
       type="button"
-      onClick={() => openGameDetails(game, openModal, t, openGame)}
+      onClick={() => showGameDetails(game)}
     >
       <span className="game-cover">
         <GameArtwork game={game} />
@@ -94,7 +60,7 @@ function GameCard({ game, openModal }) {
 
 export function RecentGames({ openModal, recentVisibility = true }) {
   const { t } = useLocale()
-  const { openGame } = useH5()
+  const showGameDetails = useGameDetails(openModal)
   const onKeyDown = (event) => {
     if (
       event.target !== event.currentTarget ||
@@ -136,7 +102,7 @@ export function RecentGames({ openModal, recentVisibility = true }) {
             className="recent-card card"
             type="button"
             key={game.id}
-            onClick={() => openGameDetails(game, openModal, t, openGame)}
+            onClick={() => showGameDetails(game)}
           >
             <GameArtwork game={game} compact />
             <span className="recent-copy">

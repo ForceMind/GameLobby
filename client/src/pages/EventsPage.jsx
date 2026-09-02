@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { checkinDays, dailyMissions } from '../data.js'
+import liteContent from '../data/liteContent.json'
 import { Progress, SectionHeader } from '../ui.jsx'
 import { formatNumber } from '../format.js'
 import { nextWheelAngle } from '../demoModel.js'
 import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
-import SocialActivities from '../components/SocialActivities.jsx'
-import LatestWins from '../components/LatestWins.jsx'
 import '../h5/eventsCompact.css'
 
 const wheelPrizes = [
@@ -33,7 +32,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
     latestTranslation.current = t
   }, [t])
   const [checkinClaimed, setCheckinClaimed] = useState(false)
-  const [wheelCount, setWheelCount] = useState(3)
+  const [wheelCount, setWheelCount] = useState(liteContent.events.wheelFreeSpins)
   const [wheelSpinning, setWheelSpinning] = useState(false)
   const [wheelAngle, setWheelAngle] = useState(0)
   const [claimedTasks, setClaimedTasks] = useState(() => new Set())
@@ -292,7 +291,6 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           </a>
         </nav>
       </section>
-      <SocialActivities openModal={openModal} toast={toast} />
       <section className="section" id="checkin" aria-labelledby="checkin-title">
         <SectionHeader
           title={t('七日签到')}
@@ -533,7 +531,6 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           </div>
         </section>
       </div>
-      <LatestWins openModal={openModal} toast={toast} />
     </>
   )
 }

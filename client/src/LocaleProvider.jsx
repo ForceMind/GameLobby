@@ -44,6 +44,7 @@ export default function LocaleProvider({ children }) {
     const url = new URL(window.location.href)
     url.searchParams.set('lang', next)
     window.history.replaceState(null, '', url)
+    window.dispatchEvent(new Event('joyloop:navigate'))
   }
 
   useEffect(() => {

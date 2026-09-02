@@ -30,6 +30,13 @@ const sourceFiles = [
   'components/LiveRooms.jsx',
   'components/LiveRoomsTeaser.jsx',
   'components/WinnerFeed.jsx',
+  'components/TomorrowChest.jsx',
+  'components/ChestHelpDialog.jsx',
+  'components/ChestLeaderboard.jsx',
+  'components/WalletLedger.jsx',
+  'components/ProfileSettings.jsx',
+  'components/WinnersPanel.jsx',
+  'useGameDetails.jsx',
 ]
 const hasChinese = (value) => /[\u3400-\u9fff]/u.test(value)
 const placeholders = (value) =>

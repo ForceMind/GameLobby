@@ -23,9 +23,9 @@ body,
   box-shadow: 0 -18px 70px #09132645;
 }
 .h5-lobby.is-half {
-  width: min(100vw, 100dvh, 640px);
-  height: min(100vw, 100dvh, 640px);
-  aspect-ratio: 1;
+  width: min(100vw, 640px);
+  height: 56vh;
+  height: clamp(50dvh, 56dvh, 60dvh);
   border-radius: 22px 22px 0 0;
 }
 .h5-lobby.is-full {
@@ -214,6 +214,14 @@ body,
 .h5-lobby.is-half .exit-button span,
 .h5-lobby.is-half .asset-chip small {
   display: none;
+}
+.h5-lobby.is-half .brand-copy .brand-version {
+  display: block;
+  margin-top: 1px;
+  color: var(--primary);
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 .h5-lobby.is-half .exit-button {
   width: 26px;

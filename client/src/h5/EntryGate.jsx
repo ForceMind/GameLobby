@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useLocale } from '../useLocale.js'
 import { Icon } from '../icons.jsx'
-import LanguagePicker from '../components/LanguagePicker.jsx'
 import { appVersion } from '../version.js'
 import './entry.css'
 
 export default function EntryGate() {
-  const { t, locale, setLocale, href } = useLocale()
+  const { t, href } = useLocale()
   const [mode, setMode] = useState('full')
   return (
     <main className="prototype-entry">
@@ -19,7 +18,6 @@ export default function EntryGate() {
             <span />
           </span>
           <span className="prototype-entry-brand-copy"><strong>Joyloop</strong><small>v{appVersion}</small></span>
-          <div className="prototype-entry-language"><LanguagePicker locale={locale} onChange={setLocale} compact /></div>
         </div>
         <p className="eyebrow">{t('原型评审')}</p>
         <h1 id="prototype-title">{t('Joyloop 游戏大厅')}</h1>
@@ -33,7 +31,7 @@ export default function EntryGate() {
             <Icon name="gamepad" />
             <span>
               <strong>{t('展示范围')}</strong>
-              {t('大厅、游戏目录、赛事、活动、商城与个人中心。')}
+              {t('大厅、游戏目录、活动、商城与个人中心。')}
             </span>
           </li>
           <li>
@@ -75,7 +73,7 @@ export default function EntryGate() {
               onChange={() => setMode('half')}
             />
             <strong>{t('半屏预览')}</strong>
-            <small>{t('1:1 游戏优先布局')}</small>
+            <small>{t('下方 50–60% 高度的游戏优先布局')}</small>
           </label>
         </fieldset>
         <button

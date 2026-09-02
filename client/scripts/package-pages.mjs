@@ -39,7 +39,6 @@ const entryFiles = [
   'docs.html',
   'lobby.html',
   'games.html',
-  'tournaments.html',
   'events.html',
   'store.html',
   'profile.html',

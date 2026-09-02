@@ -42,7 +42,7 @@ export default function H5Provider({ children }) {
     if (!activeGame.current) {
       displayMode.request({
         mode: entry.mode,
-        aspectRatio: entry.mode === 'half' ? 1 : null,
+        aspectRatio: null,
         reason: 'lobby',
       })
     }
@@ -50,7 +50,7 @@ export default function H5Provider({ children }) {
 
   const closeLobby = () => {
     displayMode.cancelPending()
-    requestHost('closeLobby')
+    return requestHost('closeLobby')
   }
 
   const openGame = (selected) => {
@@ -71,7 +71,7 @@ export default function H5Provider({ children }) {
     setGame(null)
     displayMode.request({
       mode: returnMode.current,
-      aspectRatio: returnMode.current === 'half' ? 1 : null,
+      aspectRatio: null,
       reason: 'return-to-lobby',
     })
     window.requestAnimationFrame(() =>

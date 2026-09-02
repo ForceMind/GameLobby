@@ -4,7 +4,7 @@
 
 ## 1. 注入公共上下文
 
-根入口 `index.html` 是给老板评审的原型基本说明首页：默认全屏，保留模式选择和进入按钮，点击即可进入；用户主动选择半屏后进入 1:1 大厅。大厅及其他业务入口不需要全局同意门槛，业务页默认全屏；只有显式 `mode=half|full` 才指定模式。页面加载前，宿主可注入：
+根入口 `index.html` 是给老板评审的原型基本说明首页：默认全屏，保留模式选择和进入按钮，点击即可进入；用户主动选择半屏后进入屏幕下方约 50–60% 高度的大厅，不再要求 1:1 比例。大厅及其他业务入口不需要全局同意门槛，业务页默认全屏；只有显式 `mode=half|full` 才指定模式。页面加载前，宿主可注入：
 
 ```js
 window.JoyloopHost = {
@@ -65,21 +65,21 @@ window.dispatchEvent(
 
 ## 3. 窗口模式
 
-首页是给老板评审的原型基本说明页，默认完整视口，保留模式选择和进入按钮，点击即可进入；主动选择半屏后进入 1:1 大厅。大厅及其他业务入口默认完整视口，不增加全局同意门槛。显式 `mode=half` 指定 1:1 形态，`mode=full` 指定完整视口；内部导航按链接显式传递，不读取旧 sessionStorage 布局缓存或 `accepted` 字段。大厅不提供界面缩放按钮，资产按钮只打开原地浮窗；“获得”进入当前布局的活动页，“充值”进入当前布局的商城页，均不切换 full。half 大厅只保留游戏优先内容；个人、商城、活动、赛事保留各自实际精简内容，更多功能只提示从独立首页选择 full，不导航或改 mode。half 内所有业务导航锁定 half。
+首页是给老板评审的原型基本说明页，默认完整视口，保留模式选择和进入按钮，点击即可进入；主动选择半屏后进入屏幕下方约 50–60% 高度的大厅，不要求 1:1 比例。大厅及其他业务入口默认完整视口，不增加全局同意门槛。显式 `mode=half` 指定底部半屏形态，`mode=full` 指定完整视口；内部导航按链接显式传递，不读取旧 sessionStorage 布局缓存或 `accepted` 字段。大厅不提供界面缩放按钮，资产按钮只打开原地浮窗；“获得”进入当前布局的活动页，“充值”进入当前布局的商城页，均不切换 full。half 大厅只保留游戏优先内容；个人、商城、活动保留各自实际精简内容，更多功能只提示从独立首页选择 full，不导航或改 mode。half 内所有业务导航锁定 half。
 
 `setDisplayMode` 的 payload：
 
 ```js
 {
   mode: 'half' | 'full',
-  aspectRatio: 1 | null, // half 为 1；full 时为 null 或省略
+  aspectRatio: number | null, // Lite v1 half 由 CSS 控制高度，建议传 null；full 同样为 null
   reason: 'lobby' | 'game' | 'return-to-lobby',
   revision: 1, // 正整数，单一 H5 文档内单调递增
   gameId: 'golden-pharaoh' // 仅 reason=game 时附带所选游戏 ID
 }
 ```
 
-- `half`：大厅使用 1:1 方形容器；前端目标边长为 `min(viewportWidth, viewportHeight, 640px)`。
+- `half`：大厅贴屏幕底部，高度约为视口的 50–60%，宽度最大 640px；具体高度由 CSS 和宿主分配的视口共同决定。
 - `full`：大厅或游戏使用宿主可提供的完整视口。
 - 进入游戏发送 `full`；游戏关闭后按进入前模式发送 `half` 或 `full`。
 - 模式请求由前端 dispatcher 串行发送，并且只保留最新的排队请求，避免快速切换产生过期窗口命令。
@@ -125,7 +125,9 @@ window.JoyloopHost.request = async ({
 { version: 1, requestId, action: 'closeLobby', payload: {} }
 ```
 
-宿主收到后关闭当前 H5 容器或返回 App。左上角入口始终显示：业务子页返回当前布局的大厅；大厅有宿主时调用 `closeLobby`，无宿主的浏览器预览返回独立说明首页。该操作不是退出登录。
+宿主收到后关闭当前 H5 容器或返回 App。左上角入口始终显示：业务子页返回当前布局的大厅；大厅先展示二次确认，用户确认后才调用 `closeLobby`，无宿主的浏览器预览同样确认后返回独立说明首页。取消不离开原页面，也不改变模式和滚动位置。该操作不是退出登录。确认流程复用 `50c8b32` 的 `openExit → Modal → onConfirm` 结构，避免重新设计独立弹窗系统。
+
+宿主返回键若需要页面处理，可以先派发 `window.dispatchEvent(new Event('joyloop:request-close'))`，此时宿主不要同时销毁 WebView。页面优先关闭游戏/普通浮窗，否则展示退出确认；只有收到明确的 `closeLobby` 请求后才能真正关闭。无法拦截宿主不经通知直接销毁 WebView 或浏览器标签页关闭。
 
 六个业务页之间的普通链接使用 History API，只切换 React 内容，不重建 H5Provider，不重复初始化宿主展示模式，bridge/context 保持有效。说明首页进入或退出、刷新、直接打开和新窗口仍创建新的文档；这些情况下宿主必须重新注入 bridge/context，旧文档的回调必须丢弃。
 

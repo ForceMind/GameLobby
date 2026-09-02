@@ -37,10 +37,10 @@ test('入口、外链、下载、新窗口与组合键点击不被内部路由�
   assert.equal(internalDestination('https://example.com/', 'lobby.html'), null)
 })
 
-test('账号安全仅保留登录检测，不提供新增的绑定、保护、支付密码和自动旋转', async () => {
+test('旧安全数据保持兼容，当前个人页不显示账号安全、编辑资料或旧安全功能', async () => {
   assert.deepEqual(profileSecurity.map((item) => item.label), ['异常登录检测'])
   const profile = await readFile(new URL('pages/ProfilePage.jsx', import.meta.url), 'utf8')
-  assert.doesNotMatch(profile, /autoplay|自动旋转|手机号绑定|登录保护|支付密码/)
+  assert.doesNotMatch(profile, /autoplay|自动旋转|手机号绑定|登录保护|支付密码|异常登录检测|账号安全|编辑资料/)
   for (const key of ['手机号绑定', '登录保护', '支付密码', '自动旋转']) assert.equal(Object.hasOwn(englishMessages, key), false)
 })
 

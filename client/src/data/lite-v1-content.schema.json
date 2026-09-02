@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "joyloop://schema/lite-v1-content",
+  "title": "Game Lobby Lite v1 static content",
+  "description": "发布随版本管理的基础展示内容。玩家状态、实时指标、概率、订单和奖励结果必须来自服务端。",
+  "type": "object",
+  "required": ["schemaVersion", "nav", "games", "activities", "products"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0" },
+    "nav": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "labelKey", "href"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "enum": ["lobby", "games", "activities", "store", "profile"] },
+          "labelKey": { "type": "string", "pattern": "^[a-z][a-z0-9_.]+$" },
+          "href": { "type": "string" }
+        }
+      }
+    },
+    "games": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "nameKey", "categoryKeys", "cover", "sortOrder"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "nameKey": { "type": "string", "pattern": "^[a-z][a-z0-9_.]+$" },
+          "categoryKeys": { "type": "array", "items": { "type": "string" } },
+          "cover": { "type": "string" },
+          "tagKeys": { "type": "array", "items": { "type": "string" } },
+          "sortOrder": { "type": "integer" }
+        }
+      }
+    },
+    "activities": { "type": "array", "items": { "type": "object", "required": ["id", "titleKey"], "additionalProperties": false, "properties": { "id": { "type": "string" }, "titleKey": { "type": "string" }, "descriptionKey": { "type": "string" } } } },
+    "products": { "type": "array", "items": { "type": "object", "required": ["id", "nameKey", "type"], "additionalProperties": false, "properties": { "id": { "type": "string" }, "nameKey": { "type": "string" }, "type": { "type": "string", "enum": ["coin_pack", "monthly_pass", "loss_recovery_chest"] }, "descriptionKey": { "type": "string" } } } }
+  }
+}

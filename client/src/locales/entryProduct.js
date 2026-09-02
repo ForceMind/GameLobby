@@ -7,8 +7,8 @@ export default {
   '用于评审页面设计、主要交互与全屏／半屏体验。':
     'Review the page designs, key interactions, and full-screen and compact experiences.',
   展示范围: 'Screens',
-  '大厅、游戏目录、赛事、活动、商城与个人中心。':
-    'Lobby, game library, tournaments, rewards, store, and profile.',
+  '大厅、游戏目录、活动、商城与个人中心。':
+    'Lobby, game library, rewards, store, and profile.',
   交互范围: 'Interactions',
   '可体验页面导航、资产浮窗、购买确认及游戏加载与退出。':
     'Try navigation, balance dialogs, purchase confirmation, and game loading and exit.',
@@ -19,6 +19,6 @@ export default {
   全屏预览: 'Full screen',
   完整页面与交互: 'Complete pages and interactions',
   半屏预览: 'Compact view',
-  '1:1 游戏优先布局': '1:1 game-first layout',
+  '下方 50–60% 高度的游戏优先布局': 'Game-first layout using roughly 50–60% of the screen height',
   进入原型: 'Open prototype',
 }
