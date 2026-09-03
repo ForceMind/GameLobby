@@ -1,6 +1,24 @@
 # Joyloop 部署到 Cloudflare Pages
 
-本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。当前未代为创建 Cloudflare 项目或执行线上部署。
+本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。
+
+## 实际部署方式：本机 wrangler 命令行
+
+**这是本项目实际在用的部署方式**，不是下文的 Git 集成（未配置）。Cloudflare Pages 项目名为 `joyloop`，账号为 `wxx110007@gmail.com`（本机已通过 `wrangler login` 存有 OAuth Token，见 `~/Library/Preferences/.wrangler/config/default.toml`）。每个分支部署后可通过分支别名 `https://<分支名>.joyloop.pages.dev` 访问，`main` 对应生产环境。
+
+```bash
+cd client
+npm run build
+npx wrangler pages deploy dist --project-name=joyloop --branch=<分支名> --commit-dirty=true --commit-message="<说明本次改动>"
+```
+
+- `--branch` 必须显式指定为当前 git 分支名，否则 wrangler 会用它自己检测到的分支名，可能与预期的预览别名不一致。
+- `--commit-dirty=true` 允许在本地有未提交改动时也能部署；分支本身已提交时也可以保留这个参数，不影响结果。
+- 部署完成后终端会打印两个地址：`https://<随机 ID>.joyloop.pages.dev`（这次部署的唯一地址）和 `Deployment alias URL: https://<分支名>.joyloop.pages.dev`（该分支当前生效的预览地址，同一分支重复部署会覆盖别名指向的内容）。
+- 排查"部署了但预览没变"时，先跑 `npx wrangler whoami` 确认还在登录状态，再用 `npx wrangler pages deployment list --project-name=joyloop` 看最近部署记录（含对应的 git commit、时间、部署地址），不要假设走的是 Git 自动构建。
+- `npx wrangler` 首次调用会现下载 wrangler 包（无全局安装），需要网络可达 registry。
+
+## v0.3.1 中奖列表、直播入口与白屏修正包
 
 ## v0.3.1 中奖列表、直播入口与白屏修正包
 
@@ -33,7 +51,9 @@ unzip -l joyloop-cf-pages-<date>-<gitshort>.zip
 
 把占位文件名替换为本次交付的文件名。manifest 中应确认 `dirty: false`，并核对 `sourceCommit`。
 
-## Git 集成
+## Git 集成（未启用，仅作参考）
+
+`joyloop` 项目当前**没有**配置 Cloudflare Pages 的 Git 集成——推送到 GitHub 不会触发自动构建，实际部署方式见上一节的 wrangler 命令行。以下设置是若未来要切换成 Git 集成时的参考值，不代表当前状态。
 
 | 设置                   | 值                |
 | ---------------------- | ----------------- |
