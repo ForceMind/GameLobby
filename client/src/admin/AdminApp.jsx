@@ -23,7 +23,7 @@ const navGroups = [
 ]
 
 const pageMeta = {
-  wins: ['赢家与动态', '今日赢家榜和最近中奖、中奖弹幕共用唯一中奖事件 ID；公开金额为累计中奖金币，不是净收益。'],
+  wins: ['赢家与动态', '只读查看今日赢家榜、最近中奖与宝箱幸运榜；榜单的管理在另一套系统，本后台不提供增删改。'],
   dashboard: ['运营概览', '实时掌握大厅、游戏、活动与商城运行情况。'],
   todo: ['待处理事项', '需要运营、审核或财务跟进的事项。'],
   publish: ['发布审核', '统一管理草稿、测试验证、审核发布与回滚。'],
@@ -64,7 +64,7 @@ const statusClass = (value) => {
 const statusValues = ['正常可玩', '维护中', '即将上线', '暂不可用', '进行中', '草稿', '待审核', '候补开放', '待处理', '处理中', '结算待开始', '生效中', '已发布', '启用', '成功', '已解决', '已结束', '已作废', '测试通过', '测试中', '测试失败', '校验通过', '检查中', '上传失败', '已展示', '已结算', '待激活', '待支付', '已支付', '失败', '退款处理中', '已退款', '异常', '已领取', '漏签', '今日可领', '正常', '活动限制', '待复核', '已取消', '已归档', '已停用', '已暂停', '已驳回', '已回滚', '已封禁', '已发放', '发放中', '发放失败', '未开通', '已到期', '待开启', '已开启', '已过期', '已生成版本', '已提交生产', '灰度 20%']
 
 const configurationNotes = {
-  wins: ['榜单按业务日累计中奖金币；最近中奖按时间倒序，同一事件只展示一次。所有我也要玩入口按 gameId 进入游戏说明。', '隐藏某条事件会同时把它从榜单聚合与前台弹幕中移除；暂停游戏、撤销事件或隐私变更须同时影响列表与弹幕。'],
+  wins: ['榜单按业务日累计中奖金币；最近中奖按时间倒序，同一事件只展示一次。公开金额是累计中奖金币，不是净收益。', '榜单聚合、最近中奖与前台中奖弹幕共用同一份中奖事件，三者必须一致。事件的隐藏、撤销与隐私处理由风控与内容审核系统负责，本后台只读。'],
   publish: ['带快照的发布任务在"通过并发布"时会用快照覆盖生效版本，"驳回"丢弃来源模块的草稿，"回滚"恢复上一个生效版本；不带快照的历史任务只变更状态。', '版本链路：草稿 → 自动检查 → 测试验证 → 待审核 → 灰度/全量 → 已发布。'],
   activities: ['活动配置保存为草稿；发布前校验活动周期、预算、资格范围与奖励库存。', '活动壳的状态与签到/转盘/任务子模块的配置版本目前各自独立（二期联动）。'],
   checkin: ['签到奖励按自然日发放；编辑只改草稿，保存后进入发布审核，通过后才覆盖生效版本。', '缺席补签规则明确为不支持；大奖固定在最后一天。'],
@@ -630,22 +630,19 @@ function AdminUsersPage({ onOpen, store, update, journal, navigate }) {
   return <><section className="admin-card permission-summary"><div><span>后台账号</span><strong>{store.adminUsers.length}</strong><small>启用 {store.adminUsers.filter((row) => row.status === '启用').length} · 待激活 {store.adminUsers.filter((row) => row.status === '待激活').length}</small></div><div><span>角色数量</span><strong>{store.roles.length}</strong><small>全部为自定义角色</small></div><div><span>MFA 覆盖率</span><strong>{Math.round((store.adminUsers.filter((u) => u.mfa).length / store.adminUsers.length) * 100)}%</strong><small>{store.adminUsers.filter((u) => !u.mfa).length} 个账号需处理</small></div><div><span>生产可操作角色</span><strong>{store.roles.filter((r) => r.prodPermission === '生产可操作').length}</strong><small>权限拦截待二期接入</small></div></section><section className="admin-card permission-matrix"><div className="card-heading"><div><h2>角色权限摘要</h2><p>菜单权限、操作权限和环境权限分开控制，点击任意角色可编辑。</p></div></div><div className="permission-table"><div className="permission-row permission-head"><span>角色</span><span>菜单范围</span><span>操作权限</span><span>生产权限</span></div>{store.roles.map((row) => <button className="permission-row" key={row.id} onClick={() => openRoleRow(row)}><span>{row.role}</span><span>{row.menuScope.join(' / ')}</span><span>{row.actions.join('、')}</span><span>{row.prodPermission}</span></button>)}</div></section><GenericPage page="adminUsers" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} /></>
 }
 
-function WinsPage({ store, update, journal }) {
+function WinsPage({ store }) {
   const [tab, setTab] = useState('rank')
-  const rankings = useMemo(() => aggregateWinnerRankings(store.winEvents.filter((e) => e.visible)), [store.winEvents])
+  const rankings = useMemo(() => aggregateWinnerRankings(store.winEvents), [store.winEvents])
   const events = store.winEvents
-  const chestAll = [...store.chestOpenings].sort((a, b) => b.rewardCoins - a.rewardCoins || a.id.localeCompare(b.id))
-  const chestVisible = chestAll.filter((c) => c.visible).slice(0, store.winsConfig.chestLimit).map((c) => c.id)
-  const toggleWin = (id) => { const item = events.find((e) => e.id === id); update('winEvents', (list) => list.map((e) => (e.id === id ? { ...e, visible: !e.visible } : e))); journal.logAudit({ action: item.visible ? '隐藏中奖事件' : '恢复展示中奖事件', target: `${item.name} · ${gameName(item.gameId)} · ${item.coins.toLocaleString('en-US')} 金币`, targetModule: 'wins', targetId: id, before: item.visible ? '已展示' : '已隐藏', after: item.visible ? '已隐藏' : '已展示' }) }
-  const toggleChest = (id) => { const item = store.chestOpenings.find((c) => c.id === id); update('chestOpenings', (list) => list.map((c) => (c.id === id ? { ...c, visible: !c.visible } : c))); journal.logAudit({ action: item.visible ? '隐藏开箱事件' : '恢复展示开箱事件', target: `${item.name} · ${item.rewardCoins.toLocaleString('en-US')} 金币`, targetModule: 'wins', targetId: id, before: item.visible ? '已展示' : '已隐藏', after: item.visible ? '已隐藏' : '已展示' }) }
-  const setLimit = (key, max) => (event) => update('winsConfig', (config) => ({ ...config, [key]: Math.min(max, Math.max(1, Number(event.target.value) || 1)) }))
+  const chest = [...store.chestOpenings].sort((a, b) => b.rewardCoins - a.rewardCoins || a.id.localeCompare(b.id))
   return <>
-    <div className="admin-config-note"><Icon name="shield" /><div><strong>{configurationNotes.wins[0]}</strong><span>{configurationNotes.wins[1]}</span></div></div>
-    <div className="catalog-toolbar"><div className="view-toggle"><button className={tab === 'rank' ? 'is-active' : ''} onClick={() => setTab('rank')}>大厅赢家榜与最近中奖</button><button className={tab === 'chest' ? 'is-active' : ''} onClick={() => setTab('chest')}>明日宝箱幸运榜单</button></div><span className="drag-hint">已隐藏 {events.filter((e) => !e.visible).length + store.chestOpenings.filter((c) => !c.visible).length} 条事件</span></div>
+    <div className="admin-config-note"><Icon name="shield" /><div><strong>本页只读</strong><span>{configurationNotes.wins[0]}</span><small>{configurationNotes.wins[1]}</small></div></div>
+    <div className="readonly-banner"><Icon name="lock" /><div><strong>榜单数据由风控与内容审核系统管理，本后台不提供隐藏、置顶或调整名次的操作。</strong><span>这里用于核对前台展示结果：某条中奖若需下架，请在对应系统处理，处理后本页与前台会一起变化。</span></div><span className="readonly-meta">数据来源：中奖事件服务 · 更新于刚刚</span></div>
+    <div className="catalog-toolbar"><div className="view-toggle"><button className={tab === 'rank' ? 'is-active' : ''} onClick={() => setTab('rank')}>大厅赢家榜与最近中奖</button><button className={tab === 'chest' ? 'is-active' : ''} onClick={() => setTab('chest')}>明日宝箱幸运榜单</button></div><span className="drag-hint"><Icon name="eye" />共 {events.length} 条中奖事件 · {chest.length} 条开箱事件</span></div>
     {tab === 'rank' ? <>
-      <section className="admin-card table-card"><div className="table-top"><div><strong>今日赢家榜</strong><span>按累计中奖金币排序，代表游戏取最近一次事件，仅统计已展示事件</span></div><label className="environment-select"><span>展示上限（前台固定 10）</span><input type="number" min="1" max="10" value={store.winsConfig.rankLimit} onChange={setLimit('rankLimit', 10)} style={{ width: 44, border: 0 }} /></label></div><div className="table-wrap"><table><thead><tr><th>排名</th><th>玩家昵称</th><th>代表游戏</th><th>累计中奖金币</th><th>展示状态</th></tr></thead><tbody>{rankings.slice(0, store.winsConfig.rankLimit).map((r, i) => <tr key={r.playerId}><td>{i + 1}</td><td>{r.name}</td><td>{gameName(r.gameId)}</td><td>{r.coins.toLocaleString('en-US')}</td><td><Status>已展示</Status></td></tr>)}</tbody></table>{!rankings.length && <div className="empty-state"><Icon name="eye" /><strong>没有可展示的事件</strong></div>}</div></section>
-      <section className="admin-card table-card"><div className="table-top"><div><strong>最近中奖</strong><span>按事件时间倒序，事件 ID 唯一去重；关闭展示会同时影响榜单聚合与前台弹幕</span></div></div><div className="table-wrap"><table><thead><tr><th>事件 ID</th><th>玩家昵称</th><th>游戏</th><th>中奖金币</th><th>展示状态</th></tr></thead><tbody>{events.map((e) => <tr key={e.id} className={e.visible ? '' : 'is-hidden-row'}><td>{e.id}</td><td>{e.name}</td><td>{gameName(e.gameId)}</td><td>{e.coins.toLocaleString('en-US')}</td><td><button className={`toggle-switch ${e.visible ? 'is-on' : ''}`} onClick={() => toggleWin(e.id)} aria-pressed={e.visible} aria-label="展示状态"><i /></button></td></tr>)}</tbody></table></div></section>
-    </> : <section className="admin-card table-card"><div className="table-top"><div><strong>明日宝箱幸运榜单</strong><span>按奖励金币降序，最多 5 条进入前台榜单；隐藏的事件保留在此可恢复</span></div><label className="environment-select"><span>展示上限（前台固定 5）</span><input type="number" min="1" max="5" value={store.winsConfig.chestLimit} onChange={setLimit('chestLimit', 5)} style={{ width: 44, border: 0 }} /></label></div><div className="table-wrap"><table><thead><tr><th>榜单位次</th><th>玩家昵称</th><th>中奖金币</th><th>展示状态</th></tr></thead><tbody>{chestAll.map((c) => <tr key={c.id} className={c.visible ? '' : 'is-hidden-row'}><td>{chestVisible.includes(c.id) ? chestVisible.indexOf(c.id) + 1 : '—'}</td><td>{c.name}</td><td>{c.rewardCoins.toLocaleString('en-US')}</td><td><button className={`toggle-switch ${c.visible ? 'is-on' : ''}`} onClick={() => toggleChest(c.id)} aria-pressed={c.visible} aria-label="展示状态"><i /></button></td></tr>)}</tbody></table></div></section>}
+      <section className="admin-card table-card"><div className="table-top"><div><strong>今日赢家榜</strong><span>按累计中奖金币排序，代表游戏取最近一次事件；前台固定展示前 10 名</span></div><button className="admin-btn subtle" onClick={() => exportCsv('今日赢家榜', ['排名', '玩家昵称', '代表游戏', '累计中奖金币'], rankings.slice(0, 10).map((r, i) => [i + 1, r.name, gameName(r.gameId), r.coins]))}>导出 CSV</button></div><div className="table-wrap"><table><thead><tr><th>排名</th><th>玩家昵称</th><th>代表游戏</th><th>累计中奖金币</th></tr></thead><tbody>{rankings.slice(0, 10).map((r, i) => <tr key={r.playerId}><td>{i + 1}</td><td>{r.name}</td><td>{gameName(r.gameId)}</td><td>{r.coins.toLocaleString('en-US')}</td></tr>)}</tbody></table>{!rankings.length && <div className="empty-state"><Icon name="eye" /><strong>今日暂无中奖事件</strong></div>}</div></section>
+      <section className="admin-card table-card"><div className="table-top"><div><strong>最近中奖</strong><span>按事件时间倒序，事件 ID 唯一；榜单聚合、最近中奖与前台弹幕共用这一份事件</span></div><button className="admin-btn subtle" onClick={() => exportCsv('最近中奖', ['事件 ID', '玩家昵称', '游戏', '中奖金币'], events.map((e) => [e.id, e.name, gameName(e.gameId), e.coins]))}>导出 CSV</button></div><div className="table-wrap"><table><thead><tr><th>事件 ID</th><th>玩家昵称</th><th>游戏</th><th>中奖金币</th></tr></thead><tbody>{events.map((e) => <tr key={e.id}><td>{e.id}</td><td>{e.name}</td><td>{gameName(e.gameId)}</td><td>{e.coins.toLocaleString('en-US')}</td></tr>)}</tbody></table></div></section>
+    </> : <section className="admin-card table-card"><div className="table-top"><div><strong>明日宝箱幸运榜单</strong><span>按奖励金币降序；前台固定展示前 5 名</span></div><button className="admin-btn subtle" onClick={() => exportCsv('宝箱幸运榜', ['位次', '玩家昵称', '中奖金币'], chest.map((c, i) => [i + 1, c.name, c.rewardCoins]))}>导出 CSV</button></div><div className="table-wrap"><table><thead><tr><th>榜单位次</th><th>玩家昵称</th><th>中奖金币</th><th>是否进入前台榜单</th></tr></thead><tbody>{chest.map((c, i) => <tr key={c.id}><td>{i + 1}</td><td>{c.name}</td><td>{c.rewardCoins.toLocaleString('en-US')}</td><td>{i < 5 ? <Status>已展示</Status> : <span className="admin-status neutral"><i />未进入前 5</span>}</td></tr>)}</tbody></table></div></section>}
   </>
 }
 
@@ -1311,7 +1308,7 @@ function AdminApp() {
     if (activePage === 'versions') return <GameVersionCenterPage {...common} />
     if (activePage === 'publish') return <ReleaseCenterPage {...common} />
     if (activePage === 'adminUsers') return <AdminUsersPage {...common} />
-    if (activePage === 'wins') return <WinsPage store={store} update={update} journal={journal} />
+    if (activePage === 'wins') return <WinsPage store={store} />
     if (activePage === 'checkin') return <CheckinPage {...common} />
     if (activePage === 'wheel') return <WheelPage {...common} />
     if (activePage === 'missions') return <MissionsPage store={store} update={update} journal={journal} />

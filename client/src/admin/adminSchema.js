@@ -220,10 +220,12 @@ export const wheelPrizeSeed = [
 // Wallet ledger: NovaPlayer rows come straight from engagementPreview.walletLedger (with real before/after balances);
 // the chest rows and MintCat row are prototype samples that keep the same field shape.
 const previewLedgerTimes = { 10: '今天 14:50', 20: '今天 14:40', 30: '今天 14:30', 40: '今天 14:20' }
+// 预览流水的条数会随前台样例数据变化，编号必须排在手写条目之上，否则会撞号。
+const LEDGER_ID_BASE = 90201
 const ledgerSeed = () => {
   const preview = [...engagementPreview.walletLedger].sort((a, b) => b.minutesAgo - a.minutesAgo)
   const fromPreview = preview.map((row, index) => ({
-    id: `#WL-${90101 + index}`, player: 'NovaPlayer', playerId: 'JL-2048', currency: row.currency, amount: row.amount, source: row.source,
+    id: `#WL-${LEDGER_ID_BASE + index}`, player: 'NovaPlayer', playerId: 'JL-2048', currency: row.currency, amount: row.amount, source: row.source,
     status: row.status, time: previewLedgerTimes[row.minutesAgo] || '今天', balanceBefore: row.balanceBefore, balanceAfter: row.balanceAfter, ref: '',
   }))
   const extra = [
@@ -336,9 +338,12 @@ export function createInitialStore() {
     production: zip(rawRows.production, 'production'),
     adminUsers: zip(rawRows.adminUsers, 'adminUsers').map((r) => ({ ...r, mfa: r.status !== '待激活' })),
     roles: roleSeed.map((r) => ({ ...r })),
-    winEvents: engagementPreview.wins.map((e) => ({ ...e, visible: true })),
-    chestOpenings: engagementPreview.chestOpenings.map((c) => ({ ...c, visible: true })),
-    winsConfig: { rankLimit: 10, chestLimit: 5 },
+    // Read-only mirrors of the win-event service. There is deliberately no
+    // `visible` flag or display-limit config here: hiding an event and changing
+    // how many rows the lobby shows both belong to the systems that own them,
+    // and a switch in this console that only moved its own copy would be a lie.
+    winEvents: engagementPreview.wins.map((e) => ({ ...e })),
+    chestOpenings: engagementPreview.chestOpenings.map((c) => ({ ...c })),
     rewardClaims: rewardClaimSeed.map((r) => ({ ...r })),
     entitlements: entitlementSeed.map((r) => ({ ...r })),
     chestRecords: chestRecordSeed(),
