@@ -118,6 +118,7 @@ const rawRows = {
     ['幸运旋转狂欢季', '转盘', '2026-08-20 — 2026-09-20', '进行中', '24,680', '运营一组'],
     ['七日签到 · 秋日版', '签到', '2026-08-01 — 2026-09-30', '进行中', '18,420', '运营二组'],
     ['每日任务 3.1', '任务', '每日刷新', '草稿', '—', '产品组'],
+    ['新用户首周礼', '签到', '2026-07-01 — 2026-07-31', '已结束', '6,820', '增长组'],
   ],
   orders: [
     ['JL-2026-090101', 'NovaPlayer', '68,000 金币礼包', '$4.90', '已支付', '今天 14:42'],
@@ -293,7 +294,7 @@ export function createInitialStore() {
     ...JSON.parse(JSON.stringify(config)),
     live: JSON.parse(JSON.stringify(config)),
     liveHistory: {},
-    activities: zip(rawRows.activities, 'activities'),
+    activities: zip(rawRows.activities, 'activities').map((a, i) => ({ ...a, audience: ['全部玩家', '全部玩家', '全部玩家', '新用户（注册 7 日内）'][i] || '全部玩家', budget: ['单日上限 800,000 金币', '总预算 6,800,000 金币', '单日上限 300,000 金币', '总预算 1,200,000 金币'][i] || '—' })),
     orders: zip(rawRows.orders, 'orders'),
     players: zip(rawRows.players, 'players'),
     todo,

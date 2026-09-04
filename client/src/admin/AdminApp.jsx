@@ -7,7 +7,7 @@ import { missionEventOptions, transitions, columns, createInitialStore, ledgerSo
 import {
   formatReward, coinPackPriceUsd, wheelBalanced, prizeLabel, validateWheel, validateCheckin, validateMissions, validateCoinPack,
   validateMonthlyPass, validateChestOffer, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels,
-  getSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, WHEEL_SLOTS,
+  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, validateSnapshot, WHEEL_SLOTS,
 } from './adminRules.js'
 
 const navGroups = [
@@ -641,61 +641,109 @@ function WinsPage({ store, update, journal }) {
   </>
 }
 
+// ---- shared config editors ------------------------------------------------
+// Used by both the dedicated config pages and the activity modal, so the two can never drift apart.
+const checkinStateLabel = { claimed: '已领取', missed: '漏签', today: '今日可领', locked: '未解锁' }
+const checkinStepClass = { claimed: 'done', today: 'active', missed: 'missed', locked: '' }
+
+function CheckinLadderEditor({ days, onChange }) {
+  const updateDay = (index, patch) => onChange(days.map((d, i) => (i === index ? { ...d, ...patch, reward: formatReward(patch.coins ?? d.coins, patch.gems ?? d.gems) } : d)))
+  const steps = []
+  days.forEach((d, i) => {
+    if (i > 0) steps.push(<i key={`line-${i}`} />)
+    steps.push(<div key={d.day} className={`workflow-step ${checkinStepClass[d.state]}`}><b>{i + 1}</b><span>{d.day.split(' ')[0]}{d.grand ? ' · 大奖' : ''}</span></div>)
+  })
+  return <>
+    <div className="workflow-strip">{steps}</div>
+    <div className="table-wrap"><table><thead><tr><th>天数</th><th>金币</th><th>宝石</th><th>大奖</th><th>示例玩家进度（非配置）</th></tr></thead><tbody>{days.map((d, i) => <tr key={d.day}>
+      <td>{d.day}</td>
+      <td><input className="ladder-input" type="number" min="0" value={d.coins} onChange={(event) => updateDay(i, { coins: Number(event.target.value) || 0 })} /></td>
+      <td><input className="ladder-input" type="number" min="0" value={d.gems} onChange={(event) => updateDay(i, { gems: Number(event.target.value) || 0 })} /></td>
+      <td><button className={`toggle-switch ${d.grand ? 'is-on' : ''}`} onClick={() => updateDay(i, { grand: !d.grand })} aria-pressed={!!d.grand} aria-label="大奖"><i /></button></td>
+      <td><Status>{checkinStateLabel[d.state]}</Status></td>
+    </tr>)}</tbody></table></div>
+  </>
+}
+
+function WheelPrizeEditor({ prizes, freeSpins, onChange }) {
+  const emit = (patch) => onChange({ prizes, freeSpins, ...patch })
+  const updatePrize = (id, patch) => emit({ prizes: prizes.map((p) => (p.id === id ? { ...p, ...patch, label: prizeLabel(patch.kind ?? p.kind, patch.amount ?? p.amount) } : p)) })
+  const total = prizes.reduce((sum, p) => sum + (Number(p.probability) || 0), 0)
+  return <>
+    <div className={`admin-config-note ${wheelBalanced(prizes) ? '' : 'danger'}`}><Icon name={wheelBalanced(prizes) ? 'shield' : 'bolt'} /><div><strong>概率总和：{total}%{wheelBalanced(prizes) ? '' : '（必须为 100%）'}</strong><span>前台固定 {WHEEL_SLOTS} 格，当前 {prizes.length} 格；概率必须是 0–100 的整数。</span></div></div>
+    <div className="prize-list">{prizes.map((p, index) => <div className="prize-row wide" key={p.id}>
+      <span className="prize-index">第 {index + 1} 格</span>
+      <select className="ladder-input" value={p.kind} onChange={(event) => updatePrize(p.id, { kind: event.target.value })}><option value="coins">金币</option><option value="gems">宝石</option><option value="freeSpin">免费旋转</option></select>
+      <input className="ladder-input" type="number" min="1" value={p.amount} onChange={(event) => updatePrize(p.id, { amount: Number(event.target.value) || 0 })} />
+      <input type="number" min="0" max="100" step="1" value={p.probability} onChange={(event) => updatePrize(p.id, { probability: Math.max(0, Math.min(100, Math.round(Number(event.target.value) || 0))) })} />
+      <span className="pct">概率 %</span>
+      <button className="admin-btn subtle" onClick={() => emit({ prizes: prizes.filter((x) => x.id !== p.id) })}>删除</button>
+    </div>)}</div>
+    <div className="editor-actions">
+      <button className="admin-btn subtle" disabled={prizes.length >= WHEEL_SLOTS} onClick={() => emit({ prizes: [...prizes, { id: `prize-${stamp()}`, label: '100 金币', kind: 'coins', amount: 100, probability: 0 }] })}><Icon name="gift" />新增奖项（上限 {WHEEL_SLOTS} 格）</button>
+      <label className="inline-field">每日免费次数<input className="ladder-input" type="number" min="0" step="1" value={freeSpins} onChange={(event) => emit({ freeSpins: Math.max(0, Math.round(Number(event.target.value) || 0)) })} /></label>
+    </div>
+  </>
+}
+
+function MissionListEditor({ missions, removableIds, onChange }) {
+  const updateMission = (id, patch) => onChange(missions.map((m) => (m.id === id ? { ...m, ...patch } : m)))
+  return <>
+    <div className="editor-actions"><button className="admin-btn subtle" onClick={() => onChange([{ id: `mission-${stamp()}`, name: '', event: missionEventOptions[0], target: 1, coinReward: 500, gemReward: 1, cycle: '每日', status: '生效中', expired: false }, ...missions])}><Icon name="flag" />新建任务</button></div>
+    <div className="table-wrap"><table><thead><tr><th>任务名称</th><th>目标事件</th><th>目标值</th><th>状态</th><th>金币奖励</th><th>宝石奖励</th><th>刷新周期</th><th>操作</th></tr></thead><tbody>{missions.map((m) => <tr key={m.id}>{m.expired
+      ? <><td>{m.name}</td><td>{m.event}</td><td>{m.target}</td><td><Status>{m.status}</Status></td><td>{m.coinReward}</td><td>{m.gemReward}</td><td>{m.cycle}</td><td>—</td></>
+      : <>
+        <td><input className="ladder-input" value={m.name} placeholder="任务名称（必填）" onChange={(event) => updateMission(m.id, { name: event.target.value })} /></td>
+        <td><select className="ladder-input" value={m.event} onChange={(event) => updateMission(m.id, { event: event.target.value })}>{missionEventOptions.map((o) => <option key={o}>{o}</option>)}</select></td>
+        <td><input className="ladder-input" type="number" min="1" step="1" value={m.target} onChange={(event) => updateMission(m.id, { target: Math.max(1, Math.round(Number(event.target.value) || 1)) })} /></td>
+        <td><Status>{m.status}</Status></td>
+        <td><input className="ladder-input" type="number" min="0" value={m.coinReward} onChange={(event) => updateMission(m.id, { coinReward: Math.max(0, Number(event.target.value) || 0) })} /></td>
+        <td><input className="ladder-input" type="number" min="0" value={m.gemReward} onChange={(event) => updateMission(m.id, { gemReward: Math.max(0, Number(event.target.value) || 0) })} /></td>
+        <td>每日</td>
+        <td><button className="row-action" onClick={() => updateMission(m.id, { status: m.status === '生效中' ? '已下线' : '生效中' })}>{m.status === '生效中' ? '下线' : '上线'}</button>{!removableIds.includes(m.id) && <button className="row-action" onClick={() => onChange(missions.filter((x) => x.id !== m.id))}>移除</button>}</td>
+      </>}</tr>)}</tbody></table></div>
+  </>
+}
+
 function CheckinPage({ onOpen, store, update, journal, navigate }) {
   const days = store.checkinDays
   const errors = validateCheckin(days)
   const differs = draftDiffers(store, 'checkin')
-  const stateLabel = { claimed: '已领取', missed: '漏签', today: '今日可领', locked: '未解锁' }
-  const stateStepClass = { claimed: 'done', today: 'active', missed: 'missed', locked: '' }
-  const updateDay = (index, patch) => update('checkinDays', (current) => current.map((d, i) => (i === index ? { ...d, ...patch, reward: formatReward(patch.coins ?? d.coins, patch.gems ?? d.gems) } : d)))
+  const sum = (list, key) => list.reduce((total, d) => total + d[key], 0)
   const saveDraft = () => {
     journal.logAudit({ action: '保存签到奖励草稿', target: '七日签到 · 秋日版', targetModule: 'checkin', targetId: 'ladder', before: store.live.checkinDays.map((d) => d.reward).join(' / '), after: days.map((d) => d.reward).join(' / ') })
     journal.queuePublish({ name: '七日签到 · 秋日版奖励调整', type: '活动版本', scope: '生产环境', sourceModule: 'checkin', sourceId: 'ladder', snapshot: getSlice(store, 'checkin'), todoSource: '活动中心' })
   }
-  const stepEls = []
-  days.forEach((d, i) => {
-    if (i > 0) stepEls.push(<i key={`line-${i}`} />)
-    stepEls.push(<div key={d.day} className={`workflow-step ${stateStepClass[d.state]}`}><b>{i + 1}</b><span>{d.day.split(' ')[0]}{d.grand ? ' · 大奖' : ''}</span></div>)
-  })
   return <>
     <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes.checkin[0]}</span><small>{configurationNotes.checkin[1]}</small></div></div>
     <ConfigBadge store={store} moduleId="checkin" onDiscard={() => journal.discardDraft('checkin')} />
-    <section className="admin-card"><div className="card-heading"><div><h2>本期签到奖励梯度（草稿）</h2><p>七日签到 · 秋日版 · 生效版本满签总额 {store.live.checkinDays.reduce((s, d) => s + d.coins, 0).toLocaleString('en-US')} 金币 / {store.live.checkinDays.reduce((s, d) => s + d.gems, 0)} 宝石；草稿 {days.reduce((s, d) => s + d.coins, 0).toLocaleString('en-US')} 金币 / {days.reduce((s, d) => s + d.gems, 0)} 宝石</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
+    <section className="admin-card"><div className="card-heading"><div><h2>本期签到奖励梯度（草稿）</h2><p>七日签到 · 秋日版 · 生效版本满签总额 {sum(store.live.checkinDays, 'coins').toLocaleString('en-US')} 金币 / {sum(store.live.checkinDays, 'gems')} 宝石；草稿 {sum(days, 'coins').toLocaleString('en-US')} 金币 / {sum(days, 'gems')} 宝石</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
       {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-      <div className="workflow-strip">{stepEls}</div>
-      <div className="table-wrap"><table><thead><tr><th>天数</th><th>金币</th><th>宝石</th><th>大奖</th><th>示例玩家进度（非配置）</th></tr></thead><tbody>{days.map((d, i) => <tr key={d.day}><td>{d.day}</td><td><input className="ladder-input" type="number" min="0" value={d.coins} onChange={(event) => updateDay(i, { coins: Number(event.target.value) || 0 })} /></td><td><input className="ladder-input" type="number" min="0" value={d.gems} onChange={(event) => updateDay(i, { gems: Number(event.target.value) || 0 })} /></td><td><button className={`toggle-switch ${d.grand ? 'is-on' : ''}`} onClick={() => updateDay(i, { grand: !d.grand })} aria-pressed={!!d.grand} aria-label="大奖"><i /></button></td><td><Status>{stateLabel[d.state]}</Status></td></tr>)}</tbody></table></div>
+      <CheckinLadderEditor days={days} onChange={(next) => update('checkinDays', () => next)} />
     </section>
     <GenericPage page="checkin" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} />
   </>
 }
 
 function WheelPage({ onOpen, store, update, journal, navigate }) {
-  const prizes = store.wheelPrizes
   const live = store.live
-  const errors = validateWheel({ prizes, freeSpins: store.wheelFreeSpins })
+  const errors = validateWheel({ prizes: store.wheelPrizes, freeSpins: store.wheelFreeSpins })
   const differs = draftDiffers(store, 'wheel')
-  const total = prizes.reduce((sum, p) => sum + (Number(p.probability) || 0), 0)
-  const balanced = wheelBalanced(prizes)
-  const updatePrize = (id, patch) => update('wheelPrizes', (current) => current.map((p) => (p.id === id ? { ...p, ...patch, label: prizeLabel(patch.kind ?? p.kind, patch.amount ?? p.amount) } : p)))
-  const addPrize = () => update('wheelPrizes', (current) => (current.length >= WHEEL_SLOTS ? current : [...current, { id: `prize-${stamp()}`, label: '100 金币', kind: 'coins', amount: 100, probability: 0 }]))
-  const removePrize = (id) => update('wheelPrizes', (current) => current.filter((p) => p.id !== id))
   const saveDraft = () => {
     const nextVersion = live.wheelVersion + 1
-    const snapshot = { ...getSlice(store, 'wheel'), wheelVersion: nextVersion }
     update('wheelVersion', () => nextVersion)
-    journal.logAudit({ action: '保存幸运转盘草稿', target: '幸运旋转狂欢季 · 主转盘', targetModule: 'wheel', targetId: 'main', before: `v${live.wheelVersion} 概率 [${live.wheelPrizes.map((p) => p.probability).join(',')}] 免费 ${live.wheelFreeSpins}`, after: `v${nextVersion} 概率 [${prizes.map((p) => p.probability).join(',')}] 免费 ${store.wheelFreeSpins}` })
-    journal.queuePublish({ name: `幸运旋转狂欢季 · 主转盘 v${nextVersion}`, type: '活动版本', scope: '生产环境', sourceModule: 'wheel', sourceId: 'main', snapshot, todoSource: '活动中心' })
+    journal.logAudit({ action: '保存幸运转盘草稿', target: '幸运旋转狂欢季 · 主转盘', targetModule: 'wheel', targetId: 'main', before: `v${live.wheelVersion} 概率 [${live.wheelPrizes.map((p) => p.probability).join(',')}] 免费 ${live.wheelFreeSpins}`, after: `v${nextVersion} 概率 [${store.wheelPrizes.map((p) => p.probability).join(',')}] 免费 ${store.wheelFreeSpins}` })
+    journal.queuePublish({ name: `幸运旋转狂欢季 · 主转盘 v${nextVersion}`, type: '活动版本', scope: '生产环境', sourceModule: 'wheel', sourceId: 'main', snapshot: { ...getSlice(store, 'wheel'), wheelVersion: nextVersion }, todoSource: '活动中心' })
   }
   const wheelRows = store.wheel.map((row, index) => (index === 0 ? { ...row, prizeCount: `${live.wheelPrizes.length} 个奖项`, freeSpins: `${live.wheelFreeSpins} 次 / 日`, probabilityState: wheelBalanced(live.wheelPrizes) ? '概率已校验' : '概率未通过', version: `v${live.wheelVersion}` } : row))
   return <>
     <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes.wheel[0]}</span><small>{configurationNotes.wheel[1]}</small></div></div>
     <ConfigBadge store={store} moduleId="wheel" versionText={`v${live.wheelVersion}`} onDiscard={() => journal.discardDraft('wheel')} />
-    <section className="admin-card"><div className="card-heading"><div><h2>幸运旋转狂欢季 · 主转盘（草稿）</h2><p>{prizes.length} / {WHEEL_SLOTS} 个奖项 · 每日 {store.wheelFreeSpins} 次免费 · 生效版本 v{live.wheelVersion}{differs ? ` → 保存后将生成 v${live.wheelVersion + 1}` : ''}</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-      <div className={`admin-config-note ${errors.length ? 'danger' : ''}`}><Icon name={errors.length ? 'bolt' : 'shield'} /><div><strong>概率总和：{total}%{balanced ? '' : '（须为 100%）'}</strong><span>{errors.length ? errors.join('；') : '已通过校验，可保存并提交审核；审核通过时会再次校验。'}</span></div></div>
-      <div className="prize-list">{prizes.map((p) => <div className="prize-row wide" key={p.id}><select className="ladder-input" value={p.kind} onChange={(event) => updatePrize(p.id, { kind: event.target.value })}><option value="coins">金币</option><option value="gems">宝石</option><option value="freeSpin">免费旋转</option></select><input className="ladder-input" type="number" min="1" value={p.amount} onChange={(event) => updatePrize(p.id, { amount: Number(event.target.value) || 0 })} /><input type="number" min="0" max="100" step="1" value={p.probability} onChange={(event) => updatePrize(p.id, { probability: Math.max(0, Math.min(100, Math.round(Number(event.target.value) || 0))) })} /><span className="pct">概率 %</span><button className="admin-btn subtle" onClick={() => removePrize(p.id)}>删除</button></div>)}</div>
-      <button className="admin-btn subtle" disabled={prizes.length >= WHEEL_SLOTS} onClick={addPrize}><Icon name="gift" />新增奖项（前台固定 {WHEEL_SLOTS} 格）</button>
+    <section className="admin-card"><div className="card-heading"><div><h2>幸运旋转狂欢季 · 主转盘（草稿）</h2><p>{store.wheelPrizes.length} / {WHEEL_SLOTS} 个奖项 · 每日 {store.wheelFreeSpins} 次免费 · 生效版本 v{live.wheelVersion}{differs ? ` → 保存后将生成 v${live.wheelVersion + 1}` : ''}</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
+      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
+      <WheelPrizeEditor prizes={store.wheelPrizes} freeSpins={store.wheelFreeSpins} onChange={({ prizes, freeSpins }) => { update('wheelPrizes', () => prizes); update('wheelFreeSpins', () => freeSpins) }} />
+      <p className="editor-hint">版本号在保存时按生效版本自动 +1，不可手工输入。</p>
     </section>
-    <section className="admin-card"><div className="card-heading"><div><h2>转盘参数</h2><p>草稿版本号在保存时自动按生效版本 +1 生成，不可手工输入。</p></div></div><div className="form-grid"><label>每日免费次数<input className="ladder-input" type="number" min="0" step="1" value={store.wheelFreeSpins} onChange={(event) => update('wheelFreeSpins', () => Math.max(0, Math.round(Number(event.target.value) || 0)))} /></label><label>版本<input className="ladder-input" value={`生效 v${live.wheelVersion}${differs ? ` · 草稿将生成 v${live.wheelVersion + 1}` : ''}`} readOnly /></label></div></section>
     <GenericPage page="wheel" onOpen={onOpen} store={{ ...store, wheel: wheelRows }} update={update} journal={journal} navigate={navigate} />
   </>
 }
@@ -704,14 +752,11 @@ function MissionsPage({ store, update, journal }) {
   const missions = store.missions
   const errors = validateMissions(missions)
   const differs = draftDiffers(store, 'missions')
-  const updateMission = (id, patch) => update('missions', (list) => list.map((m) => (m.id === id ? { ...m, ...patch } : m)))
-  const toggleStatus = (m) => updateMission(m.id, { status: m.status === '生效中' ? '已下线' : '生效中' })
+  const summary = (list) => list.filter((m) => !m.expired).map((m) => `${m.name}(${m.target}/${m.coinReward}/${m.gemReward}/${m.status})`).join('，')
   const saveDraft = () => {
-    journal.logAudit({ action: '保存每日任务草稿', target: '每日任务列表', targetModule: 'missions', targetId: 'all', before: store.live.missions.filter((m) => !m.expired).map((m) => `${m.name}(${m.target}/${m.coinReward}/${m.gemReward}/${m.status})`).join('，'), after: missions.filter((m) => !m.expired).map((m) => `${m.name}(${m.target}/${m.coinReward}/${m.gemReward}/${m.status})`).join('，') })
+    journal.logAudit({ action: '保存每日任务草稿', target: '每日任务列表', targetModule: 'missions', targetId: 'all', before: summary(store.live.missions), after: summary(missions) })
     journal.queuePublish({ name: '每日任务配置更新', type: '活动版本', scope: '生产环境', sourceModule: 'missions', sourceId: 'all', snapshot: getSlice(store, 'missions'), todoSource: '活动中心' })
   }
-  const addMission = () => update('missions', (list) => [{ id: `mission-${stamp()}`, name: '', event: missionEventOptions[0], target: 1, coinReward: 500, gemReward: 1, cycle: '每日', status: '生效中', expired: false }, ...list])
-  const removeMission = (m) => update('missions', (list) => list.filter((x) => x.id !== m.id))
   const expectedCount = liteContent.events.dailyMissionCount
   const activeCount = missions.filter((m) => m.status === '生效中').length
   return <>
@@ -719,12 +764,101 @@ function MissionsPage({ store, update, journal }) {
     <ConfigBadge store={store} moduleId="missions" onDiscard={() => journal.discardDraft('missions')} />
     {activeCount !== expectedCount && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>生效任务数与配置基线不一致</strong><span>当前草稿生效 {activeCount} 个，基线为 {expectedCount} 个（liteContent.events.dailyMissionCount）。</span></div></div>}
     {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-    <div className="admin-toolbar"><span /><button className="admin-btn primary" onClick={addMission}><Icon name="flag" />新建任务</button></div>
-    <section className="admin-card table-card"><div className="table-top"><div><strong>每日任务列表（草稿）</strong><span>共 {missions.length} 条 · 已过期任务不可编辑</span></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div><div className="table-wrap"><table><thead><tr><th>任务名称</th><th>目标事件</th><th>目标值</th><th>状态</th><th>金币奖励</th><th>宝石奖励</th><th>刷新周期</th><th>操作</th></tr></thead><tbody>{missions.map((m) => <tr key={m.id}>{m.expired ? <><td>{m.name}</td><td>{m.event}</td><td>{m.target}</td><td><Status>{m.status}</Status></td><td>{m.coinReward}</td><td>{m.gemReward}</td><td>{m.cycle}</td><td>—</td></> : <><td><input className="ladder-input" value={m.name} placeholder="任务名称（必填）" onChange={(event) => updateMission(m.id, { name: event.target.value })} /></td><td><select className="ladder-input" value={m.event} onChange={(event) => updateMission(m.id, { event: event.target.value })}>{missionEventOptions.map((o) => <option key={o}>{o}</option>)}</select></td><td><input className="ladder-input" type="number" min="1" step="1" value={m.target} onChange={(event) => updateMission(m.id, { target: Math.max(1, Math.round(Number(event.target.value) || 1)) })} /></td><td><Status>{m.status}</Status></td><td><input className="ladder-input" type="number" min="0" value={m.coinReward} onChange={(event) => updateMission(m.id, { coinReward: Math.max(0, Number(event.target.value) || 0) })} /></td><td><input className="ladder-input" type="number" min="0" value={m.gemReward} onChange={(event) => updateMission(m.id, { gemReward: Math.max(0, Number(event.target.value) || 0) })} /></td><td>每日</td><td><button className="row-action" onClick={() => toggleStatus(m)}>{m.status === '生效中' ? '下线' : '上线'}</button>{!store.live.missions.some((x) => x.id === m.id) && <button className="row-action" onClick={() => removeMission(m)}>移除</button>}</td></>}</tr>)}</tbody></table></div></section>
+    <section className="admin-card table-card"><div className="table-top"><div><strong>每日任务列表（草稿）</strong><span>共 {missions.length} 条 · 已过期任务不可编辑</span></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
+      <MissionListEditor missions={missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(next) => update('missions', () => next)} />
+    </section>
   </>
 }
 
+// ---- activity centre ------------------------------------------------------
+// Each activity type owns a different reward config, so the modal swaps its editor by type.
+const activityTypeMeta = {
+  '转盘': { moduleId: 'wheel', title: '转盘奖项与概率', note: '奖项固定 8 格，概率总和必须为 100%；保存后版本号按生效版本自动 +1。' },
+  '签到': { moduleId: 'checkin', title: '签到奖励梯度', note: '按自然日发放，大奖固定在最后一天；不支持补签。' },
+  '任务': { moduleId: 'missions', title: '任务列表与奖励', note: '任务进度由服务端事件汇总，领取需幂等键；已过期任务不可编辑。' },
+}
+
+function ActivityModal({ record, store, update, journal, onClose }) {
+  const meta = activityTypeMeta[record.type]
+  const moduleId = meta?.moduleId
+  const [shell, setShell] = useState({ name: record.name, period: record.period, audience: record.audience || '全部玩家', budget: record.budget || '—', owner: record.owner })
+  const [config, setConfig] = useState(() => (moduleId ? getSlice(store, moduleId) : null))
+  const configErrors = moduleId ? validateSnapshot(moduleId, config) : []
+  const shellErrors = [...(!String(shell.name).trim() ? ['活动名称不能为空'] : []), ...(!String(shell.period).trim() ? ['活动周期不能为空'] : [])]
+  const errors = [...shellErrors, ...configErrors]
+  const shellChanged = ['name', 'period', 'audience', 'budget', 'owner'].some((key) => shell[key] !== (record[key] ?? (key === 'audience' ? '全部玩家' : key === 'budget' ? '—' : '')))
+  const configChanged = moduleId ? JSON.stringify(config) !== JSON.stringify(getSlice(store.live, moduleId)) : false
+  const history = store.audit.filter((a) => (a.targetModule === 'activities' && a.targetId === record.id) || (moduleId && a.targetModule === moduleId))
+  const save = () => {
+    if (shellChanged) {
+      update('activities', (list) => list.map((a) => (a.id === record.id ? { ...a, ...shell } : a)))
+      journal.logAudit({ action: '编辑活动信息', target: shell.name, targetModule: 'activities', targetId: record.id, after: diffSummary(record, { ...record, ...shell }, [['name', '活动名称'], ['period', '活动周期'], ['audience', '适用人群'], ['budget', '奖励预算'], ['owner', '负责人']]) })
+    }
+    if (configChanged && moduleId) {
+      const snapshot = moduleId === 'wheel' ? { ...config, wheelVersion: store.live.wheelVersion + 1 } : config
+      journal.transform((live) => setSlice(live, moduleId, snapshot))
+      journal.logAudit({ action: `保存${meta.title}草稿`, target: shell.name, targetModule: moduleId, targetId: record.id, before: '生效版本', after: `活动「${shell.name}」内提交` })
+      journal.queuePublish({ name: `${shell.name} · ${meta.title}调整`, type: '活动版本', scope: '生产环境', sourceModule: moduleId, sourceId: record.id, snapshot, todoSource: '活动中心' })
+    }
+    onClose()
+  }
+  return <Modal wide eyebrow={`活动配置 · ${record.type}`} title={record.name} subtitle={`${record.status} · 参与人数 ${record.participants} · 配置模块：${meta ? moduleLabels[moduleId] : '无关联配置模块'}`} onClose={onClose}
+    footer={<><span className="modal-foot-note">{configChanged && shellChanged ? '活动信息立即保存，奖励配置进入草稿并提交审核' : configChanged ? '奖励配置保存后进入草稿，需审核通过才生效' : shellChanged ? '活动信息保存后立即生效' : '尚未修改任何字段'}</span><button className="admin-btn subtle" onClick={onClose}>取消</button><button className="admin-btn primary" disabled={errors.length > 0 || (!shellChanged && !configChanged)} onClick={save}>保存</button></>}>
+    <div className="game-form">
+      <fieldset><legend>活动信息</legend><div className="form-grid">
+        <label>活动名称<input className="ladder-input" value={shell.name} onChange={(event) => setShell((v) => ({ ...v, name: event.target.value }))} /></label>
+        <label>活动类型<input className="ladder-input" value={record.type} readOnly /><small className="field-note">类型决定奖励配置形态，创建后不可更改</small></label>
+        <label>活动周期<input className="ladder-input" value={shell.period} onChange={(event) => setShell((v) => ({ ...v, period: event.target.value }))} /></label>
+        <label>适用人群<select className="ladder-input" value={shell.audience} onChange={(event) => setShell((v) => ({ ...v, audience: event.target.value }))}>{['全部玩家', '新用户（注册 7 日内）', '活跃玩家', '付费玩家', '流失召回'].map((o) => <option key={o}>{o}</option>)}</select></label>
+        <label>奖励预算<input className="ladder-input" value={shell.budget} onChange={(event) => setShell((v) => ({ ...v, budget: event.target.value }))} /></label>
+        <label>负责人<input className="ladder-input" value={shell.owner} onChange={(event) => setShell((v) => ({ ...v, owner: event.target.value }))} /></label>
+        <label>当前状态<input className="ladder-input" value={record.status} readOnly /><small className="field-note">状态通过列表页的操作流转（提交审核 / 暂停 / 结束）</small></label>
+        <label>参与人数<input className="ladder-input" value={record.participants} readOnly /><small className="field-note">由统计服务写入，后台只读</small></label>
+      </div></fieldset>
+      {meta ? <fieldset><legend>{meta.title}</legend><p className="fieldset-note">{meta.note}该配置与「{moduleLabels[moduleId]}」子页面共用同一份草稿，两处修改等价。</p>
+        {record.type === '签到' && <CheckinLadderEditor days={config.checkinDays} onChange={(days) => setConfig({ checkinDays: days })} />}
+        {record.type === '转盘' && <WheelPrizeEditor prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} onChange={({ prizes, freeSpins }) => setConfig((c) => ({ ...c, wheelPrizes: prizes, wheelFreeSpins: freeSpins }))} />}
+        {record.type === '任务' && <MissionListEditor missions={config.missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(missions) => setConfig({ missions })} />}
+      </fieldset> : <fieldset><legend>奖励配置</legend><p className="fieldset-note">该活动类型尚未定义奖励配置形态，仅可维护活动信息。</p></fieldset>}
+      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
+      <fieldset><legend>最近操作</legend>{history.length ? history.slice(0, 6).map((entry) => <p className="audit-item" key={entry.id}><Icon name="clock" /><span>{entry.actor} · {entry.action}<small>{entry.time} · {entry.result}</small></span></p>) : <p className="audit-item"><Icon name="eye" /><span>暂无操作记录</span></p>}</fieldset>
+    </div>
+  </Modal>
+}
+
+function ActivitiesPage({ onOpen, store, update, journal, navigate }) {
+  const [editingId, setEditingId] = useState(null)
+  const editing = editingId ? store.activities.find((a) => a.id === editingId) : null
+  return <>
+    <ActivityTypeLegend />
+    <GenericPage page="activities" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} describe={(record) => ({
+      id: `activities-${record.id}`, eyebrow: '活动详情', title: record.name, status: record.status,
+      history: store.audit.filter((a) => a.targetModule === 'activities' && a.targetId === record.id),
+      actions: [
+        { label: '编辑活动配置', tone: 'primary', run: () => setEditingId(record.id) },
+        ...describeGeneric('activities', record, store, { update, journal }).actions,
+      ],
+      fields: [
+        { key: 'type', label: '活动类型', value: record.type, readOnly: true },
+        { key: 'period', label: '活动周期', value: record.period, readOnly: true },
+        { key: 'audience', label: '适用人群', value: record.audience || '全部玩家', readOnly: true },
+        { key: 'budget', label: '奖励预算', value: record.budget || '—', readOnly: true },
+        { key: 'participants', label: '参与人数', value: record.participants, readOnly: true },
+        { key: 'owner', label: '负责人', value: record.owner, readOnly: true },
+        { key: 'module', label: '关联配置模块', value: activityTypeMeta[record.type] ? moduleLabels[activityTypeMeta[record.type].moduleId] : '无', readOnly: true },
+      ],
+      hint: '「编辑活动配置」打开该活动类型专属的配置弹窗；状态流转（提交审核 / 暂停 / 结束）在此处操作。',
+    })} />
+    {editing && <ActivityModal key={editing.id} record={editing} store={store} update={update} journal={journal} onClose={() => setEditingId(null)} />}
+  </>
+}
+
+function ActivityTypeLegend() {
+  return <div className="activity-legend">{Object.entries(activityTypeMeta).map(([type, meta]) => <div key={type}><strong>{type}类活动</strong><span>配置项：{meta.title}</span><small>{meta.note}</small></div>)}</div>
+}
+
 const packFieldLabels = [['coins', '金币数'], ['discountPercent', '折扣'], ['gemBonus', '赠送宝石'], ['tag', '标签'], ['recommended', '推荐款']]
+
 function describeCoinPack(pack, store, { update, journal }) {
   return {
     id: `coinpack-${pack.id}`, eyebrow: '金币礼包详情（草稿）', title: `${pack.coins.toLocaleString('en-US')} 金币礼包`, status: pack.status,
@@ -953,6 +1087,7 @@ function AdminApp() {
     if (activePage === 'checkin') return <CheckinPage {...common} />
     if (activePage === 'wheel') return <WheelPage {...common} />
     if (activePage === 'missions') return <MissionsPage store={store} update={update} journal={journal} />
+    if (activePage === 'activities') return <ActivitiesPage key={pageKey} {...common} />
     if (activePage === 'store') return <ProductsPage {...common} />
     if (activePage === 'orders') return <GenericPage key={pageKey} page="orders" describe={describeOrder} {...common} intent={intent} />
     if (activePage === 'players') return <PlayersCenterPage key={pageKey} {...common} navigate={navigate} intent={intent} />
