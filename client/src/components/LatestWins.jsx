@@ -37,9 +37,9 @@ export default function LatestWins({ openModal, toast }) {
     }
     openModal?.({
       title: t(game.name),
-      subtitle: t('游戏暂不可用'),
+      subtitle: t('games.unavailable'),
       body: <p>{t('该游戏当前无法进入，请稍后再试。')}</p>,
-      confirmLabel: t('知道了'),
+      confirmLabel: t('common.gotIt'),
       cancelLabel: null,
     })
   }

@@ -19,8 +19,8 @@ export function internalDestination(current, target, click = {}) {
 }
 
 export function headerBack(page, hasHost) {
-  if (page !== 'lobby') return { href: 'lobby.html', label: '返回大厅' }
-  return { href: hasHost ? null : 'index.html', label: '退出大厅' }
+  if (page !== 'lobby') return { href: 'lobby.html', label: 'nav.backToLobby' }
+  return { href: hasHost ? null : 'index.html', label: 'nav.exitLobby' }
 }
 
 export function installNavigation(win, doc, currentUrl, onNavigate) {

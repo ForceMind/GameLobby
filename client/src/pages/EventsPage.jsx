@@ -8,16 +8,20 @@ import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
 import '../h5/eventsCompact.css'
 
+// Structured so each language renders its own sentence. These eight slots still
+// mirror the admin's wheel configuration by hand; wiring them to the published
+// config is tracked separately.
 const wheelPrizes = [
-  '800 金币',
-  '2 宝石',
-  '1,200 金币',
-  '1 次免费旋转',
-  '300 金币',
-  '5 宝石',
-  '2,000 金币',
-  '500 金币',
+  { kind: 'coins', amount: 800 },
+  { kind: 'gems', amount: 2 },
+  { kind: 'coins', amount: 1200 },
+  { kind: 'freeSpin', amount: 1 },
+  { kind: 'coins', amount: 300 },
+  { kind: 'gems', amount: 5 },
+  { kind: 'coins', amount: 2000 },
+  { kind: 'coins', amount: 500 },
 ]
+const PRIZE_KEYS = { coins: 'events.prizeCoins', gems: 'events.prizeGems', freeSpin: 'events.prizeFreeSpin' }
 const missionTitles = {
   '累计旋转 100 次': '累计旋转 100 次',
   '完成 5 局休闲游戏': '完成 5 局休闲游戏',
@@ -26,7 +30,7 @@ const missionTitles = {
 }
 
 export default function EventsPage({ openModal, toast, showFullEntryHint }) {
-  const { t, href } = useLocale()
+  const { t, href, format } = useLocale()
   const latestTranslation = useRef(t)
   useEffect(() => {
     latestTranslation.current = t
@@ -38,7 +42,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
   const [claimedTasks, setClaimedTasks] = useState(() => new Set())
   const [rewardHistory, setRewardHistory] = useState([])
   const [wheelAnnouncement, setWheelAnnouncement] = useState({
-    key: '今日有 3 次免费旋转机会。',
+    key: 'events.wheelIntro',
   })
   const spinTimer = useRef(null)
   const spinLocked = useRef(false)
@@ -54,36 +58,36 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
     ])
   const showRewardHistory = () =>
     openModal({
-      title: t('奖励记录'),
-      subtitle: t('本次活动中获得的奖励'),
+      title: t('events.historyTitle'),
+      subtitle: t('events.historySubtitle'),
       body: rewardHistory.length ? (
         <ol className="reward-history">
           {rewardHistory.map((record) => (
             <li key={record.id}>
               <strong>{t(record.sourceKey)}</strong>
               <span>{t(record.rewardKey, record.rewardValues)}</span>
-              <small>{t('已记录')}</small>
+              <small>{t('events.historyRecorded')}</small>
             </li>
           ))}
         </ol>
       ) : (
-        <p>{t('暂无记录。领取签到、任务奖励或完成转盘后，可在这里查看。')}</p>
+        <p>{t('events.historyEmpty')}</p>
       ),
       cancelLabel: null,
-      confirmLabel: t('关闭记录'),
+      confirmLabel: t('events.historyClose'),
     })
   const claimCheckin = () => {
     if (checkinClaimed) return
     setCheckinClaimed(true)
-    recordReward('D3 每日签到', '2,000 金币 + 5 宝石')
-    toast(t('已领取今日签到奖励，记录可在这里查看'))
+    recordReward('events.historyCheckinD3', 'events.historyCheckinReward')
+    toast(t('events.checkinClaimToast'))
   }
   const spinWheel = () => {
     if (spinLocked.current || wheelCount <= 0) return
     spinLocked.current = true
     const prizeIndex = [0, 1, 3][3 - wheelCount]
     setWheelSpinning(true)
-    setWheelAnnouncement({ key: '正在抽取，请等待结果。' })
+    setWheelAnnouncement({ key: 'events.wheelSpinningStatus' })
     setWheelAngle((angle) => nextWheelAngle(angle, prizeIndex))
     const duration = window.matchMedia('(prefers-reduced-motion: reduce)')
       .matches
@@ -95,17 +99,14 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
       setWheelCount(remaining)
       setWheelSpinning(false)
       spinLocked.current = false
-      setWheelAnnouncement({
-        key: '本次结果：{prize}；剩余 {count} 次。',
-        values: { prize, count: remaining },
-      })
-      recordReward('幸运转盘', prize)
       const translate = latestTranslation.current
-      toast(
-        translate('抽取结果：{prize}', {
-          prize: translate(prize),
-        }),
-      )
+      const prizeLabel = translate(PRIZE_KEYS[prize.kind], { amount: prize.amount })
+      setWheelAnnouncement({
+        key: 'events.wheelResultStatus',
+        values: { prize: prizeLabel, count: remaining },
+      })
+      recordReward('events.wheelTitle', prizeLabel)
+      toast(translate('events.wheelResultToast', { prize: prizeLabel }))
     }, duration)
   }
   const claimTask = (mission) => {
@@ -122,12 +123,12 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
     }
     recordReward(
       missionTitles[mission.title] || mission.title,
-      '{coins} 金币 + {gems} 宝石',
+      'events.rewardCoinsPlusGems',
       values,
     )
     toast(
-      t('已领取：{reward}', {
-        reward: t('{coins} 金币 + {gems} 宝石', values),
+      t('events.claimedToast', {
+        reward: t('events.missionRewardValue', values),
       }),
     )
   }
@@ -139,11 +140,11 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
       <div className="events-compact">
         <section className="events-compact-head">
           <div>
-            <span className="eyebrow">{t('活动中心')}</span>
-            <h1>{t('今日奖励')}</h1>
+            <span className="eyebrow">{t('events.title')}</span>
+            <h1>{t('events.compactTitle')}</h1>
           </div>
           <strong className="events-compact-count">{claimable}</strong>
-          <span>{t('项待领取')}</span>
+          <span>{t('events.readyToClaimSuffixShort')}</span>
         </section>
         <section
           className="events-compact-card card"
@@ -151,8 +152,8 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
         >
           <div className="events-compact-row">
             <div>
-              <h2 id="compact-checkin-title">{t('今日签到')}</h2>
-              <p>{t('2,000 金币 + 5 宝石')}</p>
+              <h2 id="compact-checkin-title">{t('events.checkinTodayTitle')}</h2>
+              <p>{t('events.checkinRewardValue')}</p>
             </div>
             <button
               className="btn btn-primary"
@@ -160,7 +161,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
               disabled={checkinClaimed}
               onClick={claimCheckin}
             >
-              {checkinClaimed ? t('已领取') : t('领取')}
+              {checkinClaimed ? t('events.claimed') : t('events.claim')}
             </button>
           </div>
         </section>
@@ -170,8 +171,8 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
         >
           <div className="events-compact-row">
             <div>
-              <h2 id="compact-wheel-title">{t('幸运转盘')}</h2>
-              <p>{t('剩余 {count} 次', { count: wheelCount })}</p>
+              <h2 id="compact-wheel-title">{t('events.wheelTitle')}</h2>
+              <p>{t('events.wheelSpinsLeft', { count: wheelCount })}</p>
             </div>
             <button
               className="btn btn-secondary"
@@ -180,10 +181,10 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
               onClick={spinWheel}
             >
               {wheelSpinning
-                ? t('抽取中')
+                ? t('events.wheelSpinning')
                 : wheelCount
-                  ? t('免费旋转')
-                  : t('今日已用完')}
+                  ? t('events.wheelSpinAction')
+                  : t('events.wheelSpinsUsedUp')}
             </button>
           </div>
           <button
@@ -192,7 +193,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
             disabled={wheelSpinning}
             onClick={showRewardHistory}
           >
-            <Icon name="clock" /> {t('查看奖励记录')}
+            <Icon name="clock" /> {t('events.historyAction')}
           </button>
         </section>
         <section
@@ -200,9 +201,9 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           aria-labelledby="compact-tasks-title"
         >
           <div className="events-compact-row">
-            <h2 id="compact-tasks-title">{t('每日任务')}</h2>
+            <h2 id="compact-tasks-title">{t('events.missionsTitle')}</h2>
             <span className="status">
-              {t('{count} 项待领取', { count: claimableTasks })}
+              {t('events.readyToClaimCount', { count: claimableTasks })}
             </span>
           </div>
           <div className="events-compact-tasks">
@@ -225,7 +226,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                       disabled={done}
                       onClick={() => claimTask(mission)}
                     >
-                      {done ? t('已领取') : t('领取')}
+                      {done ? t('events.claimed') : t('events.claim')}
                     </button>
                   )}
                 </div>
@@ -237,7 +238,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
             type="button"
             onClick={showFullEntryHint}
           >
-            {t('更多任务')}
+            {t('events.moreMissions')}
           </button>
         </section>
       </div>
@@ -247,8 +248,8 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
     <>
       <section className="page-head">
         <p className="eyebrow">REWARDS · DAILY PLAY</p>
-        <h1>{t('活动中心')}</h1>
-        <p>{t('领取奖励、查看进度和奖励记录。')}</p>
+        <h1>{t('events.title')}</h1>
+        <p>{t('events.subtitle')}</p>
       </section>
       <section
         className="event-page-state card"
@@ -257,48 +258,48 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
         hidden={claimable > 0}
       >
         <Icon name="gift" />
-        <p>{t('今日可领取的签到与任务奖励已处理，可在奖励记录中查看。')}</p>
+        <p>{t('events.allClaimedToday')}</p>
       </section>
       <section
         className="event-overview card"
         aria-labelledby="event-overview-title"
       >
         <div>
-          <span className="event-day-kicker">{t('今日总览 · 00:00 刷新')}</span>
+          <span className="event-day-kicker">{t('events.overviewKicker')}</span>
           <h2 id="event-overview-title">
             <span className="number-accent">{claimable}</span>{' '}
-            {t('项奖励待领取')}
+            {t('events.readyToClaimSuffix')}
           </h2>
-          <p>{t('先领取已完成项目，不会影响其他任务进度。')}</p>
+          <p>{t('events.overviewHint')}</p>
         </div>
-        <nav className="overview-stats" aria-label={t('今日活动快捷入口')}>
+        <nav className="overview-stats" aria-label={t('events.overviewShortcutsLabel')}>
           <a className="overview-shortcut" href="#checkin">
-            <span>{t('七日签到')}</span>
+            <span>{t('events.checkinTitle')}</span>
             <strong>
-              {checkinClaimed ? t('今日已领取') : t('今日待领取')}
+              {checkinClaimed ? t('events.checkinClaimedToday') : t('events.checkinReadyToday')}
             </strong>
-            <small>{t('+2,000 金币 · +5 宝石')}</small>
+            <small>{t('events.checkinRewardSummary')}</small>
           </a>
           <a className="overview-shortcut" href="#wheel">
-            <span>{t('幸运转盘')}</span>
-            <strong>{t('{count} 次可抽', { count: wheelCount })}</strong>
-            <small>{t('每日机会')}</small>
+            <span>{t('events.wheelTitle')}</span>
+            <strong>{t('events.wheelSpinsAvailable', { count: wheelCount })}</strong>
+            <small>{t('events.wheelDailyChances')}</small>
           </a>
           <a className="overview-shortcut" href="#tasks">
-            <span>{t('每日任务')}</span>
-            <strong>{t('{count} 项待领取', { count: claimableTasks })}</strong>
-            <small>{t('00:00 按服务端刷新')}</small>
+            <span>{t('events.missionsTitle')}</span>
+            <strong>{t('events.readyToClaimCount', { count: claimableTasks })}</strong>
+            <small>{t('events.missionsResetShort')}</small>
           </a>
         </nav>
       </section>
       <section className="section" id="checkin" aria-labelledby="checkin-title">
         <SectionHeader
-          title={t('七日签到')}
+          title={t('events.checkinTitle')}
           titleId="checkin-title"
-          description={t('按对应日期领取奖励，已领取的奖励不可重复领取')}
+          description={t('events.checkinDescription')}
           action={
             <span className="status">
-              {checkinClaimed ? t('D3 已领取') : t('D3 可领取')}
+              {checkinClaimed ? t('events.checkinHeaderClaimed') : t('events.checkinHeaderReady')}
             </span>
           }
         />
@@ -306,7 +307,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           <div
             className="checkin-grid"
             role="list"
-            aria-label={t('七日签到奖励')}
+            aria-label={t('events.checkinGridLabel')}
           >
             {checkinDays.map((day) => {
               const state =
@@ -317,16 +318,24 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                   key={day.day}
                   role="listitem"
                 >
-                  <strong>{t(day.day)}</strong>
-                  <span>{t(day.reward)}</span>
+                  <strong>
+                    {day.day}
+                    {day.state === 'today' && ` · ${t('events.dayToday')}`}
+                    {day.grand && ` · ${t('events.dayGrand')}`}
+                  </strong>
+                  <span>
+                    {day.gems
+                      ? t('events.rewardCoinsGems', { coins: format.number(day.coins), gems: day.gems })
+                      : t('events.rewardCoins', { coins: format.number(day.coins) })}
+                  </span>
                   <small>
                     {state === 'claimed'
-                      ? t('已领取')
+                      ? t('events.claimed')
                       : state === 'missed'
-                        ? t('漏签')
+                        ? t('events.checkinDayStateMissed')
                         : state === 'today'
-                          ? t('可领取')
-                          : t('尚未解锁')}
+                          ? t('events.checkinDayReady')
+                          : t('events.checkinDayStateLocked')}
                   </small>
                 </div>
               )
@@ -334,27 +343,27 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           </div>
           <div className="section-footer">
             <div className="checkin-note">
-              <p>{t('每日签到按对应日期解锁，已领取的奖励不可重复领取。')}</p>
+              <p>{t('events.checkinNote')}</p>
               <button
                 className="text-action"
                 type="button"
                 onClick={() =>
                   openModal({
-                    title: t('签到规则说明'),
-                    subtitle: t('每日签到规则'),
+                    title: t('events.checkinRulesTitle'),
+                    subtitle: t('events.checkinRulesSubtitle'),
                     body: (
                       <p>
                         {t(
-                          '每日奖励按对应日期解锁；当天奖励领取后不可重复领取。',
+                          'events.checkinRule',
                         )}
                       </p>
                     ),
-                    confirmLabel: t('知道了'),
+                    confirmLabel: t('common.gotIt'),
                     cancelLabel: null,
                   })
                 }
               >
-                {t('查看签到规则')} <Icon name="chevronRight" />
+                {t('events.checkinRulesAction')} <Icon name="chevronRight" />
               </button>
             </div>
             <button
@@ -363,7 +372,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
               disabled={checkinClaimed}
               onClick={claimCheckin}
             >
-              {checkinClaimed ? t('今日已领取') : t('领取今日奖励')}
+              {checkinClaimed ? t('events.checkinClaimedToday') : t('events.checkinClaimToday')}
             </button>
           </div>
         </div>
@@ -371,12 +380,12 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
       <div className="activity-layout">
         <section className="section" id="wheel" aria-labelledby="wheel-title">
           <SectionHeader
-            title={t('幸运转盘')}
+            title={t('events.wheelTitle')}
             titleId="wheel-title"
-            description={t('结果确认完成前不会消耗下一次机会')}
+            description={t('events.wheelLockHint')}
             action={
               <span className="pill">
-                {t('今日剩余 {count} 次', { count: wheelCount })}
+                {t('events.wheelSpinsLeftToday', { count: wheelCount })}
               </span>
             }
           />
@@ -387,17 +396,12 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
             aria-live="polite"
             aria-atomic="true"
           >
-            {t(wheelAnnouncement.key, {
-              ...wheelAnnouncement.values,
-              prize: wheelAnnouncement.values?.prize
-                ? t(wheelAnnouncement.values.prize)
-                : '',
-            })}
+            {t(wheelAnnouncement.key, wheelAnnouncement.values ?? {})}
           </p>
           <div className="wheel-card card">
             <p className="sr-only" id="wheel-prizes">
               {t(
-                '转盘奖励包括 800、1,200、2,000、300 和 500 金币，2 或 5 宝石，以及 1 次免费旋转。',
+                'events.wheelPrizesSrOnly',
               )}
             </p>
             <div className="wheel-wrap" aria-busy={wheelSpinning}>
@@ -407,14 +411,16 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                 aria-hidden="true"
               >
                 {wheelPrizes.map((prize, index) => (
-                  <span style={{ '--prize-index': index }} key={prize}>
+                  <span style={{ '--prize-index': index }} key={`${prize.kind}-${prize.amount}-${index}`}>
                     <b>
-                      {prize === '1 次免费旋转' ? '×1' : prize.split(' ')[0]}
+                      {prize.kind === 'freeSpin'
+                        ? `×${prize.amount}`
+                        : format.number(prize.amount)}
                     </b>
                     <small>
-                      {prize === '1 次免费旋转'
-                        ? t('免费旋转')
-                        : t(prize.split(' ')[1])}
+                      {prize.kind === 'freeSpin'
+                        ? t('events.wheelPrizeFreeSpin')
+                        : t(prize.kind === 'gems' ? 'ledger.gems' : 'ledger.coins')}
                     </small>
                   </span>
                 ))}
@@ -428,10 +434,10 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                 onClick={spinWheel}
               >
                 {wheelSpinning
-                  ? t('抽取中')
+                  ? t('events.wheelSpinning')
                   : wheelCount
-                    ? t('免费旋转')
-                    : t('今日已用完')}
+                    ? t('events.wheelSpinAction')
+                    : t('events.wheelSpinsUsedUp')}
               </button>
             </div>
             <div className="section-footer compact">
@@ -442,17 +448,17 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                 onClick={showRewardHistory}
               >
                 <Icon name="clock" />
-                {t('查看奖励记录')}
+                {t('events.historyAction')}
               </button>
-              <small>{t('奖励结果会在记录中显示')}</small>
+              <small>{t('events.wheelResultHint')}</small>
             </div>
           </div>
         </section>
         <section className="section" id="tasks" aria-labelledby="tasks-title">
           <SectionHeader
-            title={t('每日任务')}
+            title={t('events.missionsTitle')}
             titleId="tasks-title"
-            description={t('每日 00:00 按服务端时间刷新')}
+            description={t('events.missionsResetHint')}
           />
           <div className="task-list">
             {dailyMissions.map((mission) => {
@@ -471,28 +477,28 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                       <span
                         className={`pill ${mission.expired ? 'pill-danger' : complete ? 'pill-success' : ''}`}
                       >
-                        {done ? t('已领取') : t(mission.status)}
+                        {done ? t('events.claimed') : t(mission.status)}
                       </span>
                     </div>
                     <p>
                       {mission.expired
-                        ? t('活动窗口已结束')
-                        : t('{current} / {total}{unit}', {
+                        ? t('events.missionWindowEnded')
+                        : t('events.missionProgressValue', {
                             current: mission.current,
                             total: mission.total,
-                            unit: mission.id === 'casual-5' ? t('局') : t('次'),
+                            unit: mission.id === 'casual-5' ? t('events.unitGames') : t('events.unitSpins'),
                           })}
                     </p>
                     <Progress
                       value={value}
-                      label={t('{title}进度', { title })}
+                      label={t('events.missionProgressLabel', { title })}
                     />
                     <div className="reward-chips">
                       <span>
-                        +{formatNumber(mission.coinReward)} {t('金币')}
+                        +{formatNumber(mission.coinReward)} {t('ledger.coins')}
                       </span>
                       <span>
-                        +{mission.gemReward} {t('宝石')}
+                        +{mission.gemReward} {t('ledger.gems')}
                       </span>
                     </div>
                   </div>
@@ -503,7 +509,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                       disabled={done}
                       onClick={() => claimTask(mission)}
                     >
-                      {done ? t('已领取') : t('领取奖励')}
+                      {done ? t('events.claimed') : t('events.claimReward')}
                     </button>
                   ) : mission.expired ? (
                     <button
@@ -511,7 +517,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                       type="button"
                       disabled
                     >
-                      {t('已过期')}
+                      {t('events.missionExpired')}
                     </button>
                   ) : (
                     <a
@@ -522,7 +528,7 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
                           : 'games.html?category=slots#game-catalog',
                       )}
                     >
-                      {t('查看对应游戏')}
+                      {t('events.missionGoToGames')}
                     </a>
                   )}
                 </article>

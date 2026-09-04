@@ -130,7 +130,7 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
       className={`game-session game-theme-${game.id}`}
       role="dialog"
       aria-modal="true"
-      aria-label={t('游戏：{name}', { name: game.name })}
+      aria-label={t('play.dialogLabel', { name: game.name })}
       data-game-phase={phase}
     >
       <div className="game-session-glow" aria-hidden="true" />
@@ -141,7 +141,7 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
             className="game-loading-back"
             type="button"
             onClick={onClose}
-            aria-label={t('返回大厅')}
+            aria-label={t('nav.backToLobby')}
           >
             <Icon name="chevronLeft" />
             Lobby
@@ -152,11 +152,11 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
             </div>
             <span className="game-kicker">JOYLOOP GAMES</span>
             <h1>{game.name}</h1>
-            <p>{t('正在加载游戏')}</p>
+            <p>{t('play.loading')}</p>
             <div
               className="game-loading-progress"
               role="progressbar"
-              aria-label={t('游戏加载进度')}
+              aria-label={t('play.loadingProgress')}
               aria-valuemin="0"
               aria-valuemax="100"
               aria-valuenow={progress}
@@ -173,7 +173,7 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
             className="game-close"
             type="button"
             onClick={onClose}
-            aria-label={t('关闭游戏')}
+            aria-label={t('play.close')}
           >
             <Icon name="close" />
           </button>
@@ -188,21 +188,21 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
               aria-describedby="game-live-room-status"
             >
               <span className="live-dot" aria-hidden="true" />
-              {t(liveRoomState === 'opening' ? '正在进入房间' : '找房间一起玩')}
-              {!liveRoom && <small>{t('暂无匹配房间')}</small>}
+              {t(liveRoomState === 'opening' ? 'play.roomOpening' : 'play.roomFind')}
+              {!liveRoom && <small>{t('play.noLiveRoom')}</small>}
             </button>
             <span className="sr-only" id="game-live-room-status" role="status" aria-live="polite">
-              {liveRoomState === 'failed' ? t('进入房间失败，请稍后再试') : liveRoomState === 'opened' ? t('已打开直播间预览') : ''}
+              {liveRoomState === 'failed' ? t('play.liveRoomFailed') : liveRoomState === 'opened' ? t('play.liveRoomOpened') : ''}
             </span>
           </div>
           <div className="game-scoreboard">
             <span>
-              {t('得分')}
+              {t('play.score')}
               <strong>{score.toLocaleString('en-US')}</strong>
             </span>
             {slotGame && (
               <span>
-                {t('局数')}
+                {t('play.rounds')}
                 <strong>{rounds}</strong>
               </span>
             )}
@@ -210,7 +210,7 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
           {slotGame ? (
             <div
               className={`game-reels ${spinning ? 'is-spinning' : ''}`}
-              aria-label={t('游戏转轴')}
+              aria-label={t('play.reelsLabel')}
             >
               {reels.map((symbol, index) => (
                 <div className="game-reel" key={index}>
@@ -219,14 +219,14 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
               ))}
             </div>
           ) : (
-            <div className="game-bubble-board" aria-label={t('游戏区域')}>
+            <div className="game-bubble-board" aria-label={t('play.boardLabel')}>
               {Array.from({ length: bubbleCount }, (_, index) => (
                 <button
                   className={`play-bubble bubble-${index % 4} ${clearedBubbles.includes(index) ? 'is-cleared' : ''}`}
                   key={index}
                   type="button"
                   disabled={clearedBubbles.includes(index)}
-                  aria-label={t('点击气泡 {number}', { number: index + 1 })}
+                  aria-label={t('play.bubbleLabel', { number: index + 1 })}
                   onClick={() => popBubble(index)}
                 >
                   <span />
@@ -243,7 +243,7 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
                 onClick={spin}
               >
                 <Icon name="play" />
-                {t(spinning ? '旋转中' : '开始旋转')}
+                {t(spinning ? 'play.spinning' : 'play.spin')}
               </button>
             ) : (
               <button
@@ -255,11 +255,11 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
                 }}
               >
                 <Icon name="refresh" />
-                {t('再来一局')}
+                {t('play.playAgain')}
               </button>
             )}
             <p role="status" aria-live="polite">
-              {t(slotGame ? '好运，就在下一转。' : '点击气泡，挑战更高分。')}
+              {t(slotGame ? 'play.slotHint' : 'play.casualHint')}
             </p>
           </div>
         </>

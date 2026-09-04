@@ -37,45 +37,45 @@ export default function StorePage({
     if (purchaseLock.current) return
     const summary = packSummary(pack)
     openModal({
-      title: t('{coins} 金币礼包', { coins: formatNumber(pack.coins) }),
+      title: t('store.coinPackTitle', { coins: formatNumber(pack.coins) }),
       kicker: t(pack.tag),
-      subtitle: t('美元价格 {price}', {
+      subtitle: t('store.priceUsd', {
         price: formatUsdCents(summary.priceCents),
       }),
       body: (
         <div className="purchase-summary">
           <div>
-            <span>{t('金币数量')}</span>
+            <span>{t('store.coinAmount')}</span>
             <strong>{formatNumber(summary.totalCoins)}</strong>
           </div>
           <div>
-            <span>{t('宝石赠礼')}</span>
+            <span>{t('store.bonusGemsLabel')}</span>
             <strong>+{formatNumber(summary.gems)}</strong>
           </div>
           <div>
-            <span>{t('原价')}</span>
+            <span>{t('store.originalPrice')}</span>
             <strong className="product-old-price">
               {formatUsdCents(summary.baseCents)}
             </strong>
           </div>
           <div>
-            <span>{t('折扣价')}</span>
+            <span>{t('store.discountedPrice')}</span>
             <strong>{formatUsdCents(summary.priceCents)}</strong>
           </div>
           <p>
-            {t('已优惠 {discount}%', {
+            {t('store.discountApplied', {
               discount: summary.discountPercent,
             })}
           </p>
         </div>
       ),
-      confirmLabel: t('确认购买'),
+      confirmLabel: t('chest.confirm'),
       onConfirm: async () => {
         if (purchaseLock.current) return
         purchaseLock.current = true
         setPendingSku(pack.id)
         setPurchaseMessage('正在处理购买请求…')
-        toast(t('正在处理购买请求…'))
+        toast(t('store.purchaseProcessingToast'))
         let result
         try {
           result = await requestHost('purchase', {
@@ -129,15 +129,15 @@ export default function StorePage({
     if (purchaseLock.current) return
     const product = liteContent.products.monthlyPass
     openModal({
-      title: t('月度特权卡'),
-      subtitle: t('美元价格 {price}', { price: formatUsdCents(product.priceUsdCents) }),
-      body: <div className="purchase-summary"><div><span>{t('每日金币')}</span><strong>{formatNumber(product.dailyCoins)}</strong></div><div><span>{t('每日宝石')}</span><strong>+{product.dailyGems}</strong></div><div><span>{t('有效天数')}</span><strong>{product.validDays}</strong></div><p>{t('每日奖励需当天领取，过期不补发。')}</p></div>,
-      confirmLabel: t('确认购买'),
+      title: t('store.monthlyPassTitle'),
+      subtitle: t('store.priceUsd', { price: formatUsdCents(product.priceUsdCents) }),
+      body: <div className="purchase-summary"><div><span>{t('store.passDailyCoins')}</span><strong>{formatNumber(product.dailyCoins)}</strong></div><div><span>{t('store.passDailyGems')}</span><strong>+{product.dailyGems}</strong></div><div><span>{t('store.validDays')}</span><strong>{product.validDays}</strong></div><p>{t('store.passDailyClaimNote')}</p></div>,
+      confirmLabel: t('chest.confirm'),
       onConfirm: async () => {
         if (purchaseLock.current) return
         purchaseLock.current = true
         setPendingSku('monthly-pass')
-        toast(t('正在处理购买请求…'))
+        toast(t('store.purchaseProcessingToast'))
         const result = await requestHost('purchase', {
           sku: 'monthly-pass',
           currency: 'USD',
@@ -150,9 +150,9 @@ export default function StorePage({
         purchaseLock.current = false
         if (result?.status === 'completed') {
           setReceipts((current) => [{ id: current.length + 1, titleKey: '月度特权卡', detailKey: '已购买月卡 · 每日 {coins} 金币 + {gems} 宝石 · 有效 {days} 天', detailValues: { coins: formatNumber(product.dailyCoins), gems: product.dailyGems, days: product.validDays } }, ...current])
-          toast(t('购买成功'))
-        } else if (result?.status === 'cancelled') toast(t('购买已取消'))
-        else toast(t('暂时无法完成购买，请稍后重试'))
+          toast(t('store.purchaseSuccess'))
+        } else if (result?.status === 'cancelled') toast(t('store.purchaseCancelled'))
+        else toast(t('store.purchaseFailed'))
       },
     })
   }
@@ -161,8 +161,8 @@ export default function StorePage({
     <div className="store-page compact-store">
       <section className="page-head">
         <p className="eyebrow">STORE · SECURE CHECKOUT</p>
-        <h1>{t('金币商城')}</h1>
-        <p>{t('选择金币数量并确认购买。')}</p>
+        <h1>{t('store.title')}</h1>
+        <p>{t('store.subtitle')}</p>
       </section>
       <TomorrowChest engagement={engagement} openModal={openModal} />
       {purchaseMessage && (
@@ -172,8 +172,8 @@ export default function StorePage({
       )}
       <section className="section">
         <SectionHeader
-          title={t('金币礼包')}
-          description={t('每档金币数量固定，折扣独立计算')}
+          title={t('store.coinPacksTitle')}
+          description={t('store.coinPacksHint')}
           action={<span className="pill">{t('USD')}</span>}
         />
         <div className="product-grid">
@@ -190,14 +190,14 @@ export default function StorePage({
                 </span>
                 <div className="product-amount">
                   <strong>{formatNumber(pack.coins)}</strong>
-                  <span>{t('金币')}</span>
+                  <span>{t('ledger.coins')}</span>
                 </div>
-                <p>{t('另赠 {gems} 宝石', { gems: pack.gemBonus })}</p>
+                <p>{t('store.bonusGems', { gems: pack.gemBonus })}</p>
                 <p className="product-discount">
-                  {t('优惠 {discount}%', { discount: summary.discountPercent })}
+                  {t('store.discountBadge', { discount: summary.discountPercent })}
                 </p>
                 <div className="product-price">
-                  <span>{t('购买价格')}</span>
+                  <span>{t('chest.price')}</span>
                   <strong>{formatUsdCents(summary.priceCents)}</strong>
                   <del>{formatUsdCents(summary.baseCents)}</del>
                 </div>
@@ -207,7 +207,7 @@ export default function StorePage({
                   disabled={Boolean(pendingSku)}
                   onClick={() => buyPack(pack)}
                 >
-                  {pendingSku === pack.id ? t('购买处理中') : t('购买礼包')}
+                  {pendingSku === pack.id ? t('store.purchasePending') : t('store.buyCoinPack')}
                 </button>
               </article>
             )
@@ -215,14 +215,14 @@ export default function StorePage({
         </div>
         <p className="fine-print">
           <Icon name="shield" />
-          {t('1 美元 = 10,000 金币')}
+          {t('store.coinRate')}
         </p>
       </section>
       {receipts.length > 0 && (
         <section className="section store-receipts">
           <SectionHeader
-            title={t('购买记录')}
-            description={t('最近完成的购买与兑换')}
+            title={t('store.purchaseHistoryTitle')}
+            description={t('store.purchaseHistoryHintFull')}
           />
           <div className="detail-list">
             {receipts.map((receipt) => (
@@ -237,78 +237,78 @@ export default function StorePage({
       <div className="page-layout">
         <section className="section">
           <SectionHeader
-            title={t('月度特权卡')}
-            description={t('连续 30 天，每天领取专属奖励')}
-            action={<span className="status">{t('可购买')}</span>}
+            title={t('store.monthlyPassTitle')}
+            description={t('store.passHint')}
+            action={<span className="status">{t('store.passStatusAvailable')}</span>}
           />
           <article className="membership-card card">
             <span className="pill">MONTHLY PASS</span>
-            <h2>{t('每天都有明确到账的轻量权益')}</h2>
-            <p>{t('每天领取固定权益。')}</p>
+            <h2>{t('store.passHeadline')}</h2>
+            <p>{t('store.passSubhead')}</p>
             <div className="benefit-grid">
               <div>
                 <strong>2,000</strong>
-                <span>{t('每日金币')}</span>
+                <span>{t('store.passDailyCoins')}</span>
               </div>
               <div>
                 <strong>1</strong>
-                <span>{t('每日宝石')}</span>
+                <span>{t('store.passDailyGems')}</span>
               </div>
               <div>
                 <strong>30</strong>
-                <span>{t('有效天数')}</span>
+                <span>{t('store.validDays')}</span>
               </div>
             </div>
             <div className="section-footer">
-              <span className="pill">{t('有效期：30 天')}</span>
+              <span className="pill">{t('store.validityBadge')}</span>
               <button
                 className="btn btn-secondary"
                 type="button"
                 disabled={Boolean(pendingSku)}
                 onClick={buyMonthlyPass}
               >
-                {pendingSku === 'monthly-pass' ? t('购买处理中') : t('购买月卡')}
+                {pendingSku === 'monthly-pass' ? t('store.purchasePending') : t('store.buyMonthlyPass')}
               </button>
               <button
                 className="btn btn-ghost"
                 type="button"
                 onClick={() =>
                   openModal({
-                    title: t('月度特权卡'),
-                    subtitle: t('权益详情'),
+                    title: t('store.monthlyPassTitle'),
+                    subtitle: t('store.benefitDetailsTitle'),
                     body: (
                       <p>
-                        {t('每日领取 2,000 金币和 1 宝石，有效期 30 天。每日奖励需当天领取，过期不补发。')}
+                        {t('store.passBenefitsBody')}
                       </p>
                     ),
-                    confirmLabel: t('知道了'),
+                    confirmLabel: t('common.gotIt'),
                     cancelLabel: null,
                   })
                 }
               >
-                {t('查看内容详情')}
+                {t('store.benefitDetailsAction')}
               </button>
             </div>
           </article>
         </section>
         <aside className="side-rail">
           <section className="section">
-            <SectionHeader title={t('购买记录')} description={t('最近完成的购买')} />
+            <SectionHeader title={t('store.purchaseHistoryTitle')} description={t('store.purchaseHistoryHint')} />
             <div className="record-list card">
               {receipts.length ? receipts.map((receipt) => (
                 <div key={receipt.id}><strong>{t(receipt.titleKey, receipt.titleValues)}</strong><span>{t(receipt.detailKey, receipt.detailValues)}</span></div>
-              )) : <p className="empty-state">{t('暂无购买记录')}</p>}
+              )) : <p className="empty-state">{t('store.purchaseHistoryEmpty')}</p>}
             </div>
           </section>
         </aside>
       </div>
-      <div className="compact-store-links" aria-label={t('更多商城内容')}>
+      <div className="compact-store-links" aria-label={t('store.moreLinksLabel')}>
         <button type="button" onClick={showFullEntryHint}>
-          <span>{t('月度特权卡')}</span>
+          <span>{t('store.monthlyPassTitle')}</span>
           <Icon name="chevronRight" />
         </button>
         <button type="button" onClick={showFullEntryHint}>
-          <span>{t('购买记录')}</span>
+          <span>{t('store.purchaseHistoryTitle')}</span>
           <Icon name="chevronRight" />
         </button>
       </div>

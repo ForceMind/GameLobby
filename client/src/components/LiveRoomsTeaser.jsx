@@ -31,7 +31,7 @@ export default function LiveRoomsTeaser({ href, toast }) {
     const message = result?.preview
       ? t('已打开 {name} 的房间预览', { name: room.title })
       : result?.status === 'failed'
-        ? t('进入房间失败，请稍后再试')
+        ? t('play.liveRoomFailed')
         : t('正在进入 {name}', { name: room.title })
     toast?.(message)
   }

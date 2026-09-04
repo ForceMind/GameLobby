@@ -1,5 +1,7 @@
 // Boundary for data supplied by the native Joyloop host.  Keep this module
 // free of browser/React dependencies so it can be exercised independently.
+import { normalizeLocale } from '../locales/registry.js'
+
 const MAX_STRING_LENGTH = 240
 
 const ACCOUNT_FIELDS = ['id', 'name', 'avatar']
@@ -30,6 +32,13 @@ function pickBalance(source, fallback, key) {
   return validBalance(source?.[key]) ?? validBalance(fallback?.[key]) ?? 0
 }
 
+// The host tells us which language the player has chosen in the native app. It is
+// validated against the supported set here rather than trusted verbatim, so a host
+// cannot push the lobby into a locale that has no catalogue.
+function validLocale(value) {
+  return normalizeLocale(validString(value))
+}
+
 /**
  * Normalize a partial host context, retaining only the public H5 contract.
  * Values missing or invalid in input are taken from fallback.  Derived labels
@@ -54,9 +63,11 @@ export function normalizeHostContext(input = {}, fallback = {}) {
 
   const coins = pickBalance(sourceWallet, previousWallet, 'coins')
   const gems = pickBalance(sourceWallet, previousWallet, 'gems')
+  const locale = validLocale(source.locale) ?? validLocale(previous.locale)
 
   return {
     account,
+    ...(locale ? { locale } : {}),
     wallet: {
       coins,
       gems,

@@ -1,74 +1,105 @@
-import common from './locales/common.js'
-import profileTournaments from './locales/profileTournaments.js'
-import eventsStore from './locales/eventsStore.js'
-import h5Product from './locales/h5Product.js'
-import storeProduct from './locales/storeProduct.js'
-import profileProduct from './locales/profileProduct.js'
-import activitiesProduct from './locales/activitiesProduct.js'
-import entryProduct from './locales/entryProduct.js'
-import compactProduct from './locales/compactProduct.js'
-import compactAccountStore from './locales/compactAccountStore.js'
-import engagementMessages from './data/engagementMessages.json' with { type: 'json' }
+import {
+  DEFAULT_LOCALE,
+  FALLBACK_LOCALE,
+  localeMeta,
+  normalizeLocale,
+  supportedLocales,
+} from './locales/registry.js'
+import messages from './locales/index.js'
+import legacyEnglish, { legacyChinese } from './locales/legacy.js'
 
-export const catalogs = {
-  common,
-  profileTournaments,
-  eventsStore,
-  h5Product,
-  storeProduct,
-  profileProduct,
-  activitiesProduct,
-  entryProduct,
-  compactProduct,
-  compactAccountStore,
-}
-// Shared terminology wins if a page-specific catalog repeats a common label.
-export const englishMessages = {
-  ...profileTournaments,
-  ...eventsStore,
-  ...common,
-  ...storeProduct,
-  ...profileProduct,
-  ...activitiesProduct,
-  ...h5Product,
-  ...entryProduct,
-  ...compactProduct,
-  ...compactAccountStore,
-}
-export const supportedLocales = ['zh', 'en']
+export { supportedLocales, DEFAULT_LOCALE, FALLBACK_LOCALE }
+// Re-exported for the guards that still audit the pre-migration catalogues.
+export { default as englishMessages, catalogs, legacyChinese } from './locales/legacy.js'
+export { locales, localeMeta, isRtl, intlTag, normalizeLocale } from './locales/registry.js'
 
-const chineseTerms = {
-  Slots: '老虎机',
-  'Slots · 实时': '老虎机 · 实时',
-  'Slot 赛事': '老虎机赛事',
-  'Slot 冲榜赛': '老虎机冲榜赛',
-  'Jackpot 争夺赛': '累积大奖争夺赛',
-  'Jackpot 猎手': '大奖猎手',
-  'Lucky Spin 狂欢季': '幸运旋转狂欢季',
-  'Classic Slot 周挑战': '经典老虎机周挑战',
-  'Free Spin': '免费旋转',
+// Every lookup that falls through to the key itself lands here, so a missing
+// translation is a reportable event rather than silently shipping a raw key.
+// LocaleProvider installs a dev-mode console reporter; production can install a
+// telemetry one. Nothing is reported twice for the same locale+key.
+const missSeen = new Set()
+let missHandler = null
+
+export function setMissingTranslationHandler(handler) {
+  missHandler = typeof handler === 'function' ? handler : null
 }
 
-export function resolveLocale(search = '', savedLocale = 'zh') {
-  const requested = new URLSearchParams(search).get('lang')
-  return supportedLocales.includes(requested)
-    ? requested
-    : supportedLocales.includes(savedLocale)
-      ? savedLocale
-      : 'zh'
+export function resetMissingTranslations() {
+  missSeen.clear()
+}
+
+function reportMiss(locale, key, resolvedFrom) {
+  const id = `${locale} ${key}`
+  if (missSeen.has(id)) return
+  missSeen.add(id)
+  if (missHandler) missHandler({ locale, key, resolvedFrom })
+}
+
+const interpolate = (template, values) =>
+  template.replace(/\{(\w+)\}/g, (match, key) =>
+    Object.hasOwn(values, key) ? String(values[key]) : match,
+  )
+
+// Resolution order: the player's language, then English, then the legacy
+// Chinese-source catalogue that still backs the screens not yet migrated, then
+// the key itself. Only the first hop counts as a real translation.
+export function translate(locale, key, values = {}) {
+  if (typeof key !== 'string') return key
+  const primary = messages[locale]
+  if (primary && Object.hasOwn(primary, key)) return interpolate(primary[key], values)
+
+  const fallback = messages[FALLBACK_LOCALE]
+  if (fallback && Object.hasOwn(fallback, key)) {
+    reportMiss(locale, key, FALLBACK_LOCALE)
+    return interpolate(fallback[key], values)
+  }
+
+  // Legacy screens still call t() with Chinese source text as the key. Chinese
+  // locales render that text as-is; English has a translation table for it.
+  if (locale === 'en' && Object.hasOwn(legacyEnglish, key)) {
+    reportMiss(locale, key, 'legacy')
+    return interpolate(legacyEnglish[key], values)
+  }
+  if (locale.startsWith('zh') && Object.hasOwn(legacyChinese, key)) {
+    reportMiss(locale, key, 'legacy')
+    return interpolate(legacyChinese[key], values)
+  }
+  reportMiss(locale, key, 'key')
+  return interpolate(key, values)
 }
 
 export function createTranslator(locale) {
-  return (source, values = {}) => {
-    if (typeof source !== 'string') return source
-    const template = engagementMessages[locale]?.[source] ?? (
-      locale === 'en'
-        ? (englishMessages[source] ?? source)
-        : (chineseTerms[source] ?? source))
-    return template.replace(/\{(\w+)\}/g, (match, key) =>
-      Object.hasOwn(values, key) ? String(values[key]) : match,
-    )
+  const active = normalizeLocale(locale) ?? DEFAULT_LOCALE
+  return (key, values = {}) => translate(active, key, values)
+}
+
+// URL parameter wins, then the host app's language, then what the player chose
+// last, then the browser's own preference, then the default.
+export function resolveLocale(search = '', savedLocale = null, hostLocale = null, navigatorLanguages = []) {
+  const requested = new URLSearchParams(search).get('lang')
+  const candidates = [requested, hostLocale, savedLocale, ...navigatorLanguages]
+  for (const candidate of candidates) {
+    const match = normalizeLocale(candidate)
+    if (match) return match
   }
+  return DEFAULT_LOCALE
+}
+
+// Coverage of the player-facing catalogue, for the admin translation module and
+// for the build guard. Counted against the English catalogue, which is complete.
+export function translationCoverage() {
+  const keys = Object.keys(messages[FALLBACK_LOCALE] ?? {})
+  return supportedLocales.map((code) => {
+    const catalogue = messages[code] ?? {}
+    const missing = keys.filter((key) => !Object.hasOwn(catalogue, key) || catalogue[key] === '')
+    return {
+      locale: code,
+      nativeName: localeMeta[code]?.nativeName ?? code,
+      total: keys.length,
+      translated: keys.length - missing.length,
+      missing,
+    }
+  })
 }
 
 export function localizedHref(value, locale, displayMode) {
@@ -82,7 +113,7 @@ export function localizedHref(value, locale, displayMode) {
   const query = new URLSearchParams(
     queryIndex < 0 ? '' : target.slice(queryIndex + 1),
   )
-  query.set('lang', supportedLocales.includes(locale) ? locale : 'zh')
+  query.set('lang', normalizeLocale(locale) ?? DEFAULT_LOCALE)
   // Business navigation keeps its layout; the independent entry omits this argument.
   if (['half', 'full'].includes(displayMode)) {
     query.set('mode', displayMode)

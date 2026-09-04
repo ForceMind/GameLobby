@@ -120,7 +120,7 @@ export function Modal({ modal, onClose }) {
             className="icon-btn"
             type="button"
             onClick={onClose}
-            aria-label={t('关闭弹窗')}
+            aria-label={t('common.closeDialog')}
           >
             <Icon name="close" />
           </button>
@@ -137,7 +137,7 @@ export function Modal({ modal, onClose }) {
                   type="button"
                   onClick={onClose}
                 >
-                  {modal.cancelLabel || t('取消')}
+                  {modal.cancelLabel || t('common.cancel')}
                 </button>
               )}
               <button
@@ -148,7 +148,7 @@ export function Modal({ modal, onClose }) {
                   onClose()
                 }}
               >
-                {modal.confirmLabel || t('知道了')}
+                {modal.confirmLabel || t('common.gotIt')}
               </button>
             </>
           )}

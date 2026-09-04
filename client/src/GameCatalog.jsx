@@ -5,16 +5,19 @@ import useGameDetails from './useGameDetails.jsx'
 import { GameArtwork, SectionHeader } from './ui.jsx'
 import { filterGames } from './demoModel.js'
 import { useLocale } from './useLocale.js'
+import { useCategoryLabel } from './useCategoryLabel.js'
 
 function GameCard({ game, openModal }) {
   const { t } = useLocale()
+  const categoryLabel = useCategoryLabel()
   const showGameDetails = useGameDetails(openModal)
   const badgeLabels = {
-    HOT: '热门',
-    TREND: '流行',
-    NEW: '新游',
-    FUN: '趣味',
-    JACKPOT: '累积大奖',
+    HOT: 'games.badgeHot',
+    TREND: 'games.badgeTrend',
+    NEW: 'games.badgeNew',
+    FUN: 'games.badgeFun',
+    JACKPOT: 'common.jackpot',
+    LIVE: 'games.tagLive',
   }
   return (
     <button
@@ -27,8 +30,8 @@ function GameCard({ game, openModal }) {
         <span className="badge-row">
           {game.badges.map((badge) => (
             <span className="pill" key={badge}>
-              {badge.startsWith('热度 ')
-                ? t('热度 {value}', { value: game.heat })
+              {badge === 'HEAT'
+                ? t('games.popularityBadge', { value: game.heat })
                 : t(badgeLabels[badge] ?? badge)}
             </span>
           ))}
@@ -37,10 +40,10 @@ function GameCard({ game, openModal }) {
           <span className="game-state">
             {t(
               game.status === 'maintenance'
-                ? '维护中'
+                ? 'games.statusMaintenance'
                 : game.status === 'upcoming'
-                  ? '即将上线'
-                  : '暂不可用',
+                  ? 'games.statusUpcoming'
+                  : 'games.statusUnavailable',
             )}
           </span>
         )}
@@ -48,8 +51,8 @@ function GameCard({ game, openModal }) {
       <span className="game-body">
         <strong>{game.name}</strong>
         <span>
-          <span>{t(game.categoryLabel)}</span>
-          <span title={t('在线人数；破折号表示暂未开放。')}>
+          <span>{categoryLabel(game)}</span>
+          <span title={t('games.playersHint')}>
             <Icon name="users" /> {game.players}
           </span>
         </span>
@@ -60,6 +63,7 @@ function GameCard({ game, openModal }) {
 
 export function RecentGames({ openModal, recentVisibility = true }) {
   const { t } = useLocale()
+  const categoryLabel = useCategoryLabel()
   const showGameDetails = useGameDetails(openModal)
   const onKeyDown = (event) => {
     if (
@@ -81,19 +85,19 @@ export function RecentGames({ openModal, recentVisibility = true }) {
       <div className="section-head">
         <div>
           <p className="eyebrow">WELCOME BACK</p>
-          <h1 id="recent-title">{t('最近在玩')}</h1>
+          <h1 id="recent-title">{t('lobby.recentTitle')}</h1>
           <p id="recent-games-hint">
-            {t('滑动或用方向键浏览，点击开始游戏。')}
+            {t('lobby.recentHint')}
           </p>
         </div>
-        <span className="recent-visibility"><Icon name="users" />{t(recentVisibility ? '好友可见' : '仅自己可见')}</span>
+        <span className="recent-visibility"><Icon name="users" />{t(recentVisibility ? 'lobby.recentVisibleToFriends' : 'lobby.recentVisibleToSelf')}</span>
       </div>
       <div
         className="recent-list"
         tabIndex={0}
         onKeyDown={onKeyDown}
         role="region"
-        aria-label={t('最近玩过的游戏')}
+        aria-label={t('lobby.recentListLabel')}
         aria-keyshortcuts="ArrowLeft ArrowRight"
         aria-describedby="recent-games-hint"
       >
@@ -107,7 +111,7 @@ export function RecentGames({ openModal, recentVisibility = true }) {
             <GameArtwork game={game} compact />
             <span className="recent-copy">
               <strong>{game.name}</strong>
-              <small>{t(game.categoryLabel)}</small>
+              <small>{categoryLabel(game)}</small>
               <span>{t(game.recent)}</span>
             </span>
             <Icon name="chevronRight" />
@@ -141,7 +145,7 @@ export function GameCatalog({ variant = 'library', openModal }) {
   const [onlyRealtime, setOnlyRealtime] = useState(false)
   const categoryItems = popular
     ? [
-        { id: 'popular', label: '热门' },
+        { id: 'popular', label: 'lobby.filterPopular' },
         ...gameCategories.filter((item) => item.id !== 'all'),
       ]
     : gameCategories
@@ -162,23 +166,23 @@ export function GameCatalog({ variant = 'library', openModal }) {
       aria-labelledby={popular ? 'popular-games-title' : 'game-catalog-title'}
     >
       <SectionHeader
-        title={t(popular ? '热门游戏' : '游戏目录')}
+        title={t(popular ? 'lobby.popularTitle' : 'games.libraryTitle')}
         titleId={popular ? 'popular-games-title' : 'game-catalog-title'}
         description={t(
           popular
-            ? '热门游戏，为你精选'
-            : '选择游戏，即可开始；未开放的游戏可查看状态。',
+            ? 'lobby.popularHint'
+            : 'games.libraryHint',
         )}
         action={
           popular ? (
             <a className="text-action" href={href('games.html')}>
-              {t('全部游戏')} <Icon name="chevronRight" />
+              {t('games.allTitle')} <Icon name="chevronRight" />
             </a>
           ) : (
             <button
               className={`icon-btn ${advanced || onlyReady || onlyRealtime ? 'is-active' : ''}`}
               type="button"
-              aria-label={t('筛选更多条件')}
+              aria-label={t('games.filterToggleLabel')}
               aria-controls="catalog-advanced-filters"
               aria-expanded={advanced}
               onClick={() => setAdvanced((value) => !value)}
@@ -189,7 +193,7 @@ export function GameCatalog({ variant = 'library', openModal }) {
         }
       />
       <div className="catalog-filters">
-        <div className="filter-row" role="group" aria-label={t('游戏分类')}>
+        <div className="filter-row" role="group" aria-label={t('games.categoriesLabel')}>
           {categoryItems.map((item) => (
             <button
               key={item.id}
@@ -207,7 +211,7 @@ export function GameCatalog({ variant = 'library', openModal }) {
             className="filter-toggle"
             id="catalog-advanced-filters"
             role="group"
-            aria-label={t('更多筛选')}
+            aria-label={t('games.filterAdvancedLabel')}
             hidden={!advanced}
           >
             <label>
@@ -216,7 +220,7 @@ export function GameCatalog({ variant = 'library', openModal }) {
                 checked={onlyReady}
                 onChange={(event) => setOnlyReady(event.target.checked)}
               />
-              {t('仅可进入')}
+              {t('games.filterAvailable')}
             </label>
             <label>
               <input
@@ -224,26 +228,26 @@ export function GameCatalog({ variant = 'library', openModal }) {
                 checked={onlyRealtime}
                 onChange={(event) => setOnlyRealtime(event.target.checked)}
               />
-              {t('仅实时')}
+              {t('games.filterLive')}
             </label>
             <button
               className="text-action"
               type="button"
               onClick={clearFilters}
             >
-              {t('清除筛选')}
+              {t('games.clearFilters')}
             </button>
           </div>
         )}
       </div>
       {!popular && (
         <p className="catalog-count" role="status">
-          {t('显示 {count} / {total} 款', {
+          {t('games.resultCount', {
             count: visibleGames.length,
             total: games.length,
           })}
-          {onlyReady && <> · {t('仅可进入')}</>}
-          {onlyRealtime && <> · {t('仅实时')}</>}
+          {onlyReady && <> · {t('games.filterAvailable')}</>}
+          {onlyRealtime && <> · {t('games.filterLive')}</>}
         </p>
       )}
       {visibleGames.length ? (
@@ -255,14 +259,14 @@ export function GameCatalog({ variant = 'library', openModal }) {
       ) : (
         <div className="empty-state card">
           <Icon name="filter" />
-          <h3>{t('没有匹配的游戏')}</h3>
-          <p>{t('调整筛选条件后再试。')}</p>
+          <h3>{t('games.emptyTitle')}</h3>
+          <p>{t('games.emptyHint')}</p>
           <button
             className="btn btn-secondary"
             type="button"
             onClick={clearFilters}
           >
-            {t('清除筛选')}
+            {t('games.clearFilters')}
           </button>
         </div>
       )}

@@ -16,11 +16,11 @@ export default function WalletDetails({ currency }) {
           <Icon name={isCoins ? 'coin' : 'gem'} />
         </span>
         <span>
-          <small>{t('当前余额')}</small>
+          <small>{t('ledger.balance')}</small>
           <strong>{formatNumber(wallet[currency])}</strong>
         </span>
       </div>
-      <h3>{t('最近变动')}</h3>
+      <h3>{t('ledger.recentChanges')}</h3>
       <WalletLedger currency={currency} key={currency} />
     </div>
   )

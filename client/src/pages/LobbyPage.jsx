@@ -29,21 +29,21 @@ export default function LobbyPage({
       {mode === 'half' && <button className="winners-compact-entry" onClick={() => openModal({ title: t('wins.title'), body: <WinnersPanel onPlay={onPlayWin} />, confirmLabel: t('common.close'), cancelLabel: null })}>{t('wins.open')} <Icon name="chevronRight" /></button>}
       <section className="section lobby-quick-actions">
         <SectionHeader
-          title={t('快捷入口')}
-          description={t('奖励、游戏与记录一触即达')}
+          title={t('lobby.quickActionsTitle')}
+          description={t('lobby.quickActionsHint')}
         />
         <div className="quick-grid">
           {[
-            ['bolt', '免费旋转', '今日剩余 3 次', 'events.html#wheel', '新'],
+            ['bolt', 'events.wheelPrizeFreeSpin', 'lobby.quickWheelDetail', 'events.html#wheel', 'common.badgeNew'],
             [
               'jackpot',
-              '累积大奖',
-              '浏览老虎机',
+              'common.jackpot',
+              'lobby.quickJackpotDetail',
               'games.html?category=slots#game-catalog',
               null,
             ],
-            ['gift', '每日任务', '查看每日进度', 'events.html#tasks', '任务'],
-            ['clock', '最近战绩', '查看最近记录', 'profile.html#records', null],
+            ['gift', 'events.missionsTitle', 'lobby.quickMissionsDetail', 'events.html#tasks', 'lobby.quickMissionsBadge'],
+            ['clock', 'lobby.quickRecordsTitle', 'lobby.quickRecordsDetail', 'profile.html#records', null],
           ].map(([icon, title, detail, destination, badge]) => (
             <a className="quick-card card" href={href(destination)} key={title}>
               <span className="quick-mark">
@@ -63,7 +63,7 @@ export default function LobbyPage({
         type="button"
         onClick={showFullEntryHint}
       >
-        <span>{t('更多内容')}</span>
+        <span>{t('common.fullEntry')}</span>
         <Icon name="chevronRight" />
       </button>
     </div>

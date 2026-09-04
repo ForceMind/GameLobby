@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
+import { locales } from '../locales/registry.js'
 import '../styles/languagePicker.css'
 
-export default function LanguagePicker({ locale, onChange, compact = false }) {
-  const { t } = useLocale()
+// Every language is listed under its own name — a player looking for Português
+// should not have to know the Chinese or English word for it. The list comes from
+// the locale registry, so adding a language never means editing this component.
+const shortLabel = (code) => code.split('-')[0].toUpperCase()
+
+export default function LanguagePicker({ compact = false }) {
+  const { t, locale, setLocale } = useLocale()
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
-  const options = [
-    { value: 'zh', label: t('简体中文'), compactLabel: t('简中') },
-    { value: 'en', label: t('英文'), compactLabel: 'EN' },
-  ]
-  const selected = options.find((option) => option.value === locale) ?? options[0]
+  const selected = locales.find((entry) => entry.code === locale) ?? locales[0]
 
   useEffect(() => {
     const onPointerDown = (event) => {
@@ -33,30 +35,38 @@ export default function LanguagePicker({ locale, onChange, compact = false }) {
       <button
         className="language-picker-trigger"
         type="button"
-        aria-label={t('界面语言')}
+        aria-label={t('settings.language')}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <span>{compact ? selected.compactLabel : selected.label}</span>
+        <span>{compact ? shortLabel(selected.code) : selected.nativeName}</span>
         <Icon name="chevronRight" />
       </button>
       {open && (
-        <div className="language-picker-menu" role="listbox" aria-label={t('界面语言')}>
-          {options.map((option) => (
+        <div
+          className="language-picker-menu"
+          role="listbox"
+          aria-label={t('settings.language')}
+        >
+          {locales.map((entry) => (
             <button
-              className={option.value === locale ? 'is-selected' : ''}
+              className={entry.code === locale ? 'is-selected' : ''}
               type="button"
               role="option"
-              aria-selected={option.value === locale}
-              key={option.value}
+              lang={entry.bcp47}
+              dir={entry.dir}
+              aria-selected={entry.code === locale}
+              key={entry.code}
               onClick={() => {
-                onChange(option.value)
+                setLocale(entry.code)
                 setOpen(false)
               }}
             >
-              <span>{option.label}</span>
-              {option.value === locale && <span className="language-picker-check">✓</span>}
+              <span>{entry.nativeName}</span>
+              {entry.code === locale && (
+                <span className="language-picker-check">✓</span>
+              )}
             </button>
           ))}
         </div>

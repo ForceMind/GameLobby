@@ -43,9 +43,9 @@ export default function ProfilePage({
   const copyProfileId = async () => {
     try {
       await navigator.clipboard.writeText(profile.id)
-      toast(t('ID 已复制'))
+      toast(t('profile.idCopied'))
     } catch {
-      toast(t('请长按 ID 复制'))
+      toast(t('profile.idCopyFallback'))
     }
   }
   const openSettings = () => openModal({ title: t('settings.title'), body: <ProfileSettings />, confirmLabel: t('common.close'), cancelLabel: null })
@@ -63,8 +63,8 @@ export default function ProfilePage({
     <div className="profile-page compact-profile">
       <section className="page-head">
         <p className="eyebrow">{t('PROFILE · ACCOUNT')}</p>
-        <h1>{t('我的')}</h1>
-        <p>{t('资产、记录和权益集中管理。')}</p>
+        <h1>{t('profile.title')}</h1>
+        <p>{t('profile.subtitle')}</p>
       </section>
       <section className="profile-hero card">
         <AccountAvatar
@@ -72,19 +72,19 @@ export default function ProfilePage({
           account={profile}
         />
         <div className="profile-copy">
-          <span className="pill">{t('App 账号')}</span>
+          <span className="pill">{t('profile.accountType')}</span>
           <h2>{profile.name}</h2>
           <button
             className="profile-id-action"
             type="button"
             onClick={copyProfileId}
           >
-            {t('Joyloop ID · {id}', { id: profile.id })} <Icon name="copy" />
+            {t('profile.idLabel', { id: profile.id })} <Icon name="copy" />
           </button>
         </div>
         <div className="profile-hero-summary">
-          <strong>{t('Lv. {level}', { level: profile.level })}</strong>
-          <span>{t('App 账号')}</span>
+          <strong>{t('profile.level', { level: profile.level })}</strong>
+          <span>{t('profile.accountType')}</span>
         </div>
         <button type="button" className="btn btn-secondary profile-settings-entry" onClick={openSettings} aria-haspopup="dialog"><Icon name="gear" />{t('settings.title')}</button>
       </section>
@@ -92,8 +92,8 @@ export default function ProfilePage({
         <div>
           <section className="section">
             <SectionHeader
-              title={t('资产总览')}
-              description={t('用于游戏与活动')}
+              title={t('profile.balancesTitle')}
+              description={t('profile.balancesHint')}
             />
             <div className="asset-overview">
               <button
@@ -106,9 +106,9 @@ export default function ProfilePage({
                   <Icon name="coin" />
                 </span>
                 <div>
-                  <span>{t('金币')}</span>
+                  <span>{t('ledger.coins')}</span>
                   <strong>{balances.coinsLabel}</strong>
-                  <p>{t('可用于开放的游戏与活动')}</p>
+                  <p>{t('profile.coinsUsage')}</p>
                 </div>
               </button>
               <button
@@ -121,9 +121,9 @@ export default function ProfilePage({
                   <Icon name="gem" />
                 </span>
                 <div>
-                  <span>{t('宝石')}</span>
+                  <span>{t('ledger.gems')}</span>
                   <strong>{balances.gemsLabel}</strong>
-                  <p>{t('可用于指定活动')}</p>
+                  <p>{t('profile.gemsUsage')}</p>
                 </div>
               </button>
             </div>

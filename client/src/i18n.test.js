@@ -189,7 +189,16 @@ test('静态数据中的中文文案有英文对应', () => {
 test('语言与展示配置的跨页链接保留筛选和锚点', () => {
   assert.equal(resolveLocale('?lang=en', 'zh'), 'en')
   assert.equal(resolveLocale('?lang=unknown', 'en'), 'en')
-  assert.equal(resolveLocale('', 'unknown'), 'zh')
+  // 旧链接与旧存储里的 zh/zh-CN/zh-TW 仍必须可解析到规范代码
+  assert.equal(resolveLocale('?lang=zh'), 'zh-Hans')
+  assert.equal(resolveLocale('?lang=zh-CN'), 'zh-Hans')
+  assert.equal(resolveLocale('?lang=zh-TW'), 'zh-Hant')
+  assert.equal(resolveLocale('', 'zh'), 'zh-Hans')
+  // 宿主语言优先于本地存储，浏览器语言兜底
+  assert.equal(resolveLocale('', 'en', 'ja'), 'ja')
+  assert.equal(resolveLocale('', null, null, ['pt-PT', 'fr']), 'pt-BR')
+  assert.equal(resolveLocale('', null, null, ['xx']), 'zh-Hans')
+  assert.equal(resolveLocale('', 'unknown'), 'zh-Hans')
   assert.equal(
     localizedHref('games.html?category=slots#game-catalog', 'en'),
     'games.html?category=slots&lang=en#game-catalog',
@@ -201,11 +210,11 @@ test('语言与展示配置的跨页链接保留筛选和锚点', () => {
   )
   assert.equal(
     localizedHref('games.html?mode=full', 'zh', 'half'),
-    'games.html?mode=half&lang=zh',
+    'games.html?mode=half&lang=zh-Hans',
   )
   assert.equal(
     localizedHref('lobby.html?mode=full', 'zh'),
-    'lobby.html?mode=full&lang=zh',
+    'lobby.html?mode=full&lang=zh-Hans',
   )
   assert.equal(
     localizedHref('games.html?mode=half', 'en', 'full'),
@@ -215,4 +224,64 @@ test('语言与展示配置的跨页链接保留筛选和锚点', () => {
     localizedHref('https://example.com', 'en'),
     'https://example.com',
   )
+})
+
+// ---- 多语言目录守卫 --------------------------------------------------------
+// 这些断言随语言数量自动伸缩：新增一种语言只需在 registry 里加一行加一个 JSON 文件，
+// 不需要改动下面任何一条测试。
+test('语言注册表自洽：编码唯一、BCP 47 可用、RTL 标注正确', async () => {
+  const { locales, supportedLocales, normalizeLocale, isRtl, intlTag } = await import('./locales/registry.js')
+  assert.ok(locales.length >= 20, `主流语言应不少于 20 种，当前 ${locales.length}`)
+  assert.equal(new Set(supportedLocales).size, locales.length, '语言编码必须唯一')
+  for (const entry of locales) {
+    assert.match(entry.code, /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/, `编码格式异常：${entry.code}`)
+    assert.ok(entry.nativeName?.trim(), `${entry.code} 缺少自称`)
+    assert.ok(['ltr', 'rtl'].includes(entry.dir), `${entry.code} 的方向必须是 ltr 或 rtl`)
+    // Intl 必须认得这个标签，否则数字与日期会静默回退
+    assert.doesNotThrow(() => new Intl.NumberFormat(intlTag(entry.code)).format(1), `${entry.code} 的 Intl 标签不可用`)
+    assert.equal(normalizeLocale(entry.code), entry.code, `${entry.code} 无法解析回自身`)
+  }
+  assert.ok(supportedLocales.filter(isRtl).length >= 1, '至少应有一种 RTL 语言')
+})
+
+test('每种语言的目录都不含孤儿键，且占位符与英文一致', async () => {
+  const messages = (await import('./locales/index.js')).default
+  const { supportedLocales, FALLBACK_LOCALE } = await import('./locales/registry.js')
+  const fallback = messages[FALLBACK_LOCALE]
+  assert.ok(fallback && Object.keys(fallback).length > 0, '英文目录不能为空，它是所有语言的兜底')
+  const placeholders = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
+  for (const locale of supportedLocales) {
+    const catalogue = messages[locale]
+    assert.ok(catalogue, `缺少 ${locale} 的目录文件`)
+    for (const [key, value] of Object.entries(catalogue)) {
+      assert.ok(Object.hasOwn(fallback, key), `${locale} 存在英文目录里没有的孤儿键：${key}`)
+      assert.deepEqual(placeholders(value), placeholders(fallback[key]),
+        `${locale} 的 ${key} 占位符与英文不一致`)
+    }
+  }
+})
+
+test('未翻译的语言回退到英文而不是泄漏原始键或中文', async () => {
+  const { translate, translationCoverage } = await import('./i18n.js')
+  const messages = (await import('./locales/index.js')).default
+  const sample = Object.keys(messages.en)[0]
+  // 取一种尚无翻译的语言，验证回退链
+  const coverage = translationCoverage()
+  const untranslated = coverage.find((row) => row.translated === 0)
+  if (untranslated) {
+    assert.equal(translate(untranslated.locale, sample), messages.en[sample],
+      `${untranslated.locale} 未翻译时应回退英文`)
+  }
+  // 完全不存在的键才允许回落到键名本身
+  assert.equal(translate('en', 'no.such.key.exists'), 'no.such.key.exists')
+  // 覆盖率统计必须覆盖每一种语言
+  assert.equal(coverage.length, (await import('./locales/registry.js')).supportedLocales.length)
+})
+
+test('打包进前端的语言目录体积仍在同步加载的合理范围内', async () => {
+  const messages = (await import('./locales/index.js')).default
+  const bytes = new TextEncoder().encode(JSON.stringify(messages)).length
+  // 超过阈值就该改为按语言懒加载，而不是继续全量同步打包
+  assert.ok(bytes < 512 * 1024,
+    `语言目录已达 ${(bytes / 1024).toFixed(0)}KB，应改为按语言懒加载`)
 })

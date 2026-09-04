@@ -4,6 +4,7 @@ import { navItems, games } from './data.js'
 import { Icon } from './icons.jsx'
 import { Modal } from './ui.jsx'
 import { useLocale } from './useLocale.js'
+import LanguagePicker from './components/LanguagePicker.jsx'
 import { useH5 } from './h5/useH5.js'
 import EntryGate from './h5/EntryGate.jsx'
 import WalletDetails from './h5/WalletDetails.jsx'
@@ -36,7 +37,7 @@ function MainNav({ page, mobile = false }) {
   return (
     <nav
       className={mobile ? 'bottom-nav' : 'desktop-nav'}
-      aria-label={t('主导航')}
+      aria-label={t('nav.main')}
     >
       {navItems.map((item) => (
         <a
@@ -45,7 +46,7 @@ function MainNav({ page, mobile = false }) {
           href={href(item.href)}
           aria-label={
             item.badge
-              ? t('{label}，有新活动', { label: t(item.label) })
+              ? t('nav.itemNew', { label: t(item.label) })
               : t(item.label)
           }
           aria-current={
@@ -84,16 +85,16 @@ function AppHeader({ page, openWallet, onExit }) {
             className="exit-button"
             type="button"
             onClick={onExit}
-            aria-label={t('退出大厅')}
+            aria-label={t('nav.exitLobby')}
           >
             <Icon name="chevronLeft" />
-            <span>{t('退出大厅')}</span>
+            <span>{t('nav.exitLobby')}</span>
           </button>
         )}
         <a
           className="brand"
           href={href('lobby.html')}
-          aria-label={t('Joyloop 大厅')}
+          aria-label={t('nav.brandHome')}
         >
           <span className="brand-mark" aria-hidden="true">
             <span />
@@ -105,7 +106,7 @@ function AppHeader({ page, openWallet, onExit }) {
           </span>
         </a>
         <MainNav page={page} />
-        <div className="asset-cluster" aria-label={t('资产余额')}>
+        <div className="asset-cluster" aria-label={t('nav.balances')}>
           {['coins', 'gems'].map((currency) => (
             <button
               key={currency}
@@ -131,7 +132,7 @@ function AppHeader({ page, openWallet, onExit }) {
                 <Icon name={currency === 'coins' ? 'coin' : 'gem'} />
               </span>
               <span>
-                <small>{t(currency === 'coins' ? '金币' : '宝石')}</small>
+                <small>{t(currency === 'coins' ? 'ledger.coins' : 'ledger.gems')}</small>
                 <strong>
                   {formatWalletLabel(balances[currency], mode === 'half')}
                 </strong>
@@ -145,21 +146,12 @@ function AppHeader({ page, openWallet, onExit }) {
 }
 
 function PrototypeLanguageSwitcher({ source, mode }) {
-  const { t, locale } = useLocale()
-  const changeLocale = (event, next) => {
-    event.preventDefault()
-    const url = new URL(window.location.href)
-    url.searchParams.set('lang', next)
-    window.location.href = url.toString()
-  }
+  const { t } = useLocale()
   return (
-    <aside className={`prototype-language-float is-${mode}`} aria-label={t('界面语言')}>
-      <span>{t('语言')}</span>
+    <aside className={`prototype-language-float is-${mode}`} aria-label={t('settings.language')}>
+      <span>{t('settings.language')}</span>
       {source === 'preview' && <small>{t('preview.source')}</small>}
-      <nav aria-label={t('界面语言')}>
-        <a className={locale === 'zh' ? 'is-active' : ''} href="?lang=zh" onClick={(event) => changeLocale(event, 'zh')}>{t('简中')}</a>
-        <a className={locale === 'en' ? 'is-active' : ''} href="?lang=en" onClick={(event) => changeLocale(event, 'en')}>EN</a>
-      </nav>
+      <LanguagePicker compact={mode === 'half'} />
     </aside>
   )
 }
@@ -272,21 +264,21 @@ export default function App() {
 
   const openWallet = (currency) =>
     setModal({
-      title: t(currency === 'coins' ? '金币' : '宝石'),
+      title: t(currency === 'coins' ? 'ledger.coins' : 'ledger.gems'),
       body: <WalletDetails currency={currency} />,
       actions: (
         <>
           <a className="btn btn-secondary" href={href('events.html')}>
-            {t('获得')}
+            {t('ledger.getMore')}
           </a>
           <a className="btn btn-primary" href={href('store.html')}>
-            {t('充值')}
+            {t('ledger.topUp')}
           </a>
         </>
       ),
     })
 
-  const showFullEntryHint = () => toast(t('请从全屏入口查看完整内容。'))
+  const showFullEntryHint = () => toast(t('common.fullEntryHint'))
 
   const renderPage = () => {
     const props = {
@@ -315,7 +307,7 @@ export default function App() {
         <div className="app-root">
           <div className="app-surface" inert={modal || game ? true : undefined}>
             <a className="skip-link" href="#main">
-              {t('跳到主要内容')}
+              {t('common.skipToContent')}
             </a>
             <div className="background-orbs" aria-hidden="true">
               <span />

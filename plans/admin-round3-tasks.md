@@ -41,3 +41,8 @@
 - [x] lint + test(70) + build + check:dist
 - [x] 浏览器逐条走查
 - [x] 更新 plans/lobby-admin-lite-v1.md
+
+
+## W1 多语言底座 —— 已完成（2026-09-05）
+详见 plans/i18n-w1-notes.md。24 种语言、394 个稳定键、迁移前后渲染零差异、五页日语零中文残留、RTL 生效。
+后台界面按需求保持中文，未纳入多语言范围。

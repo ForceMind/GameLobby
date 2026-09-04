@@ -42,7 +42,7 @@ export default function WinnerFeed({ privacy, onPlay, events = [], paused = fals
     return () => { clearTimeout(initial); clearInterval(interval) }
   }, [events, filtered, mode, paused, privacy.receiveWinNotifications, stopped])
   if (paused || !privacy.receiveWinNotifications || !filtered.length) return null
-  return <aside className={`winner-danmaku ${stopped ? 'is-paused' : ''}`} aria-label={t('全局获胜动态')}>
+  return <aside className={`winner-danmaku ${stopped ? 'is-paused' : ''}`} aria-label={t('wins.feedLabel')}>
     <button className="winner-feed-control" onClick={() => setStopped(value => !value)} aria-label={t(stopped ? 'wins.resume' : 'wins.pause')}>{stopped ? '▶' : 'Ⅱ'}</button>
     <div className="winner-danmaku-track">{rows.filter(item => filtered.some(event => event.id === item.id)).map(item => {
       const game = games.find(entry => entry.id === item.gameId)

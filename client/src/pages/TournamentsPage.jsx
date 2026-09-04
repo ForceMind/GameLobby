@@ -53,7 +53,7 @@ export default function TournamentsPage({
           ))}
         </div>
       ),
-      confirmLabel: t('知道了'),
+      confirmLabel: t('common.gotIt'),
       cancelLabel: null,
       onConfirm: () => {},
     })
@@ -90,13 +90,13 @@ export default function TournamentsPage({
         </div>
       ),
       confirmLabel: current
-        ? t('知道了')
+        ? t('common.gotIt')
         : eligible
           ? t('确认报名')
           : full
             ? t('加入候补')
-            : t('知道了'),
-      cancelLabel: current || (!eligible && !full) ? null : t('取消'),
+            : t('common.gotIt'),
+      cancelLabel: current || (!eligible && !full) ? null : t('common.cancel'),
       onConfirm: () => {
         if (current) return
         if (eligible || full) {

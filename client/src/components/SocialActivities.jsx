@@ -68,7 +68,7 @@ function FamilyTasks({ onClaim, claimed }) {
           <div className={`social-task ${done ? 'is-claimed' : ''}`} key={task.id}>
             <span className="social-task-icon"><Icon name={task.icon} /></span>
             <div className="social-task-copy"><strong>{t(task.title)}</strong><small>{t(task.detail)}</small><Progress value={(current / task.total) * 100} label={t(task.title)} /></div>
-            <div className="social-task-reward"><span>{t(task.reward)}</span>{done ? <span className="task-done">{t('已领取')}</span> : task.claimable ? <button className="text-action" type="button" onClick={onClaim}>{t('领取')}</button> : <small>{current}/{task.total}</small>}</div>
+            <div className="social-task-reward"><span>{t(task.reward)}</span>{done ? <span className="task-done">{t('events.claimed')}</span> : task.claimable ? <button className="text-action" type="button" onClick={onClaim}>{t('events.claim')}</button> : <small>{current}/{task.total}</small>}</div>
           </div>
         )
       })}
@@ -93,7 +93,7 @@ export default function SocialActivities({ openModal, toast }) {
   const [tab, setTab] = useState('family')
   const [claimed, setClaimed] = useState(false)
   const showChest = () => openModal({ title: t('家族宝箱'), subtitle: t('由家族成员共同积攒能量，奖励每日刷新。'), body: <div className="chest-modal"><div className="chest-visual"><Icon name="gift" /></div><strong>{t('距离开启还差 14 点能量')}</strong><Progress value={86} label={t('家族宝箱开启进度')} /><p>{t('完成家族任务、参与派对同屏房，都可以为家族增加能量。')}</p></div>, confirmLabel: t('去完成任务'), onConfirm: () => setTab('family') })
-  const showLeaderboard = () => openModal({ title: t('家族游戏排行榜'), subtitle: t('本周有效分 · 每小时更新'), body: <div className="leaderboard-modal">{familyRanks.map((item) => <div className="leaderboard-row" key={item.name}><span className={`leaderboard-rank ${item.tone}`}>{item.rank}</span><span><strong>{t(item.name)}</strong><small>{t(item.members)}</small></span><strong>{item.score}<small>{t('分')}</small></strong></div>)}</div>, confirmLabel: t('知道了') })
+  const showLeaderboard = () => openModal({ title: t('家族游戏排行榜'), subtitle: t('本周有效分 · 每小时更新'), body: <div className="leaderboard-modal">{familyRanks.map((item) => <div className="leaderboard-row" key={item.name}><span className={`leaderboard-rank ${item.tone}`}>{item.rank}</span><span><strong>{t(item.name)}</strong><small>{t(item.members)}</small></span><strong>{item.score}<small>{t('分')}</small></strong></div>)}</div>, confirmLabel: t('common.gotIt') })
   const showRoom = (room) => openModal({ kicker: t('派对同屏房'), title: t(room.name), subtitle: t('房主 {host} · {viewers} 人在线', { host: room.host, viewers: room.viewers }), body: <div className="room-modal"><div className={`room-modal-art room-art-${room.accent}`}><Icon name="gamepad" /></div><p>{t('进入后可观看当前对局，也可以申请上麦参与。')}</p><div className="safety-strip"><Icon name="clock" /><span><strong>{t('今日社交游戏时长')}</strong><small>{t('已使用 28 / 45 分钟，适度游戏更尽兴')}</small></span><span className="status">{t('护栏提醒')}</span></div></div>, confirmLabel: t('进入房间'), onConfirm: () => toast(t('已打开派对房预览，原型不连接真实房间。')) })
   return (
     <section className="section social-activities" aria-labelledby="social-activities-title">

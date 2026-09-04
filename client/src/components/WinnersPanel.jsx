@@ -26,7 +26,7 @@ export default function WinnersPanel({ onPlay }) {
           const game = games.find(item => item.id === record.gameId)
           return <li key={tab === 'rank' ? record.playerId : record.id}>
             <span className="winners-position">{tab === 'rank' ? record.rank : <span className="winners-avatar">{Array.from(record.name)[0]}</span>}</span>
-            <div className="winner-person"><strong>{record.name}</strong><span>{tab === 'rank' ? t('wins.rankNumber', { rank: record.rank }) : clock(record.occurredAt)}</span><b>+{record.coins.toLocaleString(locale)} {t('金币')}</b>
+            <div className="winner-person"><strong>{record.name}</strong><span>{tab === 'rank' ? t('wins.rankNumber', { rank: record.rank }) : clock(record.occurredAt)}</span><b>+{record.coins.toLocaleString(locale)} {t('ledger.coins')}</b>
               {game && <small className="winner-game"><GameArtwork game={game} compact />{game.name}</small>}</div>
             <button type="button" className="winner-play" onClick={() => onPlay(record.gameId)}>{t('wins.play')}</button>
           </li>

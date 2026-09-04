@@ -32,7 +32,7 @@ export default function TomorrowChest({ engagement, openModal }) {
   const purchase = () => openModal({
     title: t('chest.purchaseTitle'), subtitle: t('chest.single'),
     body: <div className="chest-confirm"><dl>
-      <div><dt>{t('chest.price')}</dt><dd>{coins(data.offer.priceCoins)} {t('金币')}</dd></div>
+      <div><dt>{t('chest.price')}</dt><dd>{coins(data.offer.priceCoins)} {t('ledger.coins')}</dd></div>
       <div><dt>{t('chest.unlock')}</dt><dd>{time(data.offer.unlockAt)}</dd></div>
       <div><dt>{t('chest.expires')}</dt><dd>{time(data.offer.expiresAt)}</dd></div>
     </dl><small>{data.timeZone}</small><p>{t('chest.confirmInfo')}</p></div>,

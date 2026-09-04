@@ -30,17 +30,17 @@ export const contentApi = {
 }
 
 export const navItems = [
-  { id: 'lobby', label: '大厅', icon: 'home', href: 'lobby.html' },
-  { id: 'games', label: '游戏', icon: 'gamepad', href: 'games.html' },
+  { id: 'lobby', label: 'nav.lobby', icon: 'home', href: 'lobby.html' },
+  { id: 'games', label: 'nav.games', icon: 'gamepad', href: 'games.html' },
   {
     id: 'events',
-    label: '活动',
+    label: 'nav.events',
     icon: 'gift',
     href: 'events.html',
     badge: true,
   },
-  { id: 'store', label: '商城', icon: 'store', href: 'store.html' },
-  { id: 'profile', label: '我的', icon: 'user', href: 'profile.html' },
+  { id: 'store', label: 'nav.store', icon: 'store', href: 'store.html' },
+  { id: 'profile', label: 'nav.profile', icon: 'user', href: 'profile.html' },
 ]
 
 export const balances = {
@@ -51,10 +51,10 @@ export const balances = {
 }
 
 export const gameCategories = [
-  { id: 'all', label: '全部' },
-  { id: 'slots', label: 'Slots' },
-  { id: 'casual', label: '休闲' },
-  { id: 'realtime', label: '实时' },
+  { id: 'all', label: 'games.categoryAll' },
+  { id: 'slots', label: 'games.tagSlots' },
+  { id: 'casual', label: 'games.tagCasual' },
+  { id: 'realtime', label: 'games.tagLive' },
 ]
 
 export const games = [
@@ -67,7 +67,7 @@ export const games = [
     categoryLabel: 'Slots · 实时',
     players: '2,481',
     heat: 96,
-    badges: ['JACKPOT', '热度 96'],
+    badges: ['JACKPOT', 'HEAT'],
     status: 'ready',
     cover: 'golden-pharaoh-v2.png',
   },
@@ -93,7 +93,7 @@ export const games = [
     categoryLabel: 'Slots',
     players: '1,905',
     heat: 91,
-    badges: ['TREND', '热度 91'],
+    badges: ['TREND', 'HEAT'],
     status: 'ready',
     cover: 'fruit-party-v2.png',
   },
@@ -119,7 +119,7 @@ export const games = [
     categoryLabel: '休闲 · 实时',
     players: '842',
     heat: 84,
-    badges: ['实时', '热度 84'],
+    badges: ['LIVE', 'HEAT'],
     status: 'ready',
     cover: 'fish-hunter-v2.png',
   },
@@ -132,7 +132,7 @@ export const games = [
     categoryLabel: '休闲',
     players: '765',
     heat: 81,
-    badges: ['HOT', '热度 81'],
+    badges: ['HOT', 'HEAT'],
     status: 'ready',
     cover: 'bubble-pop-v2.png',
   },
@@ -145,7 +145,7 @@ export const games = [
     categoryLabel: '休闲',
     players: '532',
     heat: 77,
-    badges: ['NEW', '热度 77'],
+    badges: ['NEW', 'HEAT'],
     status: 'ready',
     cover: 'dice-merge-v2.png',
   },
@@ -253,7 +253,7 @@ export const liveRooms = [
 export const recentGames = [games[0], games[2], games[4]].map(
   (game, index) => ({
     ...game,
-    recent: ['刚刚', '今天 13:18', '今天 11:06'][index],
+    recent: ['lobby.playedJustNow', 'lobby.playedSample1', 'lobby.playedSample2'][index],
   }),
 )
 
@@ -336,55 +336,52 @@ export const tournaments = [
   },
 ]
 
+// Rewards are numbers, not pre-joined sentences: the day label and the reward
+// line are assembled per language at render time.
 export const checkinDays = [
-  { day: 'D1', reward: '800 金币', state: 'claimed' },
-  { day: 'D2', reward: '1,200 金币', state: 'missed' },
-  { day: 'D3 · 今日', reward: '2,000 金币 · 5 宝石', state: 'today' },
-  { day: 'D4', reward: '2,400 金币', state: 'locked' },
-  { day: 'D5', reward: '3,000 金币', state: 'locked' },
-  { day: 'D6', reward: '3,600 金币 · 8 宝石', state: 'locked' },
-  {
-    day: 'D7 · 大奖',
-    reward: '8,800 金币 · 20 宝石',
-    state: 'locked',
-    grand: true,
-  },
+  { day: 'D1', coins: 800, gems: 0, state: 'claimed' },
+  { day: 'D2', coins: 1200, gems: 0, state: 'missed' },
+  { day: 'D3', coins: 2000, gems: 5, state: 'today' },
+  { day: 'D4', coins: 2400, gems: 0, state: 'locked' },
+  { day: 'D5', coins: 3000, gems: 0, state: 'locked' },
+  { day: 'D6', coins: 3600, gems: 8, state: 'locked' },
+  { day: 'D7', coins: 8800, gems: 20, state: 'locked', grand: true },
 ]
 
 export const dailyMissions = [
   {
     id: 'spin-100',
-    title: '累计旋转 100 次',
+    title: 'events.missionSpin100',
     current: 100,
     total: 100,
-    status: '已完成',
+    status: 'events.statusDone',
     coinReward: 1500,
     gemReward: 3,
   },
   {
     id: 'casual-5',
-    title: '完成 5 局休闲游戏',
+    title: 'events.missionCasual5',
     current: 3,
     total: 5,
-    status: '进行中',
+    status: 'events.statusActive',
     coinReward: 1000,
     gemReward: 2,
   },
   {
     id: 'free-spin',
-    title: '触发 1 次 Free Spin',
+    title: 'events.missionFreeSpin',
     current: 0,
     total: 1,
-    status: '未开始',
+    status: 'events.statusNotStarted',
     coinReward: 2000,
     gemReward: 5,
   },
   {
     id: 'share-win',
-    title: '分享一次中奖记录',
+    title: 'events.missionShareWin',
     current: 0,
     total: 1,
-    status: '已过期',
+    status: 'events.statusExpired',
     coinReward: 500,
     gemReward: 1,
     expired: true,
@@ -396,21 +393,21 @@ export const coinPacks = [
     id: 'coin-6',
     coins: 6000,
     discountPercent: 8,
-    tag: '首充',
+    tag: 'store.tagFirstBuy',
     gemBonus: 2,
   },
   {
     id: 'coin-30',
     coins: 30000,
     discountPercent: 18,
-    tag: '热门',
+    tag: 'store.tagPopular',
     gemBonus: 10,
   },
   {
     id: 'coin-68',
     coins: 68000,
     discountPercent: 28,
-    tag: '推荐',
+    tag: 'store.tagRecommended',
     gemBonus: 25,
     recommended: true,
   },
@@ -418,15 +415,15 @@ export const coinPacks = [
     id: 'coin-128',
     coins: 128000,
     discountPercent: 40,
-    tag: '超值',
+    tag: 'store.tagValue',
     gemBonus: 50,
   },
 ]
 
 export const profileStats = [
-  { label: '总旋转次数', value: '12,480 次' },
+  { label: 'profile.statSpins', value: '12,480 次' },
   { label: '最高单次金币增加', value: '+88,800' },
-  { label: '最长连续获奖记录', value: '17 局' },
+  { label: 'profile.statStreak', value: '17 局' },
   { label: '本周金币净变化', value: '+12,640', positive: true },
 ]
 

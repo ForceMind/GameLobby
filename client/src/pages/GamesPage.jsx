@@ -8,9 +8,9 @@ export default function GamesPage({ openModal, toast, showFullEntryHint }) {
     <div className="games-page compact-games">
       <section className="page-head">
         <p className="eyebrow">GAME LIBRARY</p>
-        <h1>{t('全部游戏')}</h1>
+        <h1>{t('games.allTitle')}</h1>
         <p>
-          {t('浏览全部 {count} 款游戏，按类型和实时状态快速筛选。', {
+          {t('games.allSubtitle', {
             count: 8,
           })}
         </p>
@@ -21,7 +21,7 @@ export default function GamesPage({ openModal, toast, showFullEntryHint }) {
         type="button"
         onClick={showFullEntryHint}
       >
-        <span>{t('更多内容')}</span>
+        <span>{t('common.fullEntry')}</span>
       </button>
     </div>
   )
