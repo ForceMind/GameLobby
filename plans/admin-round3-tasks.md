@@ -15,10 +15,13 @@
 - [x] 发布任务详情渲染逐字段差异，改动项高亮，无快照任务显示明确说明
 - [x] "查看来源配置"跳转按钮（需给所有页面包装组件透传 navigate）
 
-## 3. 游戏管理：抽屉改弹窗 + 全字段
-- [ ] 游戏记录补 sortWeight/maintenanceNote/launchAt/cover/minBet/paylines/volatility
-- [ ] GameEditModal 分组：基础/运行状态/大厅展示/老虎机参数/操作记录
-- [ ] 前台未接入字段明确标注，不编造数值
+## 3. 游戏管理：抽屉改弹窗 + 全字段 —— 已完成（浏览器验证通过）
+- [x] 游戏记录补 cover/sortWeight/maintenanceNote/launchAt/minBet/paylines/volatility
+- [x] GameEditModal 宽弹窗，5 个分组共 21 个字段；非 slots 游戏自动隐藏 Slots 分组
+- [x] 前台未接入字段标注「前台未接入」并留空，不编造数值
+- [x] 校验：维护中必须填公告、即将上线必须填时间、热度 0–100、排序权重 >0
+- [x] 保存路径分离：状态/公告立即生效并建待办，其余字段进草稿走审核
+- [x] 顺带修复：发布差异对游戏目录只比对汇总串，改为逐字段（161 项）并折叠未改动项
 
 ## 4. 活动管理：按类型区分弹窗
 - [ ] 抽取 CheckinLadderEditor / WheelPrizeEditor / MissionListEditor 共用组件

@@ -222,6 +222,17 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
 }
 
 // ---- snapshot diff ---------------------------------------------------------
+const cell = (value) => (Array.isArray(value) ? (value.join(' / ') || '无') : (value === '' || value === null || value === undefined ? '—' : String(value)))
+const yesNo = (value) => (value ? '是' : '否')
+// Every per-game field the editor can change, so a config update diff is not summarised away.
+const gameDiffFields = [
+  ['name', '游戏名称'], ['status', '运行状态'], ['categoryLabel', '分类'], ['tags', '标签'], ['badges', '角标'],
+  ['popular', '大厅推荐', yesNo], ['heat', '热度值'], ['sortWeight', '排序权重'], ['region', '可用地区'], ['cover', '封面资源'],
+  ['description', '游戏简介'], ['maintenanceNote', '维护公告'], ['launchAt', '预计上线时间'],
+  ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRange', '中奖金额范围'], ['maxMultiplier', '最大赔率'],
+  ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性'],
+]
+
 // Rows are [stableKey, label, value] so a rename shows as a changed value, not as remove + add.
 function snapshotRows(moduleId, slice) {
   if (!slice) return []
@@ -244,7 +255,11 @@ function snapshotRows(moduleId, slice) {
   }
   if (String(moduleId).startsWith('games:')) {
     const rows = [['order', '目录排序', slice.games.map((g) => g.name).join(' → ')]]
-    slice.games.forEach((g) => rows.push([`game-${g.gameId}`, g.name, `${g.status} · ${g.categoryLabel} · ${g.popular ? '大厅推荐' : '不推荐'} · 角标 ${g.badges.join('/') || '无'}`]))
+    slice.games.forEach((g) => {
+      gameDiffFields.forEach(([key, label, format]) => {
+        rows.push([`game-${g.gameId}-${key}`, `${g.name} · ${label}`, format ? format(g[key]) : cell(g[key])])
+      })
+    })
     return rows
   }
   return []

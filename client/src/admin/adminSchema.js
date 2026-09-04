@@ -253,12 +253,17 @@ const chestRecordSeed = () => [
 ]
 
 export function createInitialStore() {
-  const gameRecords = () => gamesData.map((g) => ({
+  const gameRecords = () => gamesData.map((g, index) => ({
     id: g.id, name: g.name, gameId: g.id, categoryLabel: g.categoryLabel, tags: [...g.tags], badges: [...g.badges],
     status: statusLabel[g.status] || g.status, players: g.players, heat: g.heat, popular: g.popular, region: '全区',
+    cover: g.cover, sortWeight: (index + 1) * 10,
+    maintenanceNote: g.status === 'maintenance' ? '服务端例行维护中，预计 2 小时内恢复。' : '',
+    launchAt: g.status === 'upcoming' ? '2026-09-15 10:00' : '',
     description: liteContent.gameDetails?.[g.id]?.descriptionKey || '',
     winRate: liteContent.gameDetails?.[g.id]?.winRate || '', rtp: liteContent.gameDetails?.[g.id]?.rtp || '',
     winRange: liteContent.gameDetails?.[g.id]?.winRange || '', maxMultiplier: liteContent.gameDetails?.[g.id]?.maxMultiplier || '',
+    // Standard slot parameters the current front-end does not read yet; kept empty rather than filled with invented values.
+    minBet: '', paylines: '', volatility: '',
   }))
   const config = {
     games: { test: gameRecords(), production: gameRecords() },

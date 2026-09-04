@@ -52,3 +52,17 @@
 .diff-tag.added{background:#e6f7ee;color:#208d58}
 .diff-tag.removed{background:#fdecea;color:#c0392b}
 .drawer-section h3 small{margin-left:6px;color:var(--admin-muted);font-weight:400;font-size:11px}
+.admin-modal.is-wide{max-width:920px;width:calc(100vw - 64px)}
+.modal-subtitle{margin:4px 0 0;color:var(--admin-muted);font-size:12px}
+.game-form{display:flex;flex-direction:column;gap:16px;padding:0 24px 4px;max-height:min(64vh,620px);overflow-y:auto}
+.game-form fieldset{border:1px solid var(--admin-border);border-radius:8px;padding:14px 16px 16px;margin:0}
+.game-form fieldset.is-warning{border-color:#f2d59e;background:#fffdf8}
+.game-form legend{padding:0 6px;color:var(--admin-text);font-size:12px;font-weight:600}
+.game-form .fieldset-note{margin:0 0 10px;color:var(--admin-muted);font-size:11px;line-height:1.6}
+.game-form .form-grid{margin:0}
+.game-form label{font-size:11px}
+.field-note{display:block;margin-top:4px;color:var(--admin-muted);font-size:10px;line-height:1.5}
+.game-form .audit-item{padding:6px 0}
+.modal-foot-note{margin-right:auto;color:var(--admin-muted);font-size:11px}
+.game-form input:disabled,.game-form textarea:disabled{background:#f6f8fb;color:#a5aebb;cursor:not-allowed}
+.diff-toggle{margin-top:8px;font-size:11px;background:none;border:0;cursor:pointer}
