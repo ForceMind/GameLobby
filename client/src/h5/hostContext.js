@@ -64,10 +64,15 @@ export function normalizeHostContext(input = {}, fallback = {}) {
   const coins = pickBalance(sourceWallet, previousWallet, 'coins')
   const gems = pickBalance(sourceWallet, previousWallet, 'gems')
   const locale = validLocale(source.locale) ?? validLocale(previous.locale)
+  // ISO 3166-1 alpha-2, decided by the host from its own signals; the lobby never
+  // guesses a player's country from the browser.
+  const rawCountry = validString(source.country) ?? validString(previous.country)
+  const country = rawCountry && /^[A-Za-z]{2}$/.test(rawCountry) ? rawCountry.toUpperCase() : null
 
   return {
     account,
     ...(locale ? { locale } : {}),
+    ...(country ? { country } : {}),
     wallet: {
       coins,
       gems,

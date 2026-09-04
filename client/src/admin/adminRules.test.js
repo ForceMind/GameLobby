@@ -152,3 +152,40 @@ test('文案差异精确到「键 · 语言」，只标出真正改动的那一�
   assert.equal(changed[0].before, '—')
   assert.equal(changed[0].after, 'こんにちは')
 })
+
+test('地理范围：默认全球开放，指定模式为白名单，空白名单会被拦截', async () => {
+  const { normalizeRegion, regionOpensIn, validateRegion, regionSummary, regionByContinent, REGION_ALL, REGION_CUSTOM } =
+    await import('./adminRules.js')
+  const { countryContinent, continents } = await import('../data/regions.js')
+  const codes = continents.map((c) => c.code)
+
+  // 迁移前的自由文本一律视为全球开放
+  assert.deepEqual(normalizeRegion('全区'), { mode: REGION_ALL, countries: [] })
+  assert.deepEqual(normalizeRegion(undefined), { mode: REGION_ALL, countries: [] })
+  assert.ok(regionOpensIn('全区', 'CN'))
+
+  // 白名单：只有列出的国家可见，没列的一律关闭
+  const jpOnly = { mode: REGION_CUSTOM, countries: ['JP', 'KR'] }
+  assert.ok(regionOpensIn(jpOnly, 'JP'))
+  assert.equal(regionOpensIn(jpOnly, 'CN'), false, '未列出的国家必须默认关闭')
+
+  assert.deepEqual(validateRegion(jpOnly), [])
+  assert.equal(validateRegion({ mode: REGION_CUSTOM, countries: [] }).length, 1, '空白名单等于全员看不到，必须拦截')
+  assert.deepEqual(validateRegion({ mode: REGION_ALL, countries: [] }), [])
+
+  // 「整个洲除某几国」：选中全洲后取消勾选，靠的是解析后的国家清单
+  const asia = Object.keys(countryContinent).filter((c) => countryContinent[c] === 'AS')
+  const asiaMinusTwo = { mode: REGION_CUSTOM, countries: asia.filter((c) => c !== 'KP' && c !== 'IR') }
+  const grouped = regionByContinent(asiaMinusTwo, countryContinent, codes)
+  const asiaGroup = grouped.find((g) => g.continent === 'AS')
+  assert.equal(asiaGroup.state, 'some')
+  assert.equal(asiaGroup.selected.length, asia.length - 2)
+  assert.equal(grouped.find((g) => g.continent === 'EU').state, 'none')
+
+  assert.equal(regionSummary('全区', countryContinent, codes), '全球开放')
+  assert.match(regionSummary(asiaMinusTwo, countryContinent, codes), /个国家\/地区/)
+  assert.equal(regionSummary({ mode: REGION_CUSTOM, countries: [] }, countryContinent, codes), '未选择任何国家/地区')
+
+  // 国家码去重并排序，便于比对与审计
+  assert.deepEqual(normalizeRegion({ mode: REGION_CUSTOM, countries: ['KR', 'JP', 'JP'] }).countries, ['JP', 'KR'])
+})

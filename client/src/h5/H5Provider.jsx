@@ -90,6 +90,9 @@ export default function H5Provider({ children }) {
         closeGame,
         account: hostContext.account,
         wallet: hostContext.wallet,
+        // ISO 3166-1 alpha-2 from the host; null means the lobby applies no
+        // geographic filtering rather than guessing where the player is.
+        country: hostContext.country ?? null,
       }}
     >
       {children}

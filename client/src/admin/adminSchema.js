@@ -7,6 +7,10 @@ import { parseReward } from './adminRules.js'
 import messages from '../locales/index.js'
 import { locales as localeRegistry, FALLBACK_LOCALE } from '../locales/registry.js'
 
+// The admin console is Chinese; continent names are fixed here rather than taken
+// from Intl so the six labels read consistently in the operator's own language.
+export const CONTINENT_NAMES = { AS: '亚洲', EU: '欧洲', NA: '北美洲', SA: '南美洲', AF: '非洲', OC: '大洋洲' }
+
 export const statusLabel = { ready: '正常可玩', maintenance: '维护中', upcoming: '即将上线', unavailable: '暂不可用' }
 
 export const missionEventLabel = { 'spin-100': '旋转次数', 'casual-5': '休闲游戏局数', 'free-spin': '触发 Free Spin', 'share-win': '分享中奖事件' }
@@ -275,7 +279,9 @@ function buildTranslations() {
 export function createInitialStore() {
   const gameRecords = () => gamesData.map((g, index) => ({
     id: g.id, name: g.name, gameId: g.id, categoryLabel: g.categoryLabel, tags: [...g.tags], badges: [...g.badges],
-    status: statusLabel[g.status] || g.status, players: g.players, heat: g.heat, popular: g.popular, region: '全区',
+    status: statusLabel[g.status] || g.status, players: g.players, heat: g.heat, popular: g.popular,
+    // 白名单：默认全球开放；Ocean 777 作为示例限定在亚洲部分市场
+    region: g.id === 'ocean-777' ? { mode: 'custom', countries: ['CN', 'HK', 'JP', 'KR', 'MY', 'SG', 'TH', 'TW', 'VN'] } : { mode: 'all', countries: [] },
     cover: g.cover, sortWeight: (index + 1) * 10,
     maintenanceNote: g.status === 'maintenance' ? '服务端例行维护中，预计 2 小时内恢复。' : '',
     launchAt: g.status === 'upcoming' ? '2026-09-15 10:00' : '',
@@ -314,7 +320,8 @@ export function createInitialStore() {
     ...JSON.parse(JSON.stringify(config)),
     live: JSON.parse(JSON.stringify(config)),
     liveHistory: {},
-    activities: zip(rawRows.activities, 'activities').map((a, i) => ({ ...a, audience: ['全部玩家', '全部玩家', '全部玩家', '新用户（注册 7 日内）'][i] || '全部玩家', budget: ['单日上限 800,000 金币', '总预算 6,800,000 金币', '单日上限 300,000 金币', '总预算 1,200,000 金币'][i] || '—' })),
+    activities: zip(rawRows.activities, 'activities').map((a, i) => ({ ...a, audience: ['全部玩家', '全部玩家', '全部玩家', '新用户（注册 7 日内）'][i] || '全部玩家',
+      region: i === 3 ? { mode: 'custom', countries: ['BR', 'MX', 'AR', 'CO', 'CL'] } : { mode: 'all', countries: [] }, budget: ['单日上限 800,000 金币', '总预算 6,800,000 金币', '单日上限 300,000 金币', '总预算 1,200,000 金币'][i] || '—' })),
     orders: zip(rawRows.orders, 'orders'),
     players: zip(rawRows.players, 'players'),
     todo,

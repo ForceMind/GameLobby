@@ -246,10 +246,15 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
 const cell = (value) => (Array.isArray(value) ? (value.join(' / ') || '无') : (value === '' || value === null || value === undefined ? '—' : String(value)))
 const yesNo = (value) => (value ? '是' : '否')
 // Every per-game field the editor can change, so a config update diff is not summarised away.
+const regionCell = (value) => {
+  const scope = normalizeRegion(value)
+  return scope.mode === 'all' ? '全球开放' : `${scope.countries.length} 个国家/地区：${scope.countries.join(' ')}`
+}
+
 const gameDiffFields = [
   ['name', '游戏名称'], ['status', '运行状态'], ['categoryLabel', '分类'], ['tags', '标签'], ['badges', '角标'],
   ['popular', '大厅推荐', yesNo], ['heat', '热度值'], ['sortWeight', '排序权重'], ['region', '可用地区'], ['cover', '封面资源'],
-  ['description', '游戏简介'], ['maintenanceNote', '维护公告'], ['launchAt', '预计上线时间'],
+  ['description', '游戏简介'], ['maintenanceNote', '维护公告'], ['launchAt', '预计上线时间'], ['region', '可用地区', regionCell],
   ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRange', '中奖金额范围'], ['maxMultiplier', '最大赔率'],
   ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性'],
 ]
@@ -306,4 +311,59 @@ export function snapshotDiff(moduleId, before, after) {
       added: !before_, removed: !after_,
     }
   })
+}
+
+// ---- geographic scope ------------------------------------------------------
+// A scope is either the whole world or an explicit include-list of countries.
+// An include-list is the safer default for a regulated product: a country that
+// nobody has thought about is closed, not open. "A whole continent except three
+// countries" is expressed by selecting the continent and then deselecting those
+// three, which is why the stored value is the resolved country list rather than
+// a continent list with exceptions.
+export const REGION_ALL = 'all'
+export const REGION_CUSTOM = 'custom'
+
+export function normalizeRegion(value) {
+  if (value && typeof value === 'object' && Array.isArray(value.countries)) {
+    const mode = value.mode === REGION_CUSTOM ? REGION_CUSTOM : REGION_ALL
+    return { mode, countries: mode === REGION_CUSTOM ? [...new Set(value.countries)].sort() : [] }
+  }
+  // Everything before the geographic model was one free-text string; '全区' and
+  // anything unrecognised mean "open everywhere".
+  return { mode: REGION_ALL, countries: [] }
+}
+
+export function regionOpensIn(region, country) {
+  const scope = normalizeRegion(region)
+  return scope.mode === REGION_ALL || scope.countries.includes(country)
+}
+
+export function validateRegion(region, label = '可用地区') {
+  const scope = normalizeRegion(region)
+  if (scope.mode === REGION_CUSTOM && scope.countries.length === 0) {
+    return [`${label}：选择了「指定国家/地区」但一个都没有勾选，这会导致所有玩家都看不到`]
+  }
+  return []
+}
+
+// Groups an include-list by continent so both the editor and the audit trail can
+// say "亚洲 51 国" instead of listing 51 codes.
+export function regionByContinent(region, countryContinent, continentCodes) {
+  const scope = normalizeRegion(region)
+  return continentCodes.map((code) => {
+    const all = Object.keys(countryContinent).filter((c) => countryContinent[c] === code)
+    const selected = scope.mode === REGION_ALL ? all : all.filter((c) => scope.countries.includes(c))
+    return { continent: code, total: all.length, selected, state: selected.length === 0 ? 'none' : selected.length === all.length ? 'all' : 'some' }
+  })
+}
+
+// Short human summary for tables, audit entries and publish diffs.
+export function regionSummary(region, countryContinent, continentCodes, continentName = (c) => c) {
+  const scope = normalizeRegion(region)
+  if (scope.mode === REGION_ALL) return '全球开放'
+  const groups = regionByContinent(scope, countryContinent, continentCodes).filter((g) => g.selected.length)
+  if (!groups.length) return '未选择任何国家/地区'
+  const parts = groups.map((g) =>
+    g.state === 'all' ? `${continentName(g.continent)}全境` : `${continentName(g.continent)} ${g.selected.length} 个`)
+  return `${scope.countries.length} 个国家/地区 · ${parts.join('、')}`
 }

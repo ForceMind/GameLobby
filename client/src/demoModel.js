@@ -4,11 +4,24 @@ export function isValidNickname(value) {
   return length >= 2 && length <= 20
 }
 
+// A game's geographic scope is a whitelist: no scope at all means open everywhere,
+// and a country that was never selected is closed rather than open by default.
+// Games outside the player's country are removed from the catalogue entirely
+// rather than shown as locked — a title a player cannot legally be offered should
+// not be advertised to them.
+export function openInCountry(game, country) {
+  const scope = game.region
+  if (!scope || typeof scope !== 'object' || scope.mode !== 'custom') return true
+  if (!country) return true
+  return Array.isArray(scope.countries) && scope.countries.includes(country)
+}
+
 export function filterGames(
   catalog,
   category,
   onlyReady = false,
   onlyRealtime = false,
+  country = null,
 ) {
   return catalog.filter((game) => {
     const categories = game.tags ?? game.category.split(' ')
@@ -17,6 +30,7 @@ export function filterGames(
       (category === 'popular' ? game.popular : categories.includes(category))
     return (
       matchesCategory &&
+      openInCountry(game, country) &&
       (!onlyReady || game.status === 'ready') &&
       (!onlyRealtime || categories.includes('realtime'))
     )

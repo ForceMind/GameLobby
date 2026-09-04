@@ -75,3 +75,23 @@ test('转盘每次至少四圈且指向选中的奖项', () => {
     angle = next
   }
 })
+
+test('游戏目录按玩家所在国家过滤：白名单之外的游戏不出现在列表里', async () => {
+  const { filterGames, openInCountry } = await import('./demoModel.js')
+  const catalog = [
+    { id: 'global', tags: ['slots'], status: 'ready', popular: true },
+    { id: 'asia-only', tags: ['slots'], status: 'ready', popular: true, region: { mode: 'custom', countries: ['JP', 'KR'] } },
+    { id: 'explicit-all', tags: ['slots'], status: 'ready', popular: true, region: { mode: 'all', countries: [] } },
+  ]
+  // 没有地区限制、或明确全球开放的，任何国家都能看到
+  assert.ok(openInCountry(catalog[0], 'CN'))
+  assert.ok(openInCountry(catalog[2], 'CN'))
+  // 白名单之外的国家看不到
+  assert.equal(openInCountry(catalog[1], 'CN'), false)
+  assert.ok(openInCountry(catalog[1], 'JP'))
+
+  assert.deepEqual(filterGames(catalog, 'all', false, false, 'JP').map((g) => g.id), ['global', 'asia-only', 'explicit-all'])
+  assert.deepEqual(filterGames(catalog, 'all', false, false, 'CN').map((g) => g.id), ['global', 'explicit-all'])
+  // 宿主未提供国家时不做任何地理过滤，而不是猜测玩家位置
+  assert.equal(filterGames(catalog, 'all', false, false, null).length, 3)
+})

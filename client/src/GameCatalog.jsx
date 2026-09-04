@@ -5,6 +5,7 @@ import useGameDetails from './useGameDetails.jsx'
 import { GameArtwork, SectionHeader } from './ui.jsx'
 import { filterGames } from './demoModel.js'
 import { useLocale } from './useLocale.js'
+import { useH5 } from './h5/useH5.js'
 import { useCategoryLabel } from './useCategoryLabel.js'
 
 function GameCard({ game, openModal }) {
@@ -123,6 +124,7 @@ export function RecentGames({ openModal, recentVisibility = true }) {
 }
 
 export function GameCatalog({ variant = 'library', openModal }) {
+  const { country } = useH5()
   const { t, href } = useLocale()
   const popular = variant === 'popular'
   const [category, updateCategory] = useState(() => {
@@ -150,9 +152,9 @@ export function GameCatalog({ variant = 'library', openModal }) {
       ]
     : gameCategories
   const visibleGames = useMemo(() => {
-    const filtered = filterGames(games, category, onlyReady, onlyRealtime)
+    const filtered = filterGames(games, category, onlyReady, onlyRealtime, country)
     return popular && category === 'popular' ? filtered.slice(0, 4) : filtered
-  }, [category, onlyReady, onlyRealtime, popular])
+  }, [category, onlyReady, onlyRealtime, popular, country])
   const clearFilters = () => {
     setCategory(popular ? 'popular' : 'all')
     setOnlyReady(false)

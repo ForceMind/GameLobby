@@ -3,11 +3,13 @@ import { Icon } from '../icons.jsx'
 import { games, gameCategories } from '../data.js'
 import liteContent from '../data/liteContent.json'
 import { rankings as aggregateWinnerRankings } from '../engagement/model.js'
-import { missionEventOptions, transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel, translationLocales, translationNamespace } from './adminSchema.js'
+import { missionEventOptions, transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel, translationLocales, translationNamespace, CONTINENT_NAMES } from './adminSchema.js'
+import { continents, countryContinent, countriesOf, countryName } from '../data/regions.js'
 import {
   formatReward, coinPackPriceUsd, wheelBalanced, prizeLabel, validateWheel, validateCheckin, validateMissions, validateCoinPack,
   validateMonthlyPass, validateChestOffer, validateTranslations, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels,
   getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, validateSnapshot, WHEEL_SLOTS,
+  normalizeRegion, regionByContinent, regionSummary, validateRegion, REGION_ALL, REGION_CUSTOM,
 } from './adminRules.js'
 
 const navGroups = [
@@ -121,6 +123,7 @@ function FieldEditor({ field, value, onChange }) {
   if (field.type === 'toggle') return <button type="button" disabled={field.disabled} className={`toggle-switch ${value ? 'is-on' : ''}`} onClick={() => onChange(!value)} aria-pressed={!!value} aria-label={field.label}><i /></button>
   if (field.type === 'select') return <select className="ladder-input" value={value} onChange={(event) => onChange(event.target.value)}>{field.options.map((option) => (Array.isArray(option) ? <option key={option[0]} value={option[0]}>{option[1]}</option> : <option key={option} value={option}>{option}</option>))}</select>
   if (field.type === 'textarea') return <textarea className="ladder-input" value={value ?? ''} onChange={(event) => onChange(event.target.value)} placeholder={field.placeholder} />
+  if (field.type === 'region') return <RegionPicker value={value} onChange={onChange} label={field.label} />
   if (field.type === 'checks') return <div className="check-group">{field.options.map(([optionValue, optionLabel]) => <label key={optionValue}><input type="checkbox" checked={(value || []).includes(optionValue)} onChange={(event) => onChange(event.target.checked ? [...(value || []), optionValue] : (value || []).filter((v) => v !== optionValue))} />{optionLabel}</label>)}</div>
   if (field.type === 'number') return <input className="ladder-input" type="number" min={field.min} max={field.max} step={field.step} disabled={field.disabled} value={value ?? 0} onChange={(event) => onChange(event.target.value === '' ? '' : Number(event.target.value))} />
   return <input className="ladder-input" value={value ?? ''} disabled={field.disabled} placeholder={field.placeholder} onChange={(event) => onChange(event.target.value)} />
@@ -257,7 +260,7 @@ function gameFormSections(draft) {
       { key: 'tags', label: '分类标签', type: 'checks', options: [['slots', 'Slots'], ['casual', '休闲'], ['realtime', '实时']], full: true },
       { key: 'badges', label: '角标（英文逗号分隔）', placeholder: 'JACKPOT, 热度 96' },
       { key: 'cover', label: '封面资源', note: '资源上传接口待联调，当前仅记录文件名' },
-      { key: 'region', label: '可用地区' },
+      { key: 'region', label: '可用地区', type: 'region', full: true, note: '白名单：只有勾选的国家/地区能看到并进入这款游戏' },
       { key: 'sortWeight', label: '排序权重', type: 'number', note: '数值越小越靠前；目录页拖拽会覆盖该顺序' },
       { key: 'description', label: '游戏简介', type: 'textarea', full: true, note: '显示在前台「游戏说明」弹窗正文' },
     ] },
@@ -292,6 +295,7 @@ function validateGameDraft(draft) {
   if (!(Number(draft.sortWeight) > 0)) errors.push('排序权重必须大于 0')
   if (draft.status === '维护中' && !String(draft.maintenanceNote || '').trim()) errors.push('维护中状态必须填写维护公告文案')
   if (draft.status === '即将上线' && !String(draft.launchAt || '').trim()) errors.push('即将上线状态必须填写预计上线时间')
+  errors.push(...validateRegion(draft.region))
   return errors
 }
 
@@ -368,13 +372,14 @@ function GameCatalogPage({ environment, store, update, journal, intent }) {
   const [editingId, setEditingId] = useState(intent?.focusId && items.some((game) => game.id === intent.focusId) ? intent.focusId : null)
   const openDetail = (game) => setEditingId(game.id)
   const editing = editingId ? items.find((game) => game.id === editingId) : null
-  const headers = ['排序', '游戏名称', '游戏 ID', '分类', '状态', '在线人数', '热度', '大厅热门推荐']
+  const regionText = (game) => regionSummary(game.region, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code)
+  const headers = ['排序', '游戏名称', '游戏 ID', '分类', '状态', '可用地区', '在线人数', '热度', '大厅热门推荐']
   return <>
     <ConfigBadge store={store} moduleId={moduleId} onDiscard={() => journal.discardDraft(moduleId)} />
     <section className="admin-card catalog-summary"><div><span>当前环境</span><strong>{environment === 'production' ? '生产环境' : '测试环境'}</strong><small>草稿与生效版本按环境分开保存</small></div><div><span>目录游戏</span><strong>{items.length} 款</strong><small>草稿中正常可玩 {items.filter((item) => item.status === '正常可玩').length} 款</small></div><div><span>草稿状态</span><strong>{differs ? '有未发布变更' : '已同步'}</strong><small>{differs ? '保存后进入发布审核' : '与生效版本一致'}</small></div></section>
     <div className="drag-hint">分类统计（当前草稿）：{gameCategories.filter((c) => c.id !== 'all').map((c) => `${c.label} ${items.filter((g) => g.tags.includes(c.id)).length} 款`).join(' · ')}</div>
     <div className="catalog-toolbar"><div className="view-toggle"><button className={view === 'table' ? 'is-active' : ''} onClick={() => setView('table')}>表格视图</button><button className={view === 'cards' ? 'is-active' : ''} onClick={() => setView('cards')}>卡片视图</button></div><span className="drag-hint"><Icon name="flag" />拖拽调整排序，开关切换大厅热门推荐，点击行编辑详情</span>{differs && <button className="admin-btn primary" onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-    {view === 'table' ? <section className="admin-card table-card"><div className="table-top"><div><strong>游戏目录</strong><span>按 {environment === 'production' ? '生产' : '测试'} 环境排序</span></div><div className="table-actions"><button className="admin-btn subtle" disabled title="批量导入依赖资源服务，待联调">导入目录（待联调）</button><button className="admin-btn subtle" onClick={() => exportCsv(`游戏目录-${environment}`, headers, items.map((g, i) => [i + 1, g.name, g.gameId, g.categoryLabel, g.status, g.players, g.heat, g.popular ? '是' : '否']))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{headers.map((h) => <th key={h}>{h}</th>)}<th>操作</th></tr></thead><tbody>{items.map((game, index) => <tr key={game.id} draggable onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={dragging === game.id ? 'is-dragging' : ''} onClick={() => openDetail(game)}><td><span className="drag-handle" aria-label="拖拽排序">⋮⋮</span><b className="sort-number">{index + 1}</b></td><td><span className="game-name-cell"><span className={`game-thumb thumb-${index % 4}`} /><strong>{game.name}</strong></span></td><td>{game.gameId}</td><td>{game.categoryLabel}</td><td><Status>{game.status}</Status></td><td>{game.players}</td><td><span className="heat-bar"><i style={{ width: `${game.heat}%` }} /></span><small>{game.heat || '—'}</small></td><td><button className={`toggle-switch ${game.popular ? 'is-on' : ''}`} onClick={(event) => { event.stopPropagation(); togglePopular(game.id) }} aria-pressed={game.popular} aria-label="大厅热门推荐"><i /></button></td><td><button className="row-action" onClick={(event) => { event.stopPropagation(); openDetail(game) }}>编辑</button></td></tr>)}</tbody></table></div></section> : <section className="catalog-cards">{items.map((game, index) => <article draggable key={game.id} onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={`game-admin-card ${dragging === game.id ? 'is-dragging' : ''}`}><span className={`game-cover cover-${index % 4}`}><b>{index + 1}</b><i>⋮⋮</i></span><div><div className="game-card-top"><Status>{game.status}</Status><small>热度 {game.heat || '—'}</small></div><h3>{game.name}</h3><p>{game.categoryLabel}</p><span>{game.players} 在线 · {game.popular ? '已推荐' : '未推荐'}</span></div><button className="row-action" onClick={() => openDetail(game)}>编辑</button></article>)}</section>}
+    {view === 'table' ? <section className="admin-card table-card"><div className="table-top"><div><strong>游戏目录</strong><span>按 {environment === 'production' ? '生产' : '测试'} 环境排序</span></div><div className="table-actions"><button className="admin-btn subtle" disabled title="批量导入依赖资源服务，待联调">导入目录（待联调）</button><button className="admin-btn subtle" onClick={() => exportCsv(`游戏目录-${environment}`, headers, items.map((g, i) => [i + 1, g.name, g.gameId, g.categoryLabel, g.status, regionText(g), g.players, g.heat, g.popular ? '是' : '否']))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{headers.map((h) => <th key={h}>{h}</th>)}<th>操作</th></tr></thead><tbody>{items.map((game, index) => <tr key={game.id} draggable onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={dragging === game.id ? 'is-dragging' : ''} onClick={() => openDetail(game)}><td><span className="drag-handle" aria-label="拖拽排序">⋮⋮</span><b className="sort-number">{index + 1}</b></td><td><span className="game-name-cell"><span className={`game-thumb thumb-${index % 4}`} /><strong>{game.name}</strong></span></td><td>{game.gameId}</td><td>{game.categoryLabel}</td><td><Status>{game.status}</Status></td><td><span className={`region-cell ${normalizeRegion(game.region).mode === 'all' ? '' : 'is-limited'}`}>{regionText(game)}</span></td><td>{game.players}</td><td><span className="heat-bar"><i style={{ width: `${game.heat}%` }} /></span><small>{game.heat || '—'}</small></td><td><button className={`toggle-switch ${game.popular ? 'is-on' : ''}`} onClick={(event) => { event.stopPropagation(); togglePopular(game.id) }} aria-pressed={game.popular} aria-label="大厅热门推荐"><i /></button></td><td><button className="row-action" onClick={(event) => { event.stopPropagation(); openDetail(game) }}>编辑</button></td></tr>)}</tbody></table></div></section> : <section className="catalog-cards">{items.map((game, index) => <article draggable key={game.id} onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={`game-admin-card ${dragging === game.id ? 'is-dragging' : ''}`}><span className={`game-cover cover-${index % 4}`}><b>{index + 1}</b><i>⋮⋮</i></span><div><div className="game-card-top"><Status>{game.status}</Status><small>热度 {game.heat || '—'}</small></div><h3>{game.name}</h3><p>{game.categoryLabel}</p><span>{game.players} 在线 · {game.popular ? '已推荐' : '未推荐'}</span></div><button className="row-action" onClick={() => openDetail(game)}>编辑</button></article>)}</section>}
     {editing && <GameEditModal key={editing.id} record={editing} store={store} update={update} journal={journal} environment={environment} onClose={() => setEditingId(null)} />}
   </>
 }
@@ -642,6 +647,66 @@ function WinsPage({ store, update, journal }) {
       <section className="admin-card table-card"><div className="table-top"><div><strong>最近中奖</strong><span>按事件时间倒序，事件 ID 唯一去重；关闭展示会同时影响榜单聚合与前台弹幕</span></div></div><div className="table-wrap"><table><thead><tr><th>事件 ID</th><th>玩家昵称</th><th>游戏</th><th>中奖金币</th><th>展示状态</th></tr></thead><tbody>{events.map((e) => <tr key={e.id} className={e.visible ? '' : 'is-hidden-row'}><td>{e.id}</td><td>{e.name}</td><td>{gameName(e.gameId)}</td><td>{e.coins.toLocaleString('en-US')}</td><td><button className={`toggle-switch ${e.visible ? 'is-on' : ''}`} onClick={() => toggleWin(e.id)} aria-pressed={e.visible} aria-label="展示状态"><i /></button></td></tr>)}</tbody></table></div></section>
     </> : <section className="admin-card table-card"><div className="table-top"><div><strong>明日宝箱幸运榜单</strong><span>按奖励金币降序，最多 5 条进入前台榜单；隐藏的事件保留在此可恢复</span></div><label className="environment-select"><span>展示上限（前台固定 5）</span><input type="number" min="1" max="5" value={store.winsConfig.chestLimit} onChange={setLimit('chestLimit', 5)} style={{ width: 44, border: 0 }} /></label></div><div className="table-wrap"><table><thead><tr><th>榜单位次</th><th>玩家昵称</th><th>中奖金币</th><th>展示状态</th></tr></thead><tbody>{chestAll.map((c) => <tr key={c.id} className={c.visible ? '' : 'is-hidden-row'}><td>{chestVisible.includes(c.id) ? chestVisible.indexOf(c.id) + 1 : '—'}</td><td>{c.name}</td><td>{c.rewardCoins.toLocaleString('en-US')}</td><td><button className={`toggle-switch ${c.visible ? 'is-on' : ''}`} onClick={() => toggleChest(c.id)} aria-pressed={c.visible} aria-label="展示状态"><i /></button></td></tr>)}</tbody></table></div></section>}
   </>
+}
+
+// ---- geographic scope picker ----------------------------------------------
+// Continent first, then drill into countries. A continent row is tri-state: all,
+// some, or none. Selecting a continent selects every country in it; unticking a
+// few countries afterwards is how "the whole continent except these" is expressed.
+function RegionPicker({ value, onChange, label = '可用地区' }) {
+  const scope = normalizeRegion(value)
+  const [expanded, setExpanded] = useState(null)
+  const [filter, setFilter] = useState('')
+  const groups = regionByContinent(scope, countryContinent, continents.map((c) => c.code))
+  const nameOf = (code) => countryName(code, 'zh-Hans')
+  const continentLabel = (code) => CONTINENT_NAMES[code] ?? code
+
+  const setCountries = (next) => onChange({ mode: REGION_CUSTOM, countries: [...new Set(next)].sort() })
+  const toggleContinent = (group) => {
+    const all = countriesOf(group.continent)
+    const base = scope.mode === REGION_ALL ? [] : scope.countries
+    setCountries(group.state === 'all' ? base.filter((c) => !all.includes(c)) : [...base, ...all])
+  }
+  const toggleCountry = (code) => {
+    const base = scope.mode === REGION_ALL ? [] : scope.countries
+    setCountries(base.includes(code) ? base.filter((c) => c !== code) : [...base, code])
+  }
+
+  return <div className="region-picker">
+    <div className="region-mode">
+      <button type="button" className={scope.mode === REGION_ALL ? 'is-active' : ''} onClick={() => onChange({ mode: REGION_ALL, countries: [] })}>全球开放</button>
+      <button type="button" className={scope.mode === REGION_CUSTOM ? 'is-active' : ''} onClick={() => onChange({ mode: REGION_CUSTOM, countries: scope.countries })}>指定国家/地区</button>
+      <span className="region-summary">{regionSummary(scope, countryContinent, continents.map((c) => c.code), continentLabel)}</span>
+    </div>
+    {scope.mode === REGION_CUSTOM && <>
+      <div className="region-search"><Icon name="eye" /><input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="搜索国家/地区名称或代码..." /></div>
+      <div className="region-continents">{groups.map((group) => {
+        const all = countriesOf(group.continent)
+        const shown = filter
+          ? all.filter((c) => `${nameOf(c)} ${c}`.toLowerCase().includes(filter.toLowerCase()))
+          : all
+        if (filter && !shown.length) return null
+        const open = expanded === group.continent || (filter && shown.length)
+        return <div className={`region-continent state-${group.state}`} key={group.continent}>
+          <div className="region-continent-head">
+            <button type="button" className="region-check" onClick={() => toggleContinent(group)} aria-label={`全选或取消${continentLabel(group.continent)}`}>
+              {group.state === 'all' ? '✓' : group.state === 'some' ? '–' : ''}
+            </button>
+            <button type="button" className="region-continent-name" onClick={() => setExpanded(open && !filter ? null : group.continent)}>
+              {continentLabel(group.continent)}
+              <small>{group.selected.length} / {group.total}</small>
+              <Icon name={open ? 'chevronLeft' : 'chevronRight'} />
+            </button>
+          </div>
+          {open && <div className="region-countries">{shown.map((code) => <label key={code} className={scope.countries.includes(code) ? 'is-on' : ''}>
+            <input type="checkbox" checked={scope.countries.includes(code)} onChange={() => toggleCountry(code)} />
+            <span>{nameOf(code)}</span><small>{code}</small>
+          </label>)}</div>}
+        </div>
+      })}</div>
+      <p className="region-hint">未勾选的国家/地区一律不开放——这是白名单，不是黑名单。「整个洲除某几国」的做法是先勾选该洲，再取消那几个国家。{label}留空会导致所有玩家都看不到，保存时会被拦截。</p>
+    </>}
+  </div>
 }
 
 // ---- shared config editors ------------------------------------------------
@@ -942,18 +1007,19 @@ const activityTypeMeta = {
 function ActivityModal({ record, store, update, journal, onClose }) {
   const meta = activityTypeMeta[record.type]
   const moduleId = meta?.moduleId
-  const [shell, setShell] = useState({ name: record.name, period: record.period, audience: record.audience || '全部玩家', budget: record.budget || '—', owner: record.owner })
+  const [shell, setShell] = useState({ name: record.name, period: record.period, audience: record.audience || '全部玩家', budget: record.budget || '—', owner: record.owner, region: normalizeRegion(record.region) })
   const [config, setConfig] = useState(() => (moduleId ? getSlice(store, moduleId) : null))
   const configErrors = moduleId ? validateSnapshot(moduleId, config) : []
-  const shellErrors = [...(!String(shell.name).trim() ? ['活动名称不能为空'] : []), ...(!String(shell.period).trim() ? ['活动周期不能为空'] : [])]
+  const shellErrors = [...(!String(shell.name).trim() ? ['活动名称不能为空'] : []), ...(!String(shell.period).trim() ? ['活动周期不能为空'] : []), ...validateRegion(shell.region, '投放地区')]
   const errors = [...shellErrors, ...configErrors]
   const shellChanged = ['name', 'period', 'audience', 'budget', 'owner'].some((key) => shell[key] !== (record[key] ?? (key === 'audience' ? '全部玩家' : key === 'budget' ? '—' : '')))
+    || JSON.stringify(shell.region) !== JSON.stringify(normalizeRegion(record.region))
   const configChanged = moduleId ? JSON.stringify(config) !== JSON.stringify(getSlice(store.live, moduleId)) : false
   const history = store.audit.filter((a) => (a.targetModule === 'activities' && a.targetId === record.id) || (moduleId && a.targetModule === moduleId))
   const save = () => {
     if (shellChanged) {
       update('activities', (list) => list.map((a) => (a.id === record.id ? { ...a, ...shell } : a)))
-      journal.logAudit({ action: '编辑活动信息', target: shell.name, targetModule: 'activities', targetId: record.id, after: diffSummary(record, { ...record, ...shell }, [['name', '活动名称'], ['period', '活动周期'], ['audience', '适用人群'], ['budget', '奖励预算'], ['owner', '负责人']]) })
+      journal.logAudit({ action: '编辑活动信息', target: shell.name, targetModule: 'activities', targetId: record.id, after: diffSummary(record, { ...record, ...shell }, [['name', '活动名称'], ['period', '活动周期'], ['audience', '适用人群'], ['budget', '奖励预算'], ['owner', '负责人'], ['region', '投放地区']]) })
     }
     if (configChanged && moduleId) {
       const snapshot = moduleId === 'wheel' ? { ...config, wheelVersion: store.live.wheelVersion + 1 } : config
@@ -973,6 +1039,7 @@ function ActivityModal({ record, store, update, journal, onClose }) {
         <label>适用人群<select className="ladder-input" value={shell.audience} onChange={(event) => setShell((v) => ({ ...v, audience: event.target.value }))}>{['全部玩家', '新用户（注册 7 日内）', '活跃玩家', '付费玩家', '流失召回'].map((o) => <option key={o}>{o}</option>)}</select></label>
         <label>奖励预算<input className="ladder-input" value={shell.budget} onChange={(event) => setShell((v) => ({ ...v, budget: event.target.value }))} /></label>
         <label>负责人<input className="ladder-input" value={shell.owner} onChange={(event) => setShell((v) => ({ ...v, owner: event.target.value }))} /></label>
+        <label className="full">投放地区<RegionPicker value={shell.region} onChange={(region) => setShell((v) => ({ ...v, region }))} label="投放地区" /><small className="field-note">白名单：只有勾选的国家/地区能看到并参与这个活动；与「适用人群」是两个独立维度</small></label>
         <label>当前状态<input className="ladder-input" value={record.status} readOnly /><small className="field-note">状态通过列表页的操作流转（提交审核 / 暂停 / 结束）</small></label>
         <label>参与人数<input className="ladder-input" value={record.participants} readOnly /><small className="field-note">由统计服务写入，后台只读</small></label>
       </div></fieldset>

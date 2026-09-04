@@ -73,6 +73,8 @@ export const games = [
   },
   {
     id: 'ocean-777',
+    // 白名单：仅这些国家/地区的玩家能看到并进入（与后台「可用地区」对应）
+    region: { mode: 'custom', countries: ['CN', 'HK', 'JP', 'KR', 'MY', 'SG', 'TH', 'TW', 'VN'] },
     name: 'Ocean 777',
     category: 'slots',
     tags: ['slots'],
