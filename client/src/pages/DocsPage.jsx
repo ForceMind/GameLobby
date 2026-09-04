@@ -8,6 +8,7 @@ const toc = [
   ['architecture', '系统结构与职责边界'],
   ['pages', '页面与功能地图'],
   ['global', '全局规范'],
+  ['i18n', '多语言与地区'],
   ['games', '游戏中心'],
   ['events', '活动中心'],
   ['store', '商城与明日宝箱'],
@@ -203,7 +204,36 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="games" eyebrow="05 · GAMES" title="游戏中心" description="游戏能不能玩，由状态决定；状态由后台配置和服务端可用性共同决定。" />
+            <SectionTitle id="i18n" eyebrow="05 · LANGUAGES & REGIONS" title="多语言与地区" description="玩家看到什么语言、能看到哪些内容，由这两套机制决定。" />
+            <Logic title="多语言 · 功能逻辑">
+              <p>大厅支持 24 种主流语言。玩家看到哪一种，按这个顺序决定：链接里带的语言参数最优先，其次是宿主 App 告诉我们的语言，再次是玩家上次自己选的，然后是浏览器语言，都没有就用简体中文。玩家也可以在界面上直接切换，每种语言都用它自己的文字列出——找葡萄牙语的人不该被要求先认识"葡萄牙语"这三个汉字。</p>
+              <p>所有给玩家看的文字都不写在代码里，而是放在一份按语言分开的文案表里，每条文案有一个稳定的标识。这样中文文案改了不会让其他 23 种语言的翻译作废，运营也能在后台按语言把文案填进去。</p>
+              <p>某种语言缺翻译时，玩家看到英文，而不是空白或一串技术标识；每一次这样的回退都会被记录下来，开发环境直接报警告，生产环境可以接到监控。这意味着"某个语言少了一句"是能被发现的问题，而不是悄悄上线的缺陷。</p>
+              <p>带变量的文案有一条硬规则：比如"购买 {'{coins}'} 金币"里的那个变量，每种语言的译文都必须保留它。译文里少了或写错了，后台保存时直接拦下——否则玩家会看到一句缺了数字的话。</p>
+              <p>阿拉伯语和波斯语是从右往左书写的，整个页面布局会随之镜像。数字和日期按各语言的习惯格式化，但金额固定用拉丁数字，因为它要和宿主 App 显示的余额对得上。</p>
+              <p>需要说明的是：运营后台本身是中文界面，不做多语言。后台里管理的是玩家看到的文字，不是后台自己的按钮。</p>
+            </Logic>
+            <Roles
+              front="按解析出的语言渲染全部文案；缺翻译时回退英文并上报；RTL 语言镜像布局；数字与日期按语言格式化。"
+              server="通过宿主上下文提供玩家的语言与所在国家；返回文案标识和数值，不返回拼好的句子。"
+              admin="按语言维护玩家侧文案，显示每种语言的覆盖率与缺失清单，支持 CSV 批量导入导出；改动走草稿与发布审核。"
+            />
+            <Logic title="地区范围 · 功能逻辑">
+              <p>一款游戏或一个活动，可以选择全球开放，也可以指定在哪些国家和地区开放。选择方式是先选大洲、再细选国家——想开放整个亚洲就勾选亚洲，想"整个亚洲除了某两个市场"，就先勾选亚洲再取消那两个国家。</p>
+              <p>这是白名单不是黑名单：没有被勾选的国家一律不开放。这个方向很重要——如果用黑名单，一个没人想到过的新市场会默认开放，而在受监管的产品里，默认应该是关闭。所以后台会拦截"选了指定国家但一个都没勾"这种配置，因为那等于所有玩家都看不到。</p>
+              <p>玩家所在的国家由宿主 App 告知，大厅不自己猜。不在开放范围内的游戏，直接不出现在列表里，而不是显示成灰色的不可点——一款不能提供给这个玩家的游戏，不应该先展示给他看。如果宿主没有告知国家，大厅不做任何地区过滤。</p>
+              <p>国家名字不需要翻译：系统里只存两位国家代码和它属于哪个洲，名字由浏览器按当前语言生成，所以新增一种语言不需要补 233 个国家的译名。</p>
+            </Logic>
+            <Fields caption="地区与「适用人群」是两个独立维度：前者决定谁能看到，后者决定给谁投放。" rows={[
+              ['mode', "'all' | 'custom'", "all 为全球开放；custom 为白名单，只有 countries 里的国家可见。"],
+              ['countries', 'string[]', 'ISO 3166-1 alpha-2 代码列表，去重并排序。mode 为 custom 时不能为空。'],
+              ['玩家国家来源', '宿主上下文', '两位国家代码，由宿主 App 决定；缺失时不做地区过滤，而不是猜测玩家位置。'],
+              ['不可见时的表现', '不出现在列表', '不展示为「不可用」，避免推荐一款无法提供的游戏。'],
+            ]} />
+          </section>
+
+          <section className="docs-section">
+            <SectionTitle id="games" eyebrow="06 · GAMES" title="游戏中心" description="游戏能不能玩，由状态决定；状态由后台配置和服务端可用性共同决定。" />
             <Logic>
               <p>游戏目录是大厅最核心的东西。玩家进来看到一格一格的游戏卡片，可以按全部、Slots、休闲、实时来筛。每张卡片上有封面、名字、分类、当前在线人数和热度，右上角可能有角标，比如 JACKPOT。点开一张卡片，会弹出这个游戏的说明：一段介绍文字，如果是老虎机类还会显示中奖率、RTP、中奖金额范围和最大赔率这四个参数。说明弹窗底部是开始游戏按钮。</p>
               <p>但不是每个游戏都能点。一款游戏有四种状态：正常可玩、维护中、即将上线、暂不可用。维护中通常是临时的，运营会在后台填一段维护公告，玩家点进去看到的就是这段话，而不是一个干巴巴的"不可用"。即将上线的游戏会显示预计上线时间。暂不可用一般用于地区限制或长期下架。只有正常可玩的游戏，开始按钮才是可点的。</p>
@@ -223,6 +253,7 @@ export default function DocsPage() {
               ['status', "'ready' | 'maintenance' | 'upcoming' | 'unavailable'", '运行状态，决定开始按钮是否可点。'],
               ['maintenanceNote', 'string', '维护公告文案，仅在维护中状态展示；后台校验为维护中时必填。'],
               ['launchAt', 'string', '预计上线时间，仅在即将上线状态展示；后台校验为该状态时必填。'],
+              ['region', "{ mode: 'all' | 'custom', countries: string[] }", '地理范围。白名单：mode 为 custom 时，只有 countries 里的 ISO 3166-1 alpha-2 代码能看到这款游戏；没列出的一律关闭。空的 custom 列表会被后台拦截。'],
               ['players', 'string', '在线人数，实时数据；无数据时显示"暂无数据"，不得用静态数字冒充。'],
               ['heat', 'number 0–100', '热度值，用于排序参考与卡片展示。'],
               ['popular', 'boolean', '是否进入大厅热门推荐位。'],
@@ -241,7 +272,7 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="events" eyebrow="06 · EVENTS" title="活动中心" description="三个活动：七日签到、幸运转盘、每日任务。" />
+            <SectionTitle id="events" eyebrow="07 · EVENTS" title="活动中心" description="三个活动：七日签到、幸运转盘、每日任务。" />
             <Logic title="七日签到 · 功能逻辑">
               <p>签到是最简单的一档福利。一个周期七天，每天有一份奖励，通常是金币，有时带宝石，最后一天是明显更大的一份大奖。玩家每天进来点一次领取，就拿走当天那份。</p>
               <p>关键规则有三条。第一，按服务端所在时区的自然日刷新，不看玩家手机的时区，这样跨时区的玩家不会因为改设备时间多领一次。第二，不支持补签——漏掉的那天就是漏掉了，界面上会标成漏签，但不提供任何补领入口。第三，领取接口是幂等的，同一天重复提交只发一次奖。</p>
@@ -282,7 +313,7 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="store" eyebrow="07 · STORE" title="商城与明日宝箱" description="三类商品，三条不同的支付与结算路径。" />
+            <SectionTitle id="store" eyebrow="08 · STORE" title="商城与明日宝箱" description="三类商品，三条不同的支付与结算路径。" />
             <Logic title="金币礼包与月度特权卡 · 功能逻辑">
               <p>金币礼包是最直接的商品：花真钱买一笔金币，有几档可选，某些档位带折扣和赠送宝石，其中一档会被标为推荐。价格按固定汇率从金币数量换算，一美元对应一万金币，再乘上折扣，所以运营只需要配金币数和折扣，售价自动算出来，不会出现两处数字对不上的情况。</p>
               <p>月度特权卡不是一次性到账，而是买了之后三十天内每天可以领一份奖励，默认每天两千金币加一颗宝石。有两个容易被忽略的规则：它不自动续费，到期就结束；当天没领就是没领，不补发。所以界面上必须清楚显示今天领没领、还剩多少天。</p>
@@ -329,7 +360,7 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="wallet" eyebrow="08 · WALLET" title="钱包、流水与战绩" description="所有资产变化只有一份记录，战绩是它的一个视图。" />
+            <SectionTitle id="wallet" eyebrow="09 · WALLET" title="钱包、流水与战绩" description="所有资产变化只有一份记录，战绩是它的一个视图。" />
             <Logic>
               <p>玩家的每一次资产变化都要在钱包流水里留一条记录，没有例外。买宝箱扣的钱、开箱得的钱、玩游戏赢的和输的、签到领的、任务领的，全都在同一份流水里，用来源字段区分是哪一类。每条记录都带变动前和变动后的余额，这样对账时可以一条一条串起来验证，中间少一条就会对不上。</p>
               <p>这里要特别说明一个已经修正的设计问题。早期版本里，个人页有两个列表：一个叫"最近战绩"，一个叫"钱包流水"。结果是同一局游戏在两个地方各出现一次——战绩里写着"某某游戏 +3600"，流水里写着"游戏奖励 +3600"，是同一件事，但流水那条还看不出是哪个游戏。同时战绩里永远没有签到、任务和宝箱。这是典型的两份数据源描述同一件事，既冗余又容易对不上。</p>
@@ -363,7 +394,7 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="social" eyebrow="09 · WINNERS" title="赢家榜与中奖弹幕" description="榜单、最近中奖和弹幕共用同一份中奖事件。" />
+            <SectionTitle id="social" eyebrow="10 · WINNERS" title="赢家榜与中奖弹幕" description="榜单、最近中奖和弹幕共用同一份中奖事件。" />
             <Logic>
               <p>大厅里有三个地方会展示别人中奖：今日赢家榜、最近中奖列表，还有偶尔飘过的中奖弹幕。这三处看起来是三个功能，实际上背后是同一份中奖事件数据，只是聚合方式不同。榜单按玩家把当天的中奖金额累加起来排名，最近中奖按时间倒序列出单条事件，弹幕挑其中一部分推给玩家看。</p>
               <p>之所以强调这一点，是因为它们必须保持一致。如果运营在后台隐藏了某一条中奖事件——比如那是个异常账号——那么它必须同时从榜单的累加里消失、从最近中奖里消失、也不再出现在弹幕里。做不到这一点，就会出现"榜单上有这个人，但列表里找不到对应记录"的矛盾。所以实现上必须共用同一个事件源和同一个事件编号，去重也按这个编号来。</p>
@@ -373,12 +404,12 @@ export default function DocsPage() {
             <Roles
               front="按同一事件源渲染榜单、最近中奖与弹幕；按玩家偏好决定是否弹出；去重按事件编号。"
               server="产生并存储中奖事件、按业务日聚合排名、执行玩家的分享偏好过滤。"
-              admin="隐藏或恢复单条事件；隐藏后同时影响榜单聚合与前台弹幕；被隐藏的事件仍保留在后台列表中可恢复。"
+              admin="只读核对。中奖事件的隐藏、撤销与隐私处理属于风控与内容审核系统，运营后台不提供增删改，也不配置展示条数（前台固定 10 / 5）。"
             />
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="profile" eyebrow="10 · PROFILE" title="我的与隐私偏好" description="资料、资产、记录与三个隐私开关。" />
+            <SectionTitle id="profile" eyebrow="11 · PROFILE" title="我的与隐私偏好" description="资料、资产、记录与三个隐私开关。" />
             <Logic>
               <p>个人页汇总玩家的基本信息和资产：昵称、玩家编号、等级、金币和宝石余额，以及月卡和宝箱的权益状态。下面是两张互补的记录卡片，前面钱包那一节已经说过。</p>
               <p>隐私偏好有三个开关，默认都是开启：是否接收别人的中奖弹幕、是否允许自己的中奖被公开分享、是否让好友看到自己最近玩过的游戏。这三个开关由玩家自己控制，后台只能查看不能替玩家修改——这是合规要求，不是技术限制。</p>
@@ -392,7 +423,7 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="admin-core" eyebrow="11 · ADMIN CORE" title="后台核心机制" description="草稿与生效版本、发布审核、待办工作台、操作留痕。" />
+            <SectionTitle id="admin-core" eyebrow="12 · ADMIN CORE" title="后台核心机制" description="草稿与生效版本、发布审核、待办工作台、操作留痕。" />
             <Logic title="草稿与生效版本 · 功能逻辑">
               <p>后台里所有配置都存在两份：一份是运营正在编辑的草稿，一份是线上正在执行的生效版本。运营在页面上改数字，改的永远是草稿，线上完全不受影响。每个配置页顶部有一个明确的提示条，告诉你现在处于哪种情况：和生效版本一致、草稿有未保存的改动、还是已经提交等待审核。</p>
               <p>改完点保存，草稿会被打包成一个快照挂到一条发布审核任务上。审核人打开这条任务，能看到生效版本和这份快照的逐字段对比：哪一格的概率从 22% 改成了 25%，哪一天的签到奖励从 800 改成了 150，改动的行会高亮出来。审核人据此决定通过、灰度还是驳回。</p>
@@ -425,7 +456,7 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="admin-modules" eyebrow="12 · ADMIN MODULES" title="后台模块清单" description="每个菜单负责什么，改动走哪条路径。" />
+            <SectionTitle id="admin-modules" eyebrow="13 · ADMIN MODULES" title="后台模块清单" description="每个菜单负责什么，改动走哪条路径。" />
             <div className="docs-table-wrap"><table className="docs-table">
               <thead><tr><th>模块</th><th>能做什么</th><th>改动路径</th></tr></thead>
               <tbody>
@@ -433,11 +464,12 @@ export default function DocsPage() {
                 <tr><td><strong>待处理事项</strong></td><td>认领、跳转到对象处理、填结论关闭、转交他人</td><td>直接生效</td></tr>
                 <tr><td><strong>发布审核</strong></td><td>查看逐字段配置差异、通过 / 灰度 / 驳回 / 暂停 / 回滚、跳转来源配置</td><td>决定生效版本</td></tr>
                 <tr><td><strong>操作日志</strong></td><td>全量操作留痕，含对象模块与变更前后值</td><td>只读</td></tr>
-                <tr><td><strong>游戏管理</strong></td><td>目录排序、热门推荐、游戏配置弹窗（基础信息 / 运行状态 / 大厅展示 / Slots 参数）</td><td>运行状态与维护公告立即生效，其余走草稿审核</td></tr>
+                <tr><td><strong>游戏管理</strong></td><td>目录排序、热门推荐、游戏配置弹窗（基础信息 / 运行状态 / 大厅展示 / 可用地区 / Slots 参数）</td><td>运行状态与维护公告立即生效，其余走草稿审核</td></tr>
                 <tr><td><strong>游戏版本发布</strong></td><td>版本记录、上传记录、测试环境、生产环境四个标签的流转</td><td>提交生产发布进入审核</td></tr>
-                <tr><td><strong>赢家与动态</strong></td><td>隐藏或恢复中奖事件与开箱事件，调整展示上限</td><td>直接生效</td></tr>
+                <tr><td><strong>赢家与动态</strong></td><td>只读核对今日赢家榜、最近中奖与宝箱幸运榜</td><td>不可编辑，管理在风控与内容审核系统</td></tr>
+                <tr><td><strong>多语言内容</strong></td><td>按语言维护玩家侧全部文案与游戏说明，查看覆盖率与缺失清单，CSV 导入导出</td><td>草稿审核</td></tr>
                 <tr><td><strong>活动管理</strong></td><td>按活动类型打开不同的配置弹窗：转盘配奖项概率、签到配奖励梯度、任务配任务列表；共通字段含周期、人群、预算</td><td>活动信息立即生效，奖励配置走草稿审核</td></tr>
-                <tr><td><strong>签到 / 转盘 / 任务</strong></td><td>与活动弹窗共用同一份草稿的独立配置页</td><td>草稿审核</td></tr>
+                <tr><td><strong>签到 / 转盘 / 任务</strong></td><td>默认打开玩家视角预览，点「编辑」才进入编辑态；与活动弹窗共用同一份草稿</td><td>草稿审核</td></tr>
                 <tr><td><strong>商品与权益</strong></td><td>金币礼包、月度特权卡、明日宝箱报价</td><td>草稿审核</td></tr>
                 <tr><td><strong>订单管理</strong></td><td>查询与人工处置：取消、退款、标记异常、人工确认</td><td>直接生效，需填原因</td></tr>
                 <tr><td><strong>钱包流水</strong></td><td>查询、对账、导出；人工调整追加一条处理中流水待财务确认</td><td>既有流水只读</td></tr>
@@ -448,7 +480,7 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="api" eyebrow="13 · CONTRACT" title="接口与数据契约" description="服务端需要提供的接口，以及所有写操作的统一约定。" />
+            <SectionTitle id="api" eyebrow="14 · CONTRACT" title="接口与数据契约" description="服务端需要提供的接口，以及所有写操作的统一约定。" />
             <SubHead note="以下为玩家侧接口，前缀 /api/v1。">玩家侧接口</SubHead>
             <div className="docs-code"><code>{`GET   /api/v1/preferences          读取隐私偏好
 POST  /api/v1/preferences          保存隐私偏好（三个布尔值）
@@ -480,7 +512,7 @@ GET   /api/v1/winners/today        今日赢家榜与最近中奖，榜单最多
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="qa" eyebrow="14 · ACCEPTANCE" title="验收清单" description="发布前逐项确认。" />
+            <SectionTitle id="qa" eyebrow="15 · ACCEPTANCE" title="验收清单" description="发布前逐项确认。" />
             <div className="docs-checklist">
               <label><input type="checkbox" />五个主导航齐全，页面切换保留语言、展示模式与滚动位置</label>
               <label><input type="checkbox" />中英文键成对存在，插值参数一致，无未翻译文案</label>
@@ -493,6 +525,8 @@ GET   /api/v1/winners/today        今日赢家榜与最近中奖，榜单最多
               <label><input type="checkbox" />待办可跳转到对象，关联对象终态时自动关闭</label>
               <label><input type="checkbox" />高风险操作均需填写原因并写入操作日志</label>
               <label><input type="checkbox" />空数据、失败、超时、无权限画面均已验证</label>
+              <label><input type="checkbox" />切换到未翻译的语言时回退英文，不出现空白或原始键名</label>
+              <label><input type="checkbox" />不在开放地区的游戏不出现在列表，宿主未告知国家时不做过滤</label>
               <label><input type="checkbox" />lint、单元测试、构建与产物校验通过</label>
             </div>
             <div className="docs-footer-note"><Icon name="calendar" /><span>实现或规则发生变化时，先更新本文档再发布。本文档入口在原型首页，也可以从任意页面顶部返回。</span></div>
