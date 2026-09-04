@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { games, gameCategories } from '../data.js'
 import liteContent from '../data/liteContent.json'
@@ -7,7 +7,7 @@ import { missionEventOptions, transitions, columns, createInitialStore, ledgerSo
 import {
   formatReward, coinPackPriceUsd, wheelBalanced, prizeLabel, validateWheel, validateCheckin, validateMissions, validateCoinPack,
   validateMonthlyPass, validateChestOffer, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels,
-  getSlice, draftDiffers, resetDraftToLive, applyRelease, WHEEL_SLOTS,
+  getSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, WHEEL_SLOTS,
 } from './adminRules.js'
 
 const navGroups = [
@@ -70,6 +70,13 @@ const configurationNotes = {
   orders: ['订单仅覆盖金币礼包与月度特权卡的宿主支付流程。', '状态链路：待支付 → 处理中 → 已支付/失败；已支付后可能进入退款处理中 → 已退款；异常订单需人工介入并写入操作日志。'],
   ledger: ['流水来源与前台一致，固定为 chest_purchase / chest_reward / game_reward / game_cost / checkin / task 六类；后台人工调整使用 manual_adjust，前台流水枚举需在联调时补充该来源。', '既有流水不可编辑；人工调整以追加一条"处理中"流水的方式写入，财务确认入账后才变为成功。'],
   players: ['玩家资产、等级与最近战绩以宿主/服务端上下文为准；隐私偏好由玩家自己设置，后台只读展示默认值。', '账号状态变更（活动限制、封禁、待复核、解除）一律需要填写原因并写入操作日志。'],
+}
+
+// Which admin page owns each config module, for "查看来源配置".
+const moduleToPage = (moduleId) => {
+  if (!moduleId) return null
+  if (String(moduleId).startsWith('games:')) return 'games'
+  return { wheel: 'wheel', checkin: 'checkin', missions: 'missions', coinPacks: 'store', monthlyPass: 'store', chestOffer: 'store', versions: 'versions', test: 'versions', production: 'versions' }[moduleId] || null
 }
 
 const tagLabel = { slots: 'Slots', casual: '休闲', realtime: '实时' }
@@ -136,12 +143,16 @@ function RecordDrawer({ descriptor, onClose }) {
       <div className="drawer-head"><div><span className="eyebrow">{descriptor.eyebrow}</span><h2>{descriptor.title}</h2></div><button className="icon-button" onClick={onClose}><Icon name="close" /></button></div>
       <div className="drawer-body">
         {descriptor.status && <div className="drawer-field"><span>状态</span><Status>{descriptor.status}</Status></div>}
-        {descriptor.fields.map((field) => <div className="drawer-field" key={field.key}><span>{field.label}</span><FieldEditor field={field} value={draft[field.key]} onChange={(value) => setField(field.key, value)} /></div>)}
+        {descriptor.fields.map((field) => <div className="drawer-field" key={field.key}><span>{field.label}</span><FieldEditor field={field} value={field.readOnly ? field.value : draft[field.key]} onChange={(value) => setField(field.key, value)} /></div>)}
         {hint && <div className="admin-config-note"><Icon name="shield" /><div><strong>说明</strong><span>{hint}</span></div></div>}
         {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
+        {descriptor.diff && <div className="drawer-section"><h3>配置差异 {descriptor.diff.length > 0 && <small>{descriptor.diff.filter((r) => r.changed).length} 项改动 / 共 {descriptor.diff.length} 项</small>}</h3>
+          {descriptor.diff.length === 0 ? <p className="audit-item"><Icon name="eye" /><span>该任务没有附带配置快照，仅变更任务状态</span></p>
+            : <div className="diff-table">{descriptor.diff.map((row) => <div key={row.key} className={`diff-row ${row.changed ? 'is-changed' : ''}`}><span className="diff-label">{row.label}{row.added && <em className="diff-tag added">新增</em>}{row.removed && <em className="diff-tag removed">移除</em>}</span><span className="diff-before">{row.before}</span><span className="diff-arrow">→</span><span className="diff-after">{row.after}</span></div>)}</div>}
+        </div>}
         {descriptor.lifecycle && <div className="drawer-section"><h3>状态流转</h3><div className="state-line">{descriptor.lifecycle.steps.map((step, index) => <span key={step} style={{ display: 'contents' }}>{index > 0 && <i />}<span className={`state-node ${step === descriptor.status ? 'active' : descriptor.lifecycle.steps.indexOf(descriptor.status) > index ? 'done' : ''}`}>{step}</span></span>)}</div>{descriptor.lifecycle.branch && <p className="branch-note"><Icon name="bolt" />{descriptor.lifecycle.branch}</p>}</div>}
         {descriptor.actions && descriptor.actions.length > 0 && <div className="drawer-section"><h3>操作</h3><div className="drawer-actions">{descriptor.actions.map((action) => <button key={action.label} className={`admin-btn ${action.tone === 'warning' ? 'warning' : action.tone === 'danger' ? 'danger' : action.tone === 'primary' ? 'primary' : 'subtle'}`} onClick={() => runAction(action)}>{action.label}</button>)}</div>
-          {reasonFor && <div className="reason-box"><textarea placeholder={`「${reasonFor}」需要填写原因，用于操作日志留痕`} value={reasonText} onChange={(event) => setReasonText(event.target.value)} /><div><button className="admin-btn subtle" onClick={() => setReasonFor(null)}>取消</button><button className="admin-btn primary" disabled={!reasonText.trim()} onClick={() => runAction(descriptor.actions.find((a) => a.label === reasonFor))}>确认{reasonFor}</button></div></div>}
+          {reasonFor && <div className="reason-box"><textarea placeholder={descriptor.actions.find((a) => a.label === reasonFor)?.reasonLabel || `「${reasonFor}」需要填写原因，用于操作日志留痕`} value={reasonText} onChange={(event) => setReasonText(event.target.value)} /><div><button className="admin-btn subtle" onClick={() => setReasonFor(null)}>取消</button><button className="admin-btn primary" disabled={!reasonText.trim()} onClick={() => runAction(descriptor.actions.find((a) => a.label === reasonFor))}>确认{reasonFor}</button></div></div>}
         </div>}
         <div className="drawer-section"><h3>最近操作</h3>{descriptor.history && descriptor.history.length ? descriptor.history.slice(0, 8).map((entry) => <p className="audit-item" key={entry.id}><Icon name="clock" /><span>{entry.actor} · {entry.action}<small>{entry.time} · {entry.result}{entry.before || entry.after ? <span className="diff-pair">{entry.before || '—'} → {entry.after || '—'}</span> : null}</small></span></p>) : <p className="audit-item"><Icon name="eye" /><span>暂无操作记录</span></p>}</div>
       </div>
@@ -163,7 +174,7 @@ function ConfigBadge({ store, moduleId, versionText, onDiscard }) {
 const stamp = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 function makeJournal(setStore) {
   const logAudit = (entry) => setStore((store) => ({ ...store, audit: [{ id: `audit-${stamp()}`, logId: `#${Math.random().toString(16).slice(2, 6)}`, actor: '运营管理员', result: '成功', time: '刚刚', before: '', after: '', targetModule: '', targetId: '', ...entry }, ...store.audit] }))
-  const addTodo = (entry) => setStore((store) => ({ ...store, todo: [{ id: `todo-${stamp()}`, title: '', source: '', priority: '中', status: '待处理', time: '刚刚', owner: '运营一组', publishId: '', ...entry }, ...store.todo] }))
+  const addTodo = (entry) => setStore((store) => ({ ...store, todo: [{ id: `todo-${stamp()}`, title: '', source: '', priority: '中', status: '待处理', time: '刚刚', owner: '运营一组', publishId: '', link: null, claimedBy: '', resolution: '', ...entry }, ...store.todo] }))
   const queuePublish = (entry) => {
     const id = `publish-${stamp()}`
     setStore((store) => {
@@ -171,7 +182,7 @@ function makeJournal(setStore) {
       return {
         ...store,
         publish: [{ id, name: '', type: '', scope: '生产环境', status: '待审核', owner: '运营管理员', time: '刚刚', sourceModule: '', sourceId: '', snapshot: null, note: '', ...entry }, ...store.publish.map((p) => (superseded.includes(p.id) ? { ...p, status: '已作废', time: '刚刚' } : p))],
-        todo: [{ id: `todo-${stamp()}`, title: `${entry.name} 等待发布审核`, source: entry.todoSource || '发布审核', priority: '中', status: '待审核', time: '刚刚', owner: '审核组', publishId: id }, ...store.todo.map((t) => (superseded.includes(t.publishId) ? { ...t, status: '已解决' } : t))],
+        todo: [{ id: `todo-${stamp()}`, title: `${entry.name} 等待发布审核`, source: entry.todoSource || '发布审核', priority: '中', status: '待审核', time: '刚刚', owner: '审核组', publishId: id, link: { page: 'publish', focusId: id, label: '打开发布审核任务' }, claimedBy: '', resolution: '' }, ...store.todo.map((t) => (superseded.includes(t.publishId) ? { ...t, status: '已解决', resolution: t.resolution || '关联配置已被新草稿取代，自动关闭' } : t))],
       }
     })
     return id
@@ -249,7 +260,11 @@ function describeGame(record, store, { update, journal }, environment) {
       if (statusChanged) {
         journal.transform((s) => ({ ...s, live: { ...s.live, games: { ...s.live.games, [environment]: s.live.games[environment].map((g) => (g.id === record.id ? { ...g, status: draft.status } : g)) } } }))
         journal.logAudit({ action: '变更游戏运行状态（直接生效）', target: merged.name, targetModule: 'games', targetId: record.id, before: record.status, after: draft.status })
-        if (draft.status === '维护中') journal.addTodo({ title: `${merged.name} 进入维护`, source: '游戏运营', priority: '高' })
+        if (draft.status === '维护中') journal.addTodo({ title: `${merged.name} 进入维护`, source: '游戏运营', priority: '高', link: { page: 'games', focusId: record.id, label: `打开 ${merged.name} 游戏配置` } })
+        // Leaving maintenance closes the maintenance todos for this game on its own.
+        if (record.status === '维护中' && draft.status !== '维护中') {
+          journal.transform((s) => ({ ...s, todo: s.todo.map((t) => (t.status !== '已解决' && t.link?.page === 'games' && t.link.focusId === record.id ? { ...t, status: '已解决', resolution: `${merged.name} 已恢复为${draft.status}，事项自动关闭`, time: '刚刚' } : t)) }))
+        }
       }
       if (otherChanged) {
         journal.logAudit({ action: '编辑游戏配置（草稿）', target: merged.name, targetModule: 'games', targetId: record.id, before: '', after: diffSummary(record, merged, gameFieldLabels.filter(([k]) => k !== 'status')) })
@@ -260,7 +275,7 @@ function describeGame(record, store, { update, journal }, environment) {
   }
 }
 
-function GameCatalogPage({ onOpen, environment, store, update, journal }) {
+function GameCatalogPage({ onOpen, environment, store, update, journal, intent }) {
   const items = store.games[environment]
   const moduleId = `games:${environment}`
   const [dragging, setDragging] = useState(null)
@@ -286,6 +301,11 @@ function GameCatalogPage({ onOpen, environment, store, update, journal }) {
     journal.queuePublish({ name: `${label}排序/推荐更新`, type: '游戏配置', scope: environment === 'production' ? '生产环境' : '测试环境', sourceModule: moduleId, sourceId: environment, snapshot: { games: items }, todoSource: '游戏运营' })
   }
   const openDetail = (game) => onOpen(describeGame(game, store, { update, journal }, environment))
+  useEffect(() => {
+    const target = intent?.focusId && items.find((game) => game.id === intent.focusId)
+    if (target) openDetail(target)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount: opens the game a todo linked to
+  }, [])
   const headers = ['排序', '游戏名称', '游戏 ID', '分类', '状态', '在线人数', '热度', '大厅热门推荐']
   return <>
     <ConfigBadge store={store} moduleId={moduleId} onDiscard={() => journal.discardDraft(moduleId)} />
@@ -329,7 +349,7 @@ function describeGeneric(page, record, store, { update, journal }) {
   return { cols, label0, history, actions }
 }
 
-function GenericPage({ page, onOpen, store, update, journal, intent, describe }) {
+function GenericPage({ page, onOpen, store, update, journal, intent, describe, navigate }) {
   const rows = store[page]
   const [query, setQuery] = useState(intent?.query || '')
   const [filter, setFilter] = useState('全部状态')
@@ -349,8 +369,17 @@ function GenericPage({ page, onOpen, store, update, journal, intent, describe })
     const fields = cols.filter(([key]) => key !== 'status').map(([key, label]) => ({ key, label, value: record[key], readOnly: true }))
     if (page === 'audit') fields.push({ key: 'targetModule', label: '对象模块', value: moduleLabels[record.targetModule] || pageMeta[record.targetModule]?.[0] || record.targetModule || '—', readOnly: true }, { key: 'before', label: '变更前', value: record.before || '—', readOnly: true }, { key: 'after', label: '变更后', value: record.after || '—', readOnly: true })
     if (page === 'publish') fields.push({ key: 'sourceModule', label: '来源模块', value: moduleLabels[record.sourceModule] || (record.sourceModule ? pageMeta[record.sourceModule]?.[0] : '') || '—', readOnly: true }, { key: 'snapshot', label: '配置快照', value: record.snapshot ? '有 · 审核通过后覆盖生效版本' : '无 · 仅变更任务状态', readOnly: true }, { key: 'note', label: '发布说明', value: record.note || '—', readOnly: true })
-    onOpen({ id: `${page}-${record.id}`, eyebrow: `${meta[0]}详情`, title: label0, status: record.status, history, actions, fields })
+    const diff = page === 'publish' && record.snapshot && isConfigModule(record.sourceModule) ? snapshotDiff(record.sourceModule, getSlice(store.live, record.sourceModule), record.snapshot) : page === 'publish' ? [] : null
+    const sourcePage = page === 'publish' ? moduleToPage(record.sourceModule) : null
+    const allActions = sourcePage && navigate ? [...actions, { label: '查看来源配置', tone: 'subtle', run: () => navigate(sourcePage) }] : actions
+    onOpen({ id: `${page}-${record.id}`, eyebrow: `${meta[0]}详情`, title: label0, status: record.status, history, actions: allActions, fields, diff })
   }
+  useEffect(() => {
+    if (!intent?.focusId) return
+    const target = (rows || []).find((row) => row.id === intent.focusId)
+    if (target) openRow(target)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount: opens the record a todo linked to
+  }, [])
   const formComplete = action && action.fields.every((f) => String(formValues[f] || '').trim())
   const submitCreate = () => {
     const values = action.fields.map((f) => formValues[f].trim())
@@ -369,6 +398,88 @@ function GenericPage({ page, onOpen, store, update, journal, intent, describe })
 
 const versionSteps = [['上传版本', 1], ['自动检查', 2], ['测试环境', 3], ['审核发布', 4], ['生产环境', 5]]
 const versionActiveStep = { uploads: 2, versions: 4, test: 3, production: 5 }
+
+const OPERATOR = '运营管理员'
+const todoPriorityRank = { '高': 0, '中': 1, '低': 2 }
+const todoFilters = [['all', '全部'], ['mine', '我的待办'], ['open', '未关闭'], ['待处理', '待处理'], ['处理中', '处理中'], ['已解决', '已解决']]
+
+// A todo is only useful if it can take you to the thing that needs doing, so every record carries a link target.
+function describeTodo(record, store, { update, journal, navigate }) {
+  const actions = []
+  if (record.link) actions.push({ label: record.link.label || '去处理', tone: 'primary', run: () => navigate(record.link.page, { tab: record.link.tab, query: record.link.query, focusId: record.link.focusId }) })
+  if (record.status === '待处理' || record.status === '待审核') actions.push({
+    label: '认领并开始处理', keepOpen: true,
+    run: () => {
+      update('todo', (list) => list.map((t) => (t.id === record.id ? { ...t, status: '处理中', claimedBy: OPERATOR, owner: OPERATOR, time: '刚刚' } : t)))
+      journal.logAudit({ action: '认领待办', target: record.title, targetModule: 'todo', targetId: record.id, before: record.status, after: '处理中' })
+    },
+  })
+  if (record.status === '处理中') actions.push({
+    label: '标记已解决', tone: 'warning', requireReason: true, reasonLabel: '填写处理结论（例如「已恢复运行」「已确认退款」），写入操作日志后关闭该事项',
+    run: (reason) => {
+      update('todo', (list) => list.map((t) => (t.id === record.id ? { ...t, status: '已解决', resolution: reason, time: '刚刚' } : t)))
+      journal.logAudit({ action: '关闭待办', target: record.title, targetModule: 'todo', targetId: record.id, before: record.status, after: '已解决', result: `成功 · 处理结论：${reason}` })
+    },
+  })
+  if (record.status !== '已解决' && !record.link) actions.push({
+    label: '转交他人', tone: 'subtle', requireReason: true, reasonLabel: '填写接手的组或人，例如「财务组」', keepOpen: true,
+    run: (reason) => {
+      update('todo', (list) => list.map((t) => (t.id === record.id ? { ...t, owner: reason, claimedBy: '', status: '待处理', time: '刚刚' } : t)))
+      journal.logAudit({ action: '转交待办', target: record.title, targetModule: 'todo', targetId: record.id, before: record.owner, after: reason })
+    },
+  })
+  const linkedPublish = record.publishId ? store.publish.find((p) => p.id === record.publishId) : null
+  return {
+    id: `todo-${record.id}`, eyebrow: '待处理事项', title: record.title, status: record.status, actions,
+    history: store.audit.filter((a) => a.targetModule === 'todo' && a.targetId === record.id),
+    fields: [
+      { key: 'source', label: '来源模块', value: record.source, readOnly: true },
+      { key: 'priority', label: '优先级', value: record.priority, readOnly: true },
+      { key: 'owner', label: '负责人', value: record.owner, readOnly: true },
+      { key: 'claimedBy', label: '认领人', value: record.claimedBy || '尚未认领', readOnly: true },
+      { key: 'time', label: '更新时间', value: record.time, readOnly: true },
+      { key: 'target', label: '处理对象', value: record.link ? record.link.label : '无直接关联对象，需人工判断后处理', readOnly: true },
+      { key: 'linked', label: '关联发布任务', value: linkedPublish ? `${linkedPublish.name} · ${linkedPublish.status}` : '—', readOnly: true },
+      { key: 'resolution', label: '处理结论', value: record.resolution || '—', readOnly: true },
+    ],
+    hint: record.status === '已解决'
+      ? '该事项已关闭，仅可查看；如需重新跟进，请在来源模块新建事项。'
+      : '「去处理」直接跳到需要操作的对象；认领后事项归到你名下，处理完回到本页填写处理结论关闭。关联发布任务通过或驳回、游戏恢复运行时，事项会自动关闭。',
+  }
+}
+
+function TodoPage({ store, update, journal, navigate, onOpen }) {
+  const [filter, setFilter] = useState('open')
+  const [query, setQuery] = useState('')
+  const rows = store.todo
+  const counts = {
+    all: rows.length, mine: rows.filter((t) => t.owner === OPERATOR && t.status !== '已解决').length,
+    open: rows.filter((t) => t.status !== '已解决').length,
+    '待处理': rows.filter((t) => t.status === '待处理' || t.status === '待审核').length,
+    '处理中': rows.filter((t) => t.status === '处理中').length,
+    '已解决': rows.filter((t) => t.status === '已解决').length,
+  }
+  const filtered = rows
+    .filter((t) => (filter === 'all' ? true : filter === 'mine' ? t.owner === OPERATOR && t.status !== '已解决' : filter === 'open' ? t.status !== '已解决' : filter === '待处理' ? (t.status === '待处理' || t.status === '待审核') : t.status === filter))
+    .filter((t) => `${t.title} ${t.source} ${t.owner}`.toLowerCase().includes(query.toLowerCase()))
+    .slice()
+    .sort((a, b) => (todoPriorityRank[a.priority] ?? 3) - (todoPriorityRank[b.priority] ?? 3))
+  const goHandle = (record) => record.link && navigate(record.link.page, { tab: record.link.tab, query: record.link.query, focusId: record.link.focusId })
+  const open = (record) => onOpen((live) => { const fresh = live.todo.find((t) => t.id === record.id); return fresh ? describeTodo(fresh, live, { update, journal, navigate }) : null })
+  return <>
+    <div className="admin-config-note"><Icon name="shield" /><div><strong>事项状态的含义</strong><span>待处理 = 尚无人认领；处理中 = 已认领，认领人显示在负责人列；已解决 = 已填写处理结论并关闭。</span><small>「去处理」跳转到该事项对应的对象（游戏、发布任务、订单或玩家）。关联发布任务被通过或驳回、游戏从维护中恢复运行时，对应事项会自动关闭，无需手动标记。</small></div></div>
+    <div className="todo-filter-bar">{todoFilters.map(([id, label]) => <button key={id} className={filter === id ? 'is-active' : ''} onClick={() => setFilter(id)}>{label}<b>{counts[id]}</b></button>)}</div>
+    <div className="admin-toolbar"><div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索事项、来源模块或负责人..." /></div></div>
+    <section className="admin-card table-card"><div className="table-top"><div><strong>事项列表</strong><span>共 {filtered.length} 条 · 按优先级排序</span></div><button className="admin-btn subtle" onClick={() => exportCsv('待处理事项', ['事项', '来源模块', '优先级', '状态', '负责人', '更新时间', '处理结论'], filtered.map((t) => [t.title, t.source, t.priority, t.status, t.owner, t.time, t.resolution || '']))}>导出 CSV</button></div>
+      <div className="table-wrap"><table><thead><tr><th>优先级</th><th>事项</th><th>来源模块</th><th>状态</th><th>负责人</th><th>更新时间</th><th>操作</th></tr></thead><tbody>{filtered.map((t) => <tr key={t.id} onClick={() => open(t)} className={t.status === '已解决' ? 'is-hidden-row' : ''}>
+        <td><span className={`todo-dot ${t.priority === '高' ? 'danger' : t.priority === '中' ? 'warning' : ''}`} />{t.priority}</td>
+        <td><strong>{t.title}</strong>{t.resolution && <small className="todo-resolution">结论：{t.resolution}</small>}</td>
+        <td>{t.source}</td><td><Status>{t.status}</Status></td><td>{t.owner}{t.claimedBy && t.claimedBy !== t.owner ? ` · ${t.claimedBy}` : ''}</td><td>{t.time}</td>
+        <td><span className="row-action-group">{t.link && t.status !== '已解决' && <button className="row-action strong" onClick={(event) => { event.stopPropagation(); goHandle(t) }}>去处理</button>}<button className="row-action" onClick={(event) => { event.stopPropagation(); open(t) }}>详情</button></span></td>
+      </tr>)}</tbody></table>{!filtered.length && <div className="empty-state"><Icon name="eye" /><strong>没有符合条件的事项</strong><p>切换筛选条件或清空搜索关键词。</p></div>}</div>
+    </section>
+  </>
+}
 
 function VersionWorkflowPage({ page, onOpen, store, update, journal }) {
   const rows = store[page] || []
@@ -417,7 +528,7 @@ function GameVersionCenterPage({ onOpen, store, update, journal }) {
   </>
 }
 
-function ReleaseCenterPage({ onOpen, store, update, journal }) {
+function ReleaseCenterPage({ onOpen, store, update, journal, navigate }) {
   const pending = store.publish.filter((p) => p.status === '待审核').length
   const testing = store.test.filter((t) => t.status === '测试中').length
   const graying = store.publish.filter((p) => p.status === '灰度 20%' || p.status === '进行中').length
@@ -425,7 +536,7 @@ function ReleaseCenterPage({ onOpen, store, update, journal }) {
   return <>
     <div className="release-metrics"><div><span>待审核</span><strong>{pending}</strong><small>需要人工判定</small></div><div><span>测试中</span><strong>{testing}</strong><small>需要 QA 验证</small></div><div><span>灰度发布</span><strong>{graying}</strong><small>当前进行中</small></div><div><span>生产发布</span><strong>{published}</strong><small>累计已发布</small></div></div>
     <section className="admin-card release-guide"><div className="card-heading"><div><h2>发布任务流程</h2><p>带快照的任务：通过 = 覆盖生效版本；驳回 = 丢弃来源草稿；回滚 = 恢复上一生效版本。</p></div><span className="release-safety"><Icon name="shield" />生产发布需审批</span></div><div className="release-guide-steps"><div className="is-done"><b>1</b><span>创建任务</span><small>模块保存草稿</small></div><i /><div className="is-done"><b>2</b><span>自动检查</span><small>通过时再次校验快照</small></div><i /><div className="is-active"><b>3</b><span>审核判定</span><small>通过 / 灰度 / 驳回</small></div><i /><div><b>4</b><span>已发布</span><small>可暂停或回滚</small></div></div></section>
-    <GenericPage page="publish" onOpen={onOpen} store={store} update={update} journal={journal} />
+    <GenericPage page="publish" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} />
     <section className="admin-card release-history"><div className="card-heading"><div><h2>版本健康度 <em className="sample-tag">示例数据</em></h2><p>发布后的实时质量观察，监控接口待联调</p></div><button className="admin-link" disabled title="监控平台待联调">查看监控（待联调）</button></div><div className="health-grid"><div><span>启动成功率</span><strong>99.6%</strong><em>↑ 0.8%</em></div><div><span>资源加载失败</span><strong>0.12%</strong><em>↓ 0.04%</em></div><div><span>累计回滚</span><strong>{store.publish.filter((p) => p.status === '已回滚').length}</strong><em>来自发布审核记录</em></div></div></section>
   </>
 }
@@ -446,9 +557,9 @@ function describeRole(record, store, { update, journal }) {
   }
 }
 
-function AdminUsersPage({ onOpen, store, update, journal }) {
+function AdminUsersPage({ onOpen, store, update, journal, navigate }) {
   const openRoleRow = (record) => onOpen(describeRole(record, store, { update, journal }))
-  return <><section className="admin-card permission-summary"><div><span>后台账号</span><strong>{store.adminUsers.length}</strong><small>启用 {store.adminUsers.filter((row) => row.status === '启用').length} · 待激活 {store.adminUsers.filter((row) => row.status === '待激活').length}</small></div><div><span>角色数量</span><strong>{store.roles.length}</strong><small>全部为自定义角色</small></div><div><span>MFA 覆盖率</span><strong>{Math.round((store.adminUsers.filter((u) => u.mfa).length / store.adminUsers.length) * 100)}%</strong><small>{store.adminUsers.filter((u) => !u.mfa).length} 个账号需处理</small></div><div><span>生产可操作角色</span><strong>{store.roles.filter((r) => r.prodPermission === '生产可操作').length}</strong><small>权限拦截待二期接入</small></div></section><section className="admin-card permission-matrix"><div className="card-heading"><div><h2>角色权限摘要</h2><p>菜单权限、操作权限和环境权限分开控制，点击任意角色可编辑。</p></div></div><div className="permission-table"><div className="permission-row permission-head"><span>角色</span><span>菜单范围</span><span>操作权限</span><span>生产权限</span></div>{store.roles.map((row) => <button className="permission-row" key={row.id} onClick={() => openRoleRow(row)}><span>{row.role}</span><span>{row.menuScope.join(' / ')}</span><span>{row.actions.join('、')}</span><span>{row.prodPermission}</span></button>)}</div></section><GenericPage page="adminUsers" onOpen={onOpen} store={store} update={update} journal={journal} /></>
+  return <><section className="admin-card permission-summary"><div><span>后台账号</span><strong>{store.adminUsers.length}</strong><small>启用 {store.adminUsers.filter((row) => row.status === '启用').length} · 待激活 {store.adminUsers.filter((row) => row.status === '待激活').length}</small></div><div><span>角色数量</span><strong>{store.roles.length}</strong><small>全部为自定义角色</small></div><div><span>MFA 覆盖率</span><strong>{Math.round((store.adminUsers.filter((u) => u.mfa).length / store.adminUsers.length) * 100)}%</strong><small>{store.adminUsers.filter((u) => !u.mfa).length} 个账号需处理</small></div><div><span>生产可操作角色</span><strong>{store.roles.filter((r) => r.prodPermission === '生产可操作').length}</strong><small>权限拦截待二期接入</small></div></section><section className="admin-card permission-matrix"><div className="card-heading"><div><h2>角色权限摘要</h2><p>菜单权限、操作权限和环境权限分开控制，点击任意角色可编辑。</p></div></div><div className="permission-table"><div className="permission-row permission-head"><span>角色</span><span>菜单范围</span><span>操作权限</span><span>生产权限</span></div>{store.roles.map((row) => <button className="permission-row" key={row.id} onClick={() => openRoleRow(row)}><span>{row.role}</span><span>{row.menuScope.join(' / ')}</span><span>{row.actions.join('、')}</span><span>{row.prodPermission}</span></button>)}</div></section><GenericPage page="adminUsers" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} /></>
 }
 
 function WinsPage({ store, update, journal }) {
@@ -470,7 +581,7 @@ function WinsPage({ store, update, journal }) {
   </>
 }
 
-function CheckinPage({ onOpen, store, update, journal }) {
+function CheckinPage({ onOpen, store, update, journal, navigate }) {
   const days = store.checkinDays
   const errors = validateCheckin(days)
   const differs = draftDiffers(store, 'checkin')
@@ -494,11 +605,11 @@ function CheckinPage({ onOpen, store, update, journal }) {
       <div className="workflow-strip">{stepEls}</div>
       <div className="table-wrap"><table><thead><tr><th>天数</th><th>金币</th><th>宝石</th><th>大奖</th><th>示例玩家进度（非配置）</th></tr></thead><tbody>{days.map((d, i) => <tr key={d.day}><td>{d.day}</td><td><input className="ladder-input" type="number" min="0" value={d.coins} onChange={(event) => updateDay(i, { coins: Number(event.target.value) || 0 })} /></td><td><input className="ladder-input" type="number" min="0" value={d.gems} onChange={(event) => updateDay(i, { gems: Number(event.target.value) || 0 })} /></td><td><button className={`toggle-switch ${d.grand ? 'is-on' : ''}`} onClick={() => updateDay(i, { grand: !d.grand })} aria-pressed={!!d.grand} aria-label="大奖"><i /></button></td><td><Status>{stateLabel[d.state]}</Status></td></tr>)}</tbody></table></div>
     </section>
-    <GenericPage page="checkin" onOpen={onOpen} store={store} update={update} journal={journal} />
+    <GenericPage page="checkin" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} />
   </>
 }
 
-function WheelPage({ onOpen, store, update, journal }) {
+function WheelPage({ onOpen, store, update, journal, navigate }) {
   const prizes = store.wheelPrizes
   const live = store.live
   const errors = validateWheel({ prizes, freeSpins: store.wheelFreeSpins })
@@ -525,7 +636,7 @@ function WheelPage({ onOpen, store, update, journal }) {
       <button className="admin-btn subtle" disabled={prizes.length >= WHEEL_SLOTS} onClick={addPrize}><Icon name="gift" />新增奖项（前台固定 {WHEEL_SLOTS} 格）</button>
     </section>
     <section className="admin-card"><div className="card-heading"><div><h2>转盘参数</h2><p>草稿版本号在保存时自动按生效版本 +1 生成，不可手工输入。</p></div></div><div className="form-grid"><label>每日免费次数<input className="ladder-input" type="number" min="0" step="1" value={store.wheelFreeSpins} onChange={(event) => update('wheelFreeSpins', () => Math.max(0, Math.round(Number(event.target.value) || 0)))} /></label><label>版本<input className="ladder-input" value={`生效 v${live.wheelVersion}${differs ? ` · 草稿将生成 v${live.wheelVersion + 1}` : ''}`} readOnly /></label></div></section>
-    <GenericPage page="wheel" onOpen={onOpen} store={{ ...store, wheel: wheelRows }} update={update} journal={journal} />
+    <GenericPage page="wheel" onOpen={onOpen} store={{ ...store, wheel: wheelRows }} update={update} journal={journal} navigate={navigate} />
   </>
 }
 
@@ -739,7 +850,7 @@ function AdminApp() {
   const [store, setStore] = useState(() => createInitialStore())
   const [activePage, setActivePage] = useState('dashboard')
   const [intent, setIntent] = useState(null)
-  const [openRecord, setOpenRecord] = useState(null)
+  const [drawerSource, setDrawerSource] = useState(null)
   const [mobileNav, setMobileNav] = useState(false)
   const [environment, setEnvironment] = useState('test')
   const [showAdjust, setShowAdjust] = useState(false)
@@ -748,8 +859,10 @@ function AdminApp() {
   const journal = useMemo(() => makeJournal(setStore), [])
   const update = (moduleKey, updater) => setStore((current) => ({ ...current, [moduleKey]: typeof updater === 'function' ? updater(current[moduleKey]) : updater }))
   const meta = pageMeta[activePage]
-  const navigate = (page, nextIntent = null) => { setActivePage(page); setIntent(nextIntent ? { ...nextIntent, stamp: stamp() } : null); setMobileNav(false); setOpenRecord(null); window.scrollTo({ top: 0, behavior: 'instant' }) }
-  const onOpen = (descriptor) => setOpenRecord(descriptor)
+  const navigate = (page, nextIntent = null) => { setActivePage(page); setIntent(nextIntent ? { ...nextIntent, stamp: stamp() } : null); setMobileNav(false); setDrawerSource(null); window.scrollTo({ top: 0, behavior: 'instant' }) }
+  // Accepts a descriptor, or a builder (store) => descriptor for drawers that must track live store changes.
+  const onOpen = (descriptorOrBuilder) => setDrawerSource(() => (typeof descriptorOrBuilder === 'function' ? descriptorOrBuilder : () => descriptorOrBuilder))
+  const openRecord = drawerSource ? drawerSource(store) : null
   const runGlobalSearch = () => {
     const q = globalQuery.trim()
     if (!q) return
@@ -769,9 +882,10 @@ function AdminApp() {
   }
   const pageKey = `${activePage}-${intent?.stamp || ''}`
   const renderContent = () => {
-    const common = { onOpen, store, update, journal }
+    const common = { onOpen, store, update, journal, navigate }
     if (activePage === 'dashboard') return <Dashboard onNavigate={navigate} store={store} environment={environment} />
-    if (activePage === 'games') return <GameCatalogPage key={environment} environment={environment} {...common} />
+    if (activePage === 'todo') return <TodoPage key={pageKey} store={store} update={update} journal={journal} navigate={navigate} onOpen={onOpen} />
+    if (activePage === 'games') return <GameCatalogPage key={`${environment}-${intent?.stamp || ''}`} environment={environment} intent={intent} {...common} />
     if (activePage === 'versions') return <GameVersionCenterPage {...common} />
     if (activePage === 'publish') return <ReleaseCenterPage {...common} />
     if (activePage === 'adminUsers') return <AdminUsersPage {...common} />
@@ -788,7 +902,7 @@ function AdminApp() {
   return <div className="admin-shell">
     <aside className={`admin-sidebar ${mobileNav ? 'is-open' : ''}`}><div className="admin-brand"><span className="admin-brand-mark">J</span><span><strong>Joyloop</strong><small>运营后台原型</small></span><button className="mobile-close icon-button" onClick={() => setMobileNav(false)}><Icon name="close" /></button></div><div className="env-chip"><span className="env-dot" />{environment === 'production' ? '生产环境' : '测试环境'} <small>v0.6.0</small></div><nav>{navGroups.map((group) => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(([id, label, icon]) => <button key={id} className={activePage === id ? 'is-active' : ''} onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span>{id === 'todo' && <b>{store.todo.filter((t) => t.status !== '已解决').length}</b>}{id === 'publish' && store.publish.some((p) => p.status === '待审核') && <b>{store.publish.filter((p) => p.status === '待审核').length}</b>}</button>)}</div>)}</nav><a className="back-to-lobby" href="./index.html"><Icon name="chevronLeft" />返回大厅原型首页</a></aside>
     <div className="admin-main"><header className="admin-header"><button className="mobile-menu icon-button" onClick={() => setMobileNav(true)}><Icon name="flag" /></button><div className="crumb"><span>Joyloop 后台</span><Icon name="chevronRight" /><strong>{meta[0]}</strong></div><div className="header-actions"><label className="environment-select"><span>环境（当前只影响游戏目录）</span><select value={environment} onChange={(event) => setEnvironment(event.target.value)}><option value="test">测试环境</option><option value="production">生产环境</option></select></label><div className="global-search"><Icon name="eye" /><input value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && runGlobalSearch()} placeholder="搜索玩家 / 订单号 / 流水号，回车跳转" /></div><button className="header-icon" title="待处理事项" onClick={() => navigate('todo')}><Icon name="bell" />{store.todo.some((t) => t.status !== '已解决') && <i />}</button><button className="header-icon" title="权限与账号" onClick={() => navigate('adminUsers')}><Icon name="gear" /></button><span className="admin-avatar">OP</span><span className="operator-name">运营管理员</span></div></header><div className="admin-tabs"><button className="tab active">{meta[0]} {activePage !== 'dashboard' && <span onClick={() => navigate('dashboard')} title="关闭并返回概览"><Icon name="close" /></span>}</button>{activePage !== 'dashboard' && <button className="tab" onClick={() => navigate('dashboard')}>运营概览</button>}</div><main className="admin-content"><div className="page-title"><div><span className="eyebrow">{activePage === 'dashboard' ? 'OPERATIONS OVERVIEW' : 'JOYLOOP ADMIN CONSOLE'}</span><h1>{meta[0]}</h1><p>{meta[1]}</p></div></div>{renderContent()}</main></div>
-    <RecordDrawer key={openRecord?.id || 'none'} descriptor={openRecord} onClose={() => setOpenRecord(null)} />
+    <RecordDrawer key={openRecord?.id || 'none'} descriptor={openRecord} onClose={() => setDrawerSource(null)} />
     {showAdjust && <Modal eyebrow="钱包流水" title="人工调整流水（追加一条处理中流水）" onClose={() => setShowAdjust(false)} footer={<><button className="admin-btn subtle" onClick={() => setShowAdjust(false)}>取消</button><button className="admin-btn primary" disabled={!adjustValid} onClick={submitAdjust}>提交调整</button></>}><div className="form-grid"><label>玩家<select value={adjustForm.player} onChange={(event) => setAdjustForm((f) => ({ ...f, player: event.target.value }))}>{store.players.map((p) => <option key={p.id} value={p.name}>{p.name} · {p.playerId}</option>)}</select></label><label>币种<select value={adjustForm.currency} onChange={(event) => setAdjustForm((f) => ({ ...f, currency: event.target.value }))}><option value="coins">金币</option><option value="gems">宝石</option></select></label><label>金额（不能为 0，可为负数）<input type="number" value={adjustForm.amount} onChange={(event) => setAdjustForm((f) => ({ ...f, amount: Number(event.target.value) || 0 }))} /></label><label className="full">原因（必填）<textarea value={adjustForm.reason} onChange={(event) => setAdjustForm((f) => ({ ...f, reason: event.target.value }))} placeholder="填写调整原因，将写入操作日志并生成财务复核待办；财务确认入账后流水才变为成功" /></label></div></Modal>}
   </div>
 }

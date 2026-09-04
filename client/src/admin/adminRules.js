@@ -220,3 +220,50 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
   if (['approve', 'reject', 'rollback'].includes(decision)) next = { ...next, todo: next.todo.map((t) => (t.publishId === entry.id ? { ...t, status: '已解决', time } : t)) }
   return { ...next, audit: [audit({}), ...next.audit] }
 }
+
+// ---- snapshot diff ---------------------------------------------------------
+// Rows are [stableKey, label, value] so a rename shows as a changed value, not as remove + add.
+function snapshotRows(moduleId, slice) {
+  if (!slice) return []
+  if (moduleId === 'wheel') {
+    const rows = [['freeSpins', '每日免费次数', `${slice.wheelFreeSpins} 次 / 日`], ['version', '配置版本', `v${slice.wheelVersion}`]]
+    slice.wheelPrizes.forEach((p, i) => rows.push([`slot-${i}`, `第 ${i + 1} 格`, `${prizeLabel(p.kind, p.amount)} · ${p.probability}%`]))
+    rows.push(['sum', '概率总和', `${slice.wheelPrizes.reduce((sum, p) => sum + Number(p.probability), 0)}%`])
+    return rows
+  }
+  if (moduleId === 'checkin') return slice.checkinDays.map((d, i) => [`day-${i}`, d.day, `${Number(d.coins).toLocaleString('en-US')} 金币 · ${d.gems} 宝石${d.grand ? ' · 大奖' : ''}`])
+  if (moduleId === 'missions') return slice.missions.map((m) => [`mission-${m.id}`, m.name || m.id, `目标 ${m.target} · ${m.coinReward} 金币 · ${m.gemReward} 宝石 · ${m.status}`])
+  if (moduleId === 'coinPacks') return slice.coinPacks.map((p) => [`pack-${p.id}`, `${Number(p.coins).toLocaleString('en-US')} 金币礼包`, `${coinPackPriceUsd(p)} · 折扣 ${p.discountPercent}% · 赠 ${p.gemBonus} 宝石 · 标签 ${p.tag || '无'}${p.recommended ? ' · 推荐款' : ''}`])
+  if (moduleId === 'monthlyPass') {
+    const m = slice.monthlyPass
+    return [['price', '价格', `$${(m.priceUsdCents / 100).toFixed(2)}`], ['coins', '每日金币', Number(m.dailyCoins).toLocaleString('en-US')], ['gems', '每日宝石', String(m.dailyGems)], ['days', '有效天数', `${m.validDays} 天`]]
+  }
+  if (moduleId === 'chestOffer') {
+    const c = slice.chestOffer
+    return [['version', '报价版本', c.version], ['price', '购买价格', `${c.priceCoins} 金币`], ['max', '可能奖励上限', `${c.maxRewardCoins} 金币`]]
+  }
+  if (String(moduleId).startsWith('games:')) {
+    const rows = [['order', '目录排序', slice.games.map((g) => g.name).join(' → ')]]
+    slice.games.forEach((g) => rows.push([`game-${g.gameId}`, g.name, `${g.status} · ${g.categoryLabel} · ${g.popular ? '大厅推荐' : '不推荐'} · 角标 ${g.badges.join('/') || '无'}`]))
+    return rows
+  }
+  return []
+}
+
+// Field-level comparison between the live version and a pending snapshot, for the review screen.
+export function snapshotDiff(moduleId, before, after) {
+  const toMap = (rows) => new Map(rows.map(([key, label, value]) => [key, { label, value }]))
+  const a = toMap(snapshotRows(moduleId, before))
+  const b = toMap(snapshotRows(moduleId, after))
+  return [...new Set([...a.keys(), ...b.keys()])].map((key) => {
+    const before_ = a.get(key)
+    const after_ = b.get(key)
+    return {
+      key, label: (after_ || before_).label,
+      before: before_ ? before_.value : '—',
+      after: after_ ? after_.value : '—',
+      changed: !before_ || !after_ || before_.value !== after_.value,
+      added: !before_, removed: !after_,
+    }
+  })
+}

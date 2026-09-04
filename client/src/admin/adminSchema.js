@@ -138,6 +138,7 @@ const rawRows = {
     ['Ocean 777 维护超过 2 小时', '游戏运营', '高', '待处理', '12 分钟前', '运营一组'],
     ['七日签到 · 秋日版 v2 等待发布审核', '活动中心', '中', '待审核', '28 分钟前', '审核组'],
     ['2 笔退款订单待财务确认', '商城与经济', '中', '处理中', '1 小时前', '财务组'],
+    ['CloudNine 账号待复核（大额余额异动）', '玩家', '高', '待处理', '2 小时前', '风控组'],
   ],
   publish: [
     ['幸运旋转狂欢季 v3', '活动版本', '灰度 20%', '进行中', '运营一组', '10 分钟前'],
@@ -275,7 +276,14 @@ export function createInitialStore() {
     chestOffer: { ...engagementPreview.offer, productId: liteContent.products.tomorrowChest.productId },
   }
   const publish = zip(rawRows.publish, 'publish').map((p) => ({ ...p, sourceModule: '', sourceId: '', snapshot: null }))
-  const todo = zip(rawRows.todo, 'todo').map((t, i) => ({ ...t, publishId: i === 1 ? publish[2].id : '' }))
+  // Each todo carries the object it is about, so "去处理" lands on that record instead of only flipping a label.
+  const todoLinks = [
+    { page: 'games', focusId: 'ocean-777', label: '打开 Ocean 777 游戏配置' },
+    { page: 'publish', focusId: publish[2].id, label: '打开发布审核任务' },
+    { page: 'orders', query: '退款处理中', label: '查看退款处理中的订单' },
+    { page: 'players', tab: 'players', query: 'CloudNine', label: '打开 CloudNine 玩家档案' },
+  ]
+  const todo = zip(rawRows.todo, 'todo').map((t, i) => ({ ...t, publishId: i === 1 ? publish[2].id : '', link: todoLinks[i] || null, claimedBy: t.status === '处理中' ? t.owner : '', resolution: '' }))
   return {
     ...JSON.parse(JSON.stringify(config)),
     live: JSON.parse(JSON.stringify(config)),

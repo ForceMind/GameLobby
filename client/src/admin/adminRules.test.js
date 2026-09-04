@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   validateWheel, wheelBalanced, validateCheckin, validateMissions, validateCoinPack, validateChestOffer,
   coinPackPriceUsd, nextVersionTag, nextLedgerId, diffSummary, validateNickname,
-  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease,
+  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff,
 } from './adminRules.js'
 
 const prizes = (probabilities) => probabilities.map((probability, i) => ({ id: `p${i}`, kind: 'coins', amount: 100 + i, probability }))
@@ -94,4 +94,31 @@ test('按环境隔离的游戏目录切片可以单独读写', () => {
   assert.equal(next.games.production[0].status, '正常可玩')
   assert.equal(draftDiffers(next, 'games:test'), true)
   assert.equal(draftDiffers(resetDraftToLive(next, 'games:test'), 'games:test'), false)
+})
+
+test('配置差异：逐字段列出，只有变化项标记为 changed', () => {
+  const live = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3 }
+  const draft = { wheelPrizes: prizes([25, 12, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 5, wheelVersion: 4 }
+  const rows = snapshotDiff('wheel', live, draft)
+  const changed = rows.filter((r) => r.changed).map((r) => r.label)
+  assert.deepEqual(changed, ['每日免费次数', '配置版本', '第 1 格', '第 2 格'])
+  assert.equal(rows.find((r) => r.label === '每日免费次数').before, '3 次 / 日')
+  assert.equal(rows.find((r) => r.label === '每日免费次数').after, '5 次 / 日')
+  assert.equal(rows.find((r) => r.label === '概率总和').changed, false)
+  assert.equal(rows.length, 11)
+})
+
+test('配置差异：新增与移除的条目分别标记', () => {
+  const before = { missions: [{ id: 'a', name: '旧任务', target: 3, coinReward: 500, gemReward: 1, status: '生效中' }] }
+  const after = { missions: [{ id: 'b', name: '新任务', target: 5, coinReward: 800, gemReward: 2, status: '生效中' }] }
+  const rows = snapshotDiff('missions', before, after)
+  assert.equal(rows.find((r) => r.label === '旧任务').removed, true)
+  assert.equal(rows.find((r) => r.label === '新任务').added, true)
+})
+
+test('配置差异：游戏改名按 gameId 归位，不算作删除加新增', () => {
+  const g = (name) => ({ games: [{ gameId: 'g1', name, status: '正常可玩', categoryLabel: 'Slots', popular: true, badges: [] }] })
+  const rows = snapshotDiff('games:test', g('旧名'), g('新名'))
+  assert.equal(rows.filter((r) => r.added || r.removed).length, 0)
+  assert.equal(rows.find((r) => r.key === 'order').changed, true)
 })
