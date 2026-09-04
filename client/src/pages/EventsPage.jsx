@@ -7,21 +7,11 @@ import { nextWheelAngle } from '../demoModel.js'
 import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
 import '../h5/eventsCompact.css'
+import { wheelConfig, PRIZE_KEYS } from '../data/publishedConfig.js'
 
-// Structured so each language renders its own sentence. These eight slots still
-// mirror the admin's wheel configuration by hand; wiring them to the published
-// config is tracked separately.
-const wheelPrizes = [
-  { kind: 'coins', amount: 800 },
-  { kind: 'gems', amount: 2 },
-  { kind: 'coins', amount: 1200 },
-  { kind: 'freeSpin', amount: 1 },
-  { kind: 'coins', amount: 300 },
-  { kind: 'gems', amount: 5 },
-  { kind: 'coins', amount: 2000 },
-  { kind: 'coins', amount: 500 },
-]
-const PRIZE_KEYS = { coins: 'events.prizeCoins', gems: 'events.prizeGems', freeSpin: 'events.prizeFreeSpin' }
+// Read from the published activity config, the same file the admin console seeds
+// its live version from, so what an operator previews is what a player gets.
+const wheelPrizes = wheelConfig.prizes
 const missionTitles = {
   '累计旋转 100 次': '累计旋转 100 次',
   '完成 5 局休闲游戏': '完成 5 局休闲游戏',

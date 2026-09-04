@@ -3,8 +3,9 @@
 import { games as gamesData, checkinDays as checkinDaysData, dailyMissions, coinPacks as coinPacksData } from '../data.js'
 import liteContent from '../data/liteContent.json'
 import engagementPreview from '../data/engagementPreview.json' with { type: 'json' }
-import { parseReward } from './adminRules.js'
+import { prizeLabel } from './adminRules.js'
 import messages from '../locales/index.js'
+import { wheelConfig } from '../data/publishedConfig.js'
 import { locales as localeRegistry, FALLBACK_LOCALE } from '../locales/registry.js'
 
 // The admin console is Chinese; continent names are fixed here rather than taken
@@ -206,16 +207,6 @@ export const roleSeed = [
   { id: 'role-review', role: '审核人员', menuScope: ['运营概览'], actions: ['审核', '驳回', '查看差异'], prodPermission: '不可直接发布' },
 ]
 
-export const wheelPrizeSeed = [
-  { id: 'prize-1', label: '800 金币', kind: 'coins', amount: 800, probability: 22 },
-  { id: 'prize-2', label: '2 宝石', kind: 'gems', amount: 2, probability: 15 },
-  { id: 'prize-3', label: '1,200 金币', kind: 'coins', amount: 1200, probability: 15 },
-  { id: 'prize-4', label: '1 次免费旋转', kind: 'freeSpin', amount: 1, probability: 10 },
-  { id: 'prize-5', label: '300 金币', kind: 'coins', amount: 300, probability: 20 },
-  { id: 'prize-6', label: '5 宝石', kind: 'gems', amount: 5, probability: 6 },
-  { id: 'prize-7', label: '2,000 金币', kind: 'coins', amount: 2000, probability: 8 },
-  { id: 'prize-8', label: '500 金币', kind: 'coins', amount: 500, probability: 4 },
-]
 
 // Wallet ledger: NovaPlayer rows come straight from engagementPreview.walletLedger (with real before/after balances);
 // the chest rows and MintCat row are prototype samples that keep the same field shape.
@@ -295,13 +286,17 @@ export function createInitialStore() {
   }))
   const config = {
     games: { test: gameRecords(), production: gameRecords() },
-    checkinDays: checkinDaysData.map((d) => { const { coins, gems } = parseReward(d.reward); return { ...d, coins, gems, grand: !!d.grand } }),
-    wheelPrizes: wheelPrizeSeed.map((p) => ({ ...p })),
-    wheelFreeSpins: liteContent.events.wheelFreeSpins,
-    wheelVersion: 3,
+    // 前台数据现在直接携带数值（W1 起不再是拼好的「800 金币」字符串）
+    checkinDays: checkinDaysData.map((d) => ({ ...d, coins: Number(d.coins) || 0, gems: Number(d.gems) || 0, grand: !!d.grand })),
+    // 与前台读取同一份已发布配置，避免两边各存一份而悄悄不一致
+    wheelPrizes: wheelConfig.prizes.map((p) => ({ ...p, label: prizeLabel(p.kind, p.amount) })),
+    wheelFreeSpins: wheelConfig.freeSpinsPerDay,
+    wheelVersion: wheelConfig.version,
     missions: dailyMissions.map((m) => ({
-      id: m.id, name: m.title, event: missionEventLabel[m.id] || m.id, target: m.total,
+      // 前台任务标题是稳定键；后台界面为中文，这里解析为中文展示名
+      id: m.id, name: messages['zh-Hans']?.[m.title] ?? m.title, event: missionEventLabel[m.id] || m.id, target: m.total,
       coinReward: m.coinReward, gemReward: m.gemReward, cycle: m.expired ? '历史' : '每日',
+      titleKey: m.title,
       status: m.expired ? '已过期' : '生效中', expired: !!m.expired,
     })),
     coinPacks: coinPacksData.map((p) => ({ ...p, status: '生效中' })),

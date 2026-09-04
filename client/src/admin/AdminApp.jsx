@@ -770,7 +770,79 @@ function MissionListEditor({ missions, removableIds, onChange }) {
   </>
 }
 
+// ---- player-view previews --------------------------------------------------
+// These render the draft the way the player will actually see it. The point of
+// showing them before the editor is that an operator changing a probability or a
+// reward should see the screen it lands on, not only a row in a table.
+const WHEEL_SEGMENT_COLORS = ['#eef3ff', '#dfe8ff', '#eef3ff', '#dfe8ff', '#eef3ff', '#dfe8ff', '#eef3ff', '#dfe8ff']
+
+function PreviewFrame({ title, hint, children, note }) {
+  return <div className="preview-frame">
+    <div className="preview-head"><span className="preview-badge"><Icon name="eye" />玩家看到的样子</span><strong>{title}</strong>{hint && <small>{hint}</small>}</div>
+    <div className="preview-body">{children}</div>
+    {note && <p className="preview-note">{note}</p>}
+  </div>
+}
+
+function WheelPreview({ prizes, freeSpins }) {
+  const label = (p) => (p.kind === 'freeSpin' ? `×${p.amount}` : Number(p.amount).toLocaleString('en-US'))
+  const unit = (p) => (p.kind === 'freeSpin' ? '免费旋转' : p.kind === 'gems' ? '宝石' : '金币')
+  const slice = prizes.length ? 360 / prizes.length : 360
+  const gradient = prizes.map((p, i) => `${WHEEL_SEGMENT_COLORS[i % WHEEL_SEGMENT_COLORS.length]} ${i * slice}deg ${(i + 1) * slice}deg`).join(', ')
+  return <PreviewFrame title="幸运转盘" hint={`每日 ${freeSpins} 次免费`}
+    note="扇区顺序即玩家看到的顺序（从正上方顺时针）。概率不显示给玩家，但决定实际中奖分布。">
+    <div className="wheel-preview">
+      <div className="wheel-disc" style={{ background: `conic-gradient(${gradient})` }}>
+        {prizes.map((p, i) => <span key={p.id ?? i} className="wheel-slot" style={{ transform: `rotate(${i * slice + slice / 2}deg) translateY(-64px) rotate(${-(i * slice + slice / 2)}deg)` }}>
+          <b>{label(p)}</b><small>{unit(p)}</small>
+        </span>)}
+        <span className="wheel-hub">{freeSpins}</span>
+      </div>
+      <ol className="wheel-legend">{prizes.map((p, i) => <li key={p.id ?? i}>
+        <span className="wheel-legend-index">{i + 1}</span>
+        <span>{label(p)} {unit(p)}</span>
+        <b>{p.probability}%</b>
+      </li>)}</ol>
+    </div>
+  </PreviewFrame>
+}
+
+function CheckinPreview({ days }) {
+  const stateText = { claimed: '已领取', missed: '漏签', today: '今日可领', locked: '尚未解锁' }
+  return <PreviewFrame title="七日签到" hint={`满签 ${days.reduce((s, d) => s + Number(d.coins || 0), 0).toLocaleString('en-US')} 金币 / ${days.reduce((s, d) => s + Number(d.gems || 0), 0)} 宝石`}
+    note="玩家按自然日领取，漏签不可补。大奖日会有额外的视觉强调。">
+    <div className="checkin-preview">{days.map((d) => <div className={`checkin-cell state-${d.state}${d.grand ? ' is-grand' : ''}`} key={d.day}>
+      <strong>{d.day}{d.state === 'today' && ' · 今日'}{d.grand && ' · 大奖'}</strong>
+      <span>{Number(d.coins || 0).toLocaleString('en-US')} 金币{d.gems ? ` · ${d.gems} 宝石` : ''}</span>
+      <small>{stateText[d.state] ?? d.state}</small>
+    </div>)}</div>
+  </PreviewFrame>
+}
+
+function MissionsPreview({ missions }) {
+  const live = missions.filter((m) => m.status === '生效中')
+  return <PreviewFrame title="每日任务" hint={`${live.length} 个任务对玩家可见`}
+    note="已下线与已过期的任务不出现在玩家侧。进度由服务端按事件累计，这里显示的是达成后的样子。">
+    <div className="missions-preview">{live.length ? live.map((m) => <div className="mission-cell" key={m.id}>
+      <div><strong>{m.name || '（未命名任务）'}</strong><small>{m.event} · 目标 {m.target}</small></div>
+      <span className="mission-bar"><i style={{ width: '45%' }} /></span>
+      <b>{Number(m.coinReward || 0).toLocaleString('en-US')} 金币{m.gemReward ? ` + ${m.gemReward} 宝石` : ''}</b>
+    </div>) : <p className="audit-item"><Icon name="eye" /><span>没有生效中的任务，玩家侧的任务区块会是空的</span></p>}</div>
+  </PreviewFrame>
+}
+
+// Preview first, edit second: the operator lands on the player's view and has to
+// choose to enter the editor, so a config is always seen before it is changed.
+function PreviewEditSwitch({ mode, onChange, dirty }) {
+  return <div className="preview-switch">
+    <button className={mode === 'preview' ? 'is-active' : ''} onClick={() => onChange('preview')}><Icon name="eye" />预览</button>
+    <button className={mode === 'edit' ? 'is-active' : ''} onClick={() => onChange('edit')}><Icon name="gear" />编辑</button>
+    {dirty && <span className="preview-dirty">草稿已改动，预览显示的是改动后的样子</span>}
+  </div>
+}
+
 function CheckinPage({ onOpen, store, update, journal, navigate }) {
+  const [mode, setMode] = useState('preview')
   const days = store.checkinDays
   const errors = validateCheckin(days)
   const differs = draftDiffers(store, 'checkin')
@@ -784,13 +856,17 @@ function CheckinPage({ onOpen, store, update, journal, navigate }) {
     <ConfigBadge store={store} moduleId="checkin" onDiscard={() => journal.discardDraft('checkin')} />
     <section className="admin-card"><div className="card-heading"><div><h2>本期签到奖励梯度（草稿）</h2><p>七日签到 · 秋日版 · 生效版本满签总额 {sum(store.live.checkinDays, 'coins').toLocaleString('en-US')} 金币 / {sum(store.live.checkinDays, 'gems')} 宝石；草稿 {sum(days, 'coins').toLocaleString('en-US')} 金币 / {sum(days, 'gems')} 宝石</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
       {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-      <CheckinLadderEditor days={days} onChange={(next) => update('checkinDays', () => next)} />
+      <PreviewEditSwitch mode={mode} onChange={setMode} dirty={differs} />
+      {mode === 'preview'
+        ? <CheckinPreview days={days} />
+        : <CheckinLadderEditor days={days} onChange={(next) => update('checkinDays', () => next)} />}
     </section>
     <GenericPage page="checkin" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} />
   </>
 }
 
 function WheelPage({ onOpen, store, update, journal, navigate }) {
+  const [mode, setMode] = useState('preview')
   const live = store.live
   const errors = validateWheel({ prizes: store.wheelPrizes, freeSpins: store.wheelFreeSpins })
   const differs = draftDiffers(store, 'wheel')
@@ -806,14 +882,20 @@ function WheelPage({ onOpen, store, update, journal, navigate }) {
     <ConfigBadge store={store} moduleId="wheel" versionText={`v${live.wheelVersion}`} onDiscard={() => journal.discardDraft('wheel')} />
     <section className="admin-card"><div className="card-heading"><div><h2>幸运旋转狂欢季 · 主转盘（草稿）</h2><p>{store.wheelPrizes.length} / {WHEEL_SLOTS} 个奖项 · 每日 {store.wheelFreeSpins} 次免费 · 生效版本 v{live.wheelVersion}{differs ? ` → 保存后将生成 v${live.wheelVersion + 1}` : ''}</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
       {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-      <WheelPrizeEditor prizes={store.wheelPrizes} freeSpins={store.wheelFreeSpins} onChange={({ prizes, freeSpins }) => { update('wheelPrizes', () => prizes); update('wheelFreeSpins', () => freeSpins) }} />
-      <p className="editor-hint">版本号在保存时按生效版本自动 +1，不可手工输入。</p>
+      <PreviewEditSwitch mode={mode} onChange={setMode} dirty={differs} />
+      {mode === 'preview'
+        ? <WheelPreview prizes={store.wheelPrizes} freeSpins={store.wheelFreeSpins} />
+        : <>
+          <WheelPrizeEditor prizes={store.wheelPrizes} freeSpins={store.wheelFreeSpins} onChange={({ prizes, freeSpins }) => { update('wheelPrizes', () => prizes); update('wheelFreeSpins', () => freeSpins) }} />
+          <p className="editor-hint">版本号在保存时按生效版本自动 +1，不可手工输入。</p>
+        </>}
     </section>
     <GenericPage page="wheel" onOpen={onOpen} store={{ ...store, wheel: wheelRows }} update={update} journal={journal} navigate={navigate} />
   </>
 }
 
 function MissionsPage({ store, update, journal }) {
+  const [mode, setMode] = useState('preview')
   const missions = store.missions
   const errors = validateMissions(missions)
   const differs = draftDiffers(store, 'missions')
@@ -830,7 +912,10 @@ function MissionsPage({ store, update, journal }) {
     {activeCount !== expectedCount && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>生效任务数与配置基线不一致</strong><span>当前草稿生效 {activeCount} 个，基线为 {expectedCount} 个（liteContent.events.dailyMissionCount）。</span></div></div>}
     {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
     <section className="admin-card table-card"><div className="table-top"><div><strong>每日任务列表（草稿）</strong><span>共 {missions.length} 条 · 已过期任务不可编辑</span></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-      <MissionListEditor missions={missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(next) => update('missions', () => next)} />
+      <PreviewEditSwitch mode={mode} onChange={setMode} dirty={differs} />
+      {mode === 'preview'
+        ? <MissionsPreview missions={missions} />
+        : <MissionListEditor missions={missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(next) => update('missions', () => next)} />}
     </section>
   </>
 }
