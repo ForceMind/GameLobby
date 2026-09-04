@@ -2,36 +2,239 @@
   "source": "preview",
   "version": 1,
   "timeZone": "Asia/Shanghai",
-  "offer": {"version": "tomorrow-single-v1", "priceCoins": 500, "maxRewardCoins": 7000},
+  "offer": {
+    "version": "tomorrow-single-v1",
+    "priceCoins": 500,
+    "maxRewardCoins": 7000
+  },
   "initialCoins": 52860,
   "initialGems": 84,
   "walletLedger": [
-    {"id":"sample-task-gems","currency":"gems","amount":2,"source":"task","minutesAgo":10,"status":"completed","balanceBefore":82,"balanceAfter":84},
-    {"id":"sample-checkin-gems","currency":"gems","amount":2,"source":"checkin","minutesAgo":20,"status":"completed","balanceBefore":80,"balanceAfter":82},
-    {"id":"sample-checkin-coins","currency":"coins","amount":60,"source":"checkin","minutesAgo":20,"status":"completed","balanceBefore":52800,"balanceAfter":52860},
-    {"id":"sample-game-cost","currency":"coins","amount":-800,"source":"game_cost","minutesAgo":30,"status":"completed","balanceBefore":53600,"balanceAfter":52800},
-    {"id":"sample-game-reward","currency":"coins","amount":3600,"source":"game_reward","minutesAgo":40,"status":"completed","balanceBefore":50000,"balanceAfter":53600}
+    {
+      "id": "sample-task-gems",
+      "currency": "gems",
+      "amount": 2,
+      "source": "task",
+      "minutesAgo": 10,
+      "status": "completed",
+      "balanceBefore": 82,
+      "balanceAfter": 84
+    },
+    {
+      "id": "sample-checkin-gems",
+      "currency": "gems",
+      "amount": 2,
+      "source": "checkin",
+      "minutesAgo": 20,
+      "status": "completed",
+      "balanceBefore": 80,
+      "balanceAfter": 82
+    },
+    {
+      "id": "sample-checkin-coins",
+      "currency": "coins",
+      "amount": 60,
+      "source": "checkin",
+      "minutesAgo": 20,
+      "status": "completed",
+      "balanceBefore": 52800,
+      "balanceAfter": 52860
+    },
+    {
+      "id": "sample-game-cost",
+      "currency": "coins",
+      "amount": -800,
+      "source": "game_cost",
+      "minutesAgo": 30,
+      "status": "completed",
+      "balanceBefore": 53600,
+      "balanceAfter": 52800,
+      "gameId": "fruit-party"
+    },
+    {
+      "id": "sample-game-reward",
+      "currency": "coins",
+      "amount": 3600,
+      "source": "game_reward",
+      "minutesAgo": 40,
+      "status": "completed",
+      "balanceBefore": 50000,
+      "balanceAfter": 53600,
+      "gameId": "golden-pharaoh"
+    },
+    {
+      "id": "sample-game-fish-coins",
+      "currency": "coins",
+      "amount": 1240,
+      "source": "game_reward",
+      "gameId": "fish-hunter",
+      "minutesAgo": 60,
+      "status": "completed",
+      "balanceBefore": 48760,
+      "balanceAfter": 50000
+    },
+    {
+      "id": "sample-game-fish-gems",
+      "currency": "gems",
+      "amount": 1,
+      "source": "game_reward",
+      "gameId": "fish-hunter",
+      "minutesAgo": 60,
+      "status": "completed",
+      "balanceBefore": 79,
+      "balanceAfter": 80
+    },
+    {
+      "id": "sample-game-bubble-cost",
+      "currency": "coins",
+      "amount": -320,
+      "source": "game_cost",
+      "gameId": "bubble-pop",
+      "minutesAgo": 75,
+      "status": "completed",
+      "balanceBefore": 49080,
+      "balanceAfter": 48760
+    },
+    {
+      "id": "sample-game-dice-coins",
+      "currency": "coins",
+      "amount": 920,
+      "source": "game_reward",
+      "gameId": "dice-merge",
+      "minutesAgo": 90,
+      "status": "completed",
+      "balanceBefore": 48160,
+      "balanceAfter": 49080
+    },
+    {
+      "id": "sample-game-dice-gems",
+      "currency": "gems",
+      "amount": 1,
+      "source": "game_reward",
+      "gameId": "dice-merge",
+      "minutesAgo": 90,
+      "status": "completed",
+      "balanceBefore": 78,
+      "balanceAfter": 79
+    }
   ],
   "rewardCoins": 2400,
   "chestOpenings": [
-    {"id":"opening-5","playerId":"JL-1001","name":"NovaRay","rewardCoins":6800},
-    {"id":"opening-4","playerId":"JL-1002","name":"MintCat","rewardCoins":5200},
-    {"id":"opening-3","playerId":"JL-1003","name":"BlueFin","rewardCoins":3600},
-    {"id":"opening-2","playerId":"JL-1004","name":"CloudNine","rewardCoins":1800},
-    {"id":"opening-1","playerId":"JL-1005","name":"DiceMomo","rewardCoins":1200}
+    {
+      "id": "opening-5",
+      "playerId": "JL-1001",
+      "name": "NovaRay",
+      "rewardCoins": 6800
+    },
+    {
+      "id": "opening-4",
+      "playerId": "JL-1002",
+      "name": "MintCat",
+      "rewardCoins": 5200
+    },
+    {
+      "id": "opening-3",
+      "playerId": "JL-1003",
+      "name": "BlueFin",
+      "rewardCoins": 3600
+    },
+    {
+      "id": "opening-2",
+      "playerId": "JL-1004",
+      "name": "CloudNine",
+      "rewardCoins": 1800
+    },
+    {
+      "id": "opening-1",
+      "playerId": "JL-1005",
+      "name": "DiceMomo",
+      "rewardCoins": 1200
+    }
   ],
   "wins": [
-    {"id":"win-12","playerId":"JL-1001","name":"NovaRay","gameId":"golden-pharaoh","coins":268800},
-    {"id":"win-11","playerId":"JL-1002","name":"MintCat","gameId":"fruit-party","coins":98600},
-    {"id":"win-10","playerId":"JL-2048","name":"NovaPlayer","gameId":"fish-hunter","coins":12480},
-    {"id":"win-09","playerId":"JL-1003","name":"BlueFin","gameId":"bubble-pop","coins":65200},
-    {"id":"win-08","playerId":"JL-1004","name":"CloudNine","gameId":"dice-merge","coins":42900},
-    {"id":"win-07","playerId":"JL-1005","name":"DiceMomo","gameId":"dice-merge","coins":18600},
-    {"id":"win-06","playerId":"JL-1002","name":"MintCat","gameId":"fruit-party","coins":16800},
-    {"id":"win-05","playerId":"JL-1006","name":"OceanPilot","gameId":"ocean-777","coins":12800},
-    {"id":"win-04","playerId":"JL-1007","name":"MoonFox","gameId":"golden-pharaoh","coins":11200},
-    {"id":"win-03","playerId":"JL-1008","name":"SunnyBee","gameId":"bubble-pop","coins":8800},
-    {"id":"win-02","playerId":"JL-1009","name":"RiverStone","gameId":"fish-hunter","coins":6600},
-    {"id":"win-01","playerId":"JL-1010","name":"BlueStar","gameId":"fruit-party","coins":4400}
+    {
+      "id": "win-12",
+      "playerId": "JL-1001",
+      "name": "NovaRay",
+      "gameId": "golden-pharaoh",
+      "coins": 268800
+    },
+    {
+      "id": "win-11",
+      "playerId": "JL-1002",
+      "name": "MintCat",
+      "gameId": "fruit-party",
+      "coins": 98600
+    },
+    {
+      "id": "win-10",
+      "playerId": "JL-2048",
+      "name": "NovaPlayer",
+      "gameId": "fish-hunter",
+      "coins": 12480
+    },
+    {
+      "id": "win-09",
+      "playerId": "JL-1003",
+      "name": "BlueFin",
+      "gameId": "bubble-pop",
+      "coins": 65200
+    },
+    {
+      "id": "win-08",
+      "playerId": "JL-1004",
+      "name": "CloudNine",
+      "gameId": "dice-merge",
+      "coins": 42900
+    },
+    {
+      "id": "win-07",
+      "playerId": "JL-1005",
+      "name": "DiceMomo",
+      "gameId": "dice-merge",
+      "coins": 18600
+    },
+    {
+      "id": "win-06",
+      "playerId": "JL-1002",
+      "name": "MintCat",
+      "gameId": "fruit-party",
+      "coins": 16800
+    },
+    {
+      "id": "win-05",
+      "playerId": "JL-1006",
+      "name": "OceanPilot",
+      "gameId": "ocean-777",
+      "coins": 12800
+    },
+    {
+      "id": "win-04",
+      "playerId": "JL-1007",
+      "name": "MoonFox",
+      "gameId": "golden-pharaoh",
+      "coins": 11200
+    },
+    {
+      "id": "win-03",
+      "playerId": "JL-1008",
+      "name": "SunnyBee",
+      "gameId": "bubble-pop",
+      "coins": 8800
+    },
+    {
+      "id": "win-02",
+      "playerId": "JL-1009",
+      "name": "RiverStone",
+      "gameId": "fish-hunter",
+      "coins": 6600
+    },
+    {
+      "id": "win-01",
+      "playerId": "JL-1010",
+      "name": "BlueStar",
+      "gameId": "fruit-party",
+      "coins": 4400
+    }
   ]
 }

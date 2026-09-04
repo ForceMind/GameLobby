@@ -4,6 +4,7 @@ export function normalizeLedger(entries) {
     currency: row.currency ?? 'coins',
     amount: row.amount ?? row.coins,
     source: row.source ?? (row.id.startsWith('purchase-') ? 'chest_purchase' : 'chest_reward'),
+    gameId: typeof row.gameId === 'string' ? row.gameId : null,
     createdAt: row.createdAt ?? row.at,
     status: row.status ?? 'completed',
     balanceBefore: Number.isSafeInteger(row.balanceBefore) ? row.balanceBefore : null,
@@ -12,7 +13,14 @@ export function normalizeLedger(entries) {
     .sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id))
 }
 
-export function filterLedger(entries, currency = 'all', direction = 'all') {
+export const GAME_SOURCES = ['game_reward', 'game_cost']
+
+export function isGameEntry(row) {
+  return GAME_SOURCES.includes(row.source)
+}
+
+export function filterLedger(entries, currency = 'all', direction = 'all', kind = 'all') {
   return entries.filter(row => (currency === 'all' || row.currency === currency) &&
-    (direction === 'all' || (direction === 'income' ? row.amount > 0 : row.amount < 0)))
+    (direction === 'all' || (direction === 'income' ? row.amount > 0 : row.amount < 0)) &&
+    (kind === 'all' || (kind === 'game' ? isGameEntry(row) : !isGameEntry(row))))
 }

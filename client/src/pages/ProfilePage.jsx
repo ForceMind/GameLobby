@@ -1,10 +1,6 @@
 import { useState } from 'react'
 import { Icon } from '../icons.jsx'
-import {
-  recentRecords,
-} from '../data.js'
 import { SectionHeader } from '../ui.jsx'
-import { formatNumber } from '../format.js'
 import { useLocale } from '../useLocale.js'
 import { useH5 } from '../h5/useH5.js'
 import '../h5/profileCompact.css'
@@ -54,42 +50,14 @@ export default function ProfilePage({
   }
   const openSettings = () => openModal({ title: t('settings.title'), body: <ProfileSettings />, confirmLabel: t('common.close'), cancelLabel: null })
   const openLedger = () => openModal({ title: t('ledger.allRecords'), body: <WalletLedger full />, confirmLabel: t('common.close'), cancelLabel: null })
+  // "全部战绩" is the same transaction history, pre-filtered to game entries.
   const openRecords = () =>
     openModal({
-      title: t('最近战绩详情'),
-      subtitle: t('查看最近的游戏记录。'),
-      body: (
-        <div className="detail-list">
-          {recentRecords.map((record) => (
-            <div key={`${record.id}-${record.time}`}>
-              <strong>{record.game}</strong>
-              <span>
-                {t(record.type)} · {t(record.time)}
-              </span>
-              <b className={record.coins >= 0 ? 'positive' : 'negative'}>
-                {t(
-                  record.coins >= 0
-                    ? '收益记录 {coins} {currency} {gems}'
-                    : '损失记录 {coins} {currency} {gems}',
-                  {
-                    coins: `${record.coins >= 0 ? '+' : ''}${formatNumber(record.coins)}`,
-                    currency: t('金币'),
-                    gems: record.gems
-                      ? t('，奖励 {value} {currency}', {
-                          value: `+${record.gems}`,
-                          currency: t('宝石'),
-                        })
-                      : '',
-                  },
-                )}
-              </b>
-            </div>
-          ))}
-        </div>
-      ),
-      confirmLabel: t('关闭'),
+      title: t('ledger.recentGames'),
+      subtitle: t('ledger.recentGamesHint'),
+      body: <WalletLedger full kind="game" emptyLabel="ledger.noGames" />,
+      confirmLabel: t('common.close'),
       cancelLabel: null,
-      onConfirm: () => {},
     })
   return (
     <div className="profile-page compact-profile">
@@ -160,47 +128,22 @@ export default function ProfilePage({
               </button>
             </div>
           </section>
-          <WalletLedger onShowAll={openLedger} />
+          <WalletLedger
+            kind="reward"
+            title="ledger.rewardsTitle"
+            description="ledger.rewardsHint"
+            emptyLabel="ledger.noRewards"
+            onShowAll={openLedger}
+          />
           <section className="section profile-records" id="records">
-            <SectionHeader
-              title={t('最近战绩')}
-              description={t('最近五条游戏记录')}
-              action={
-                <button
-                  className="text-action"
-                  type="button"
-                  onClick={openRecords}
-                >
-                  {t('全部战绩')} <Icon name="chevronRight" />
-                </button>
-              }
+            <WalletLedger
+              kind="game"
+              title="ledger.recentGames"
+              description="ledger.recentGamesHint"
+              emptyLabel="ledger.noGames"
+              actionLabel="ledger.allGames"
+              onShowAll={openRecords}
             />
-            <div className="record-list card">
-              {recentRecords.map((record) => (
-                <div className="record-row" key={`${record.id}-${record.time}`}>
-                  <span className="record-icon">
-                    <Icon
-                      name={record.type === 'Slots' ? 'jackpot' : 'gamepad'}
-                    />
-                  </span>
-                  <span>
-                    <strong>{record.game}</strong>
-                    <small>
-                      {t(record.type)} · {t(record.time)}
-                    </small>
-                  </span>
-                  <span className={record.coins >= 0 ? 'positive' : 'negative'}>
-                    <strong>
-                      {record.coins >= 0 ? '+' : ''}
-                      {formatNumber(record.coins)}
-                    </strong>
-                    <small>
-                      {record.gems ? `+${record.gems} ${t('宝石')}` : t('金币')}
-                    </small>
-                  </span>
-                </div>
-              ))}
-            </div>
           </section>
         </div>
       </div>

@@ -458,48 +458,6 @@ export const achievements = [
   },
 ]
 
-export const recentRecords = [
-  {
-    id: 'golden-pharaoh',
-    game: 'Golden Pharaoh',
-    type: 'Slots',
-    time: '今天 14:42',
-    coins: 3600,
-    gems: 2,
-  },
-  {
-    id: 'fruit-party',
-    game: 'Fruit Party',
-    type: 'Slots',
-    time: '今天 13:18',
-    coins: -800,
-    gems: 0,
-  },
-  {
-    id: 'fish-hunter',
-    game: 'Fish Hunter',
-    type: '休闲',
-    time: '今天 11:06',
-    coins: 1240,
-    gems: 1,
-  },
-  {
-    id: 'bubble-pop',
-    game: 'Bubble Pop',
-    type: '休闲',
-    time: '昨天 22:36',
-    coins: -320,
-    gems: 0,
-  },
-  {
-    id: 'dice-merge',
-    game: 'Dice Merge',
-    type: '休闲',
-    time: '昨天 19:05',
-    coins: 920,
-    gems: 1,
-  },
-]
 
 export const profile = {
   name: 'NovaPlayer',

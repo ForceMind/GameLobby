@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { defaultPreferences, readPreferences, writePreferences } from './preferences.js'
 import { normalizeLedger, filterLedger } from './ledger.js'
 import { createPreviewService } from './service.js'
+import engagementPreview from '../data/engagementPreview.json' with { type: 'json' }
 
 const memory = () => { const map=new Map();return {getItem:key=>map.get(key),setItem:(key,value)=>map.set(key,value)} }
 
@@ -33,7 +34,8 @@ test('宝箱购买和开启使用同一钱包流水且返回变动前后余额',
   let now=Date.parse('2026-09-02T12:00:00+08:00')
   const service=createPreviewService({storage:memory(),now:()=>now})
   const before=await service.ledger('a')
-  assert.equal(before.entries.length,5)
+  // every seeded row survives normalisation; the count follows the preview data instead of a magic number
+  assert.equal(before.entries.length,engagementPreview.walletLedger.length)
   await service.completeRound('a')
   const state=await service.chest('a')
   const purchased=await service.buy('a',{day:state.offer.day,offerVersion:state.offer.version})
@@ -51,7 +53,10 @@ test('半屏个人页保留独立流水和设置入口，资产浮窗不再挪�
   const profile=await readFile(new URL('../pages/ProfilePage.jsx',import.meta.url),'utf8')
   const wallet=await readFile(new URL('../h5/WalletDetails.jsx',import.meta.url),'utf8')
   const feed=await readFile(new URL('../components/WinnerFeed.jsx',import.meta.url),'utf8')
-  assert.match(profile,/<WalletLedger onShowAll=/)
+  // the two profile cards partition one ledger: rewards/spending and game results, never both
+  assert.match(profile,/kind="reward"/)
+  assert.match(profile,/kind="game"/)
+  assert.match(profile,/onShowAll=\{openLedger\}/)
   assert.match(profile,/<ProfileSettings \/>/)
   assert.match(profile,/profile-settings-entry/)
   assert.doesNotMatch(wallet,/recentRecords/)

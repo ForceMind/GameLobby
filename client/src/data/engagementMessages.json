@@ -118,7 +118,19 @@
     "wins.open": "查看赢家榜与最近中奖",
     "wins.status": "游戏当前不可用",
     "wins.pause": "暂停中奖弹幕",
-    "wins.resume": "继续中奖弹幕"
+    "wins.resume": "继续中奖弹幕",
+    "ledger.kind": "类型",
+    "ledger.kindAll": "全部记录",
+    "ledger.kindGame": "游戏战绩",
+    "ledger.kindReward": "奖励与消费",
+    "ledger.recentGames": "最近战绩",
+    "ledger.recentGamesHint": "最近的游戏记录，来自同一份资产流水",
+    "ledger.noGames": "暂无游戏记录",
+    "ledger.gameLabel": "{game} · {source}",
+    "ledger.rewardsTitle": "奖励与消费",
+    "ledger.rewardsHint": "签到、任务与宝箱带来的余额变化",
+    "ledger.noRewards": "暂无奖励或消费记录",
+    "ledger.allGames": "全部战绩"
   },
   "en": {
     "settings.title": "Settings",
@@ -239,6 +251,18 @@
     "wins.open": "View winners and recent wins",
     "wins.status": "Game currently unavailable",
     "wins.pause": "Pause win feed",
-    "wins.resume": "Resume win feed"
+    "wins.resume": "Resume win feed",
+    "ledger.kind": "Type",
+    "ledger.kindAll": "All records",
+    "ledger.kindGame": "Game results",
+    "ledger.kindReward": "Rewards & spending",
+    "ledger.recentGames": "Recent games",
+    "ledger.recentGamesHint": "Your latest game results, from the same transaction history",
+    "ledger.noGames": "No game records yet",
+    "ledger.gameLabel": "{game} · {source}",
+    "ledger.rewardsTitle": "Rewards & spending",
+    "ledger.rewardsHint": "Balance changes from check-ins, missions and chests",
+    "ledger.noRewards": "No reward or spending records yet",
+    "ledger.allGames": "All game results"
   }
 }
