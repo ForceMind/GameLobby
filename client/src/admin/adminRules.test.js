@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   validateWheel, wheelBalanced, validateCheckin, validateMissions, validateCoinPack, validateChestOffer,
   coinPackPriceUsd, nextVersionTag, nextLedgerId, diffSummary, validateNickname,
-  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff,
+  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations,
 } from './adminRules.js'
 
 const prizes = (probabilities) => probabilities.map((probability, i) => ({ id: `p${i}`, kind: 'coins', amount: 100 + i, probability }))
@@ -121,4 +121,34 @@ test('配置差异：游戏改名按 gameId 归位，不算作删除加新增', 
   const rows = snapshotDiff('games:test', g('旧名'), g('新名'))
   assert.equal(rows.filter((r) => r.added || r.removed).length, 0)
   assert.equal(rows.find((r) => r.key === 'order').changed, true)
+})
+
+test('玩家侧文案：英文不可为空，各语言占位符必须与英文一致', () => {
+  assert.deepEqual(validateTranslations({
+    'store.buy': { 'zh-Hans': '购买 {coins} 金币', en: 'Buy {coins} coins', ja: '{coins} コインを購入' },
+  }), [], '占位符一致时应通过')
+
+  const missingEn = validateTranslations({ 'a.b': { 'zh-Hans': '你好', en: '', ja: 'こんにちは' } })
+  assert.ok(missingEn.some((e) => e.includes('缺少英文')), '英文是兜底，不能为空')
+
+  const badPlaceholder = validateTranslations({
+    'store.buy': { en: 'Buy {coins} coins', ja: '{wrong} コインを購入' },
+  })
+  assert.equal(badPlaceholder.length, 1)
+  assert.ok(badPlaceholder[0].includes('ja') && badPlaceholder[0].includes('占位符'))
+
+  // 未翻译（留空）不算错误，运行时回退英文
+  assert.deepEqual(validateTranslations({ 'store.buy': { en: 'Buy {coins} coins', ja: '', de: '   ' } }), [])
+})
+
+test('文案差异精确到「键 · 语言」，只标出真正改动的那一格', () => {
+  const before = { translations: { 'a.b': { en: 'Hello', ja: '' }, 'a.c': { en: 'Bye', ja: 'さようなら' } } }
+  const after = { translations: { 'a.b': { en: 'Hello', ja: 'こんにちは' }, 'a.c': { en: 'Bye', ja: 'さようなら' } } }
+  const rows = snapshotDiff('translations', before, after)
+  assert.equal(rows.length, 4, '两个键 × 两种语言')
+  const changed = rows.filter((r) => r.changed)
+  assert.equal(changed.length, 1)
+  assert.equal(changed[0].label, 'a.b · ja')
+  assert.equal(changed[0].before, '—')
+  assert.equal(changed[0].after, 'こんにちは')
 })

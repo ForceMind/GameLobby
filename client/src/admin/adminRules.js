@@ -121,7 +121,8 @@ export function diffSummary(before, after, fields) {
 
 // ---- draft/live snapshots -------------------------------------------------
 // moduleId: wheel | checkin | missions | coinPacks | monthlyPass | chestOffer | games:test | games:production
-const moduleKeys = {
+export const moduleKeys = {
+  translations: ['translations'],
   wheel: ['wheelPrizes', 'wheelFreeSpins', 'wheelVersion'],
   checkin: ['checkinDays'],
   missions: ['missions'],
@@ -131,6 +132,7 @@ const moduleKeys = {
 }
 
 export const moduleLabels = {
+  translations: '多语言内容',
   wheel: '幸运转盘', checkin: '签到奖励梯度', missions: '每日任务', coinPacks: '金币礼包', monthlyPass: '月度特权卡', chestOffer: '明日宝箱报价',
   'games:test': '游戏目录 · 测试环境', 'games:production': '游戏目录 · 生产环境',
 }
@@ -165,7 +167,26 @@ export function resetDraftToLive(store, moduleId) {
   return setSlice(store, moduleId, getSlice(store.live, moduleId))
 }
 
+// Player-facing copy: English is the fallback every other language falls back to,
+// so it must be complete, and a translation must keep the placeholders its source has.
+export function validateTranslations(entries) {
+  const errors = []
+  const placeholders = (text) => [...String(text ?? '').matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
+  Object.entries(entries).forEach(([key, byLocale]) => {
+    const source = byLocale.en
+    if (!String(source ?? '').trim()) errors.push(`「${key}」缺少英文，英文是所有语言的兜底，不能为空`)
+    Object.entries(byLocale).forEach(([locale, text]) => {
+      if (locale === 'en' || !String(text ?? '').trim()) return
+      if (placeholders(text) !== placeholders(source)) {
+        errors.push(`「${key}」的 ${locale} 占位符与英文不一致`)
+      }
+    })
+  })
+  return errors
+}
+
 export function validateSnapshot(moduleId, slice) {
+  if (moduleId === 'translations') return validateTranslations(slice.translations)
   if (moduleId === 'wheel') return validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins })
   if (moduleId === 'checkin') return validateCheckin(slice.checkinDays)
   if (moduleId === 'missions') return validateMissions(slice.missions)
@@ -252,6 +273,10 @@ function snapshotRows(moduleId, slice) {
   if (moduleId === 'chestOffer') {
     const c = slice.chestOffer
     return [['version', '报价版本', c.version], ['price', '购买价格', `${c.priceCoins} 金币`], ['max', '可能奖励上限', `${c.maxRewardCoins} 金币`]]
+  }
+  if (moduleId === 'translations') {
+    return Object.entries(slice.translations).flatMap(([key, byLocale]) =>
+      Object.entries(byLocale).map(([locale, text]) => [`${key}|${locale}`, `${key} · ${locale}`, cell(text)]))
   }
   if (String(moduleId).startsWith('games:')) {
     const rows = [['order', '目录排序', slice.games.map((g) => g.name).join(' → ')]]

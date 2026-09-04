@@ -4,6 +4,8 @@ import { games as gamesData, checkinDays as checkinDaysData, dailyMissions, coin
 import liteContent from '../data/liteContent.json'
 import engagementPreview from '../data/engagementPreview.json' with { type: 'json' }
 import { parseReward } from './adminRules.js'
+import messages from '../locales/index.js'
+import { locales as localeRegistry, FALLBACK_LOCALE } from '../locales/registry.js'
 
 export const statusLabel = { ready: '正常可玩', maintenance: '维护中', upcoming: '即将上线', unavailable: '暂不可用' }
 
@@ -253,6 +255,23 @@ const chestRecordSeed = () => [
   { id: 'chest-2026-09-01-JL-1006', player: 'OceanPilot', playerId: 'JL-1006', purchaseDay: '2026-09-01', status: '已过期', rewardCoins: null, offerVersion: engagementPreview.offer.version, unlockAt: '2026-09-02 00:00', expiresAt: '2026-09-03 00:00', openedAt: '—' },
 ]
 
+// The admin console is Chinese-only by design; what it manages here is the copy the
+// PLAYER sees, across every supported language. One row per key, one column per language.
+export const translationLocales = localeRegistry.map((entry) => ({ code: entry.code, nativeName: entry.nativeName, dir: entry.dir }))
+
+// A key's namespace is its first dotted segment; it groups the table into sections.
+export function translationNamespace(key) {
+  return String(key).split('.')[0]
+}
+
+function buildTranslations() {
+  const keys = Object.keys(messages[FALLBACK_LOCALE] ?? {}).sort()
+  return Object.fromEntries(keys.map((key) => [
+    key,
+    Object.fromEntries(translationLocales.map(({ code }) => [code, messages[code]?.[key] ?? ''])),
+  ]))
+}
+
 export function createInitialStore() {
   const gameRecords = () => gamesData.map((g, index) => ({
     id: g.id, name: g.name, gameId: g.id, categoryLabel: g.categoryLabel, tags: [...g.tags], badges: [...g.badges],
@@ -290,6 +309,7 @@ export function createInitialStore() {
     { page: 'players', tab: 'players', query: 'CloudNine', label: '打开 CloudNine 玩家档案' },
   ]
   const todo = zip(rawRows.todo, 'todo').map((t, i) => ({ ...t, publishId: i === 1 ? publish[2].id : '', link: todoLinks[i] || null, claimedBy: t.status === '处理中' ? t.owner : '', resolution: '' }))
+  config.translations = buildTranslations()
   return {
     ...JSON.parse(JSON.stringify(config)),
     live: JSON.parse(JSON.stringify(config)),

@@ -77,3 +77,26 @@
 .inline-field input{width:76px}
 .editor-hint{margin:10px 0 0;color:var(--admin-muted);font-size:11px}
 .game-form fieldset .table-wrap{max-height:none}
+.coverage-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:6px;margin-top:12px}
+.coverage-cell{display:grid;grid-template-columns:minmax(0,1fr) 56px;grid-template-areas:"name value" "bar bar";gap:4px 8px;padding:9px 11px;border:1px solid var(--admin-border);border-radius:8px;background:#fff;cursor:pointer;text-align:left}
+.coverage-cell:hover{border-color:#b6cbff}
+.coverage-cell.is-active{border-color:var(--admin-primary);background:var(--admin-primary-soft)}
+.coverage-name{grid-area:name;font-size:11px;color:var(--admin-text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.coverage-name small{display:block;color:var(--admin-muted);font-size:9px;font-weight:400}
+.coverage-value{grid-area:value;text-align:right;font-size:11px;font-weight:600;color:var(--admin-text)}
+.coverage-value small{display:block;color:var(--admin-muted);font-size:9px;font-weight:400}
+.coverage-bar{grid-area:bar;height:4px;border-radius:2px;background:#eef1f6;overflow:hidden}
+.coverage-bar i{display:block;height:100%;background:var(--admin-primary);border-radius:2px}
+.coverage-bar i.is-full{background:#22a35f}
+.coverage-bar i.is-none{background:transparent}
+.translation-key{padding:2px 6px;border-radius:4px;background:#f2f5fa;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#2864f0}
+.translation-rows{display:grid;gap:6px}
+.translation-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:start;font-size:11px}
+.translation-row .translation-locale{padding-top:7px;color:var(--admin-text);font-weight:500}
+.translation-row .translation-locale small{display:block;color:var(--admin-muted);font-size:9px;font-weight:400;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.translation-row textarea{min-height:38px;padding:7px 9px;border:1px solid var(--admin-border);border-radius:6px;font:inherit;resize:vertical}
+.translation-row.is-source textarea{background:#f8fafd}
+.translation-row.is-empty textarea{border-style:dashed}
+.translation-row.is-bad textarea{border-color:#e0a0a0;background:#fff6f5}
+.import-label{position:relative;overflow:hidden;cursor:pointer}
+.import-label input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}

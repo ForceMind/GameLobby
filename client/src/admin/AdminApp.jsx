@@ -3,10 +3,10 @@ import { Icon } from '../icons.jsx'
 import { games, gameCategories } from '../data.js'
 import liteContent from '../data/liteContent.json'
 import { rankings as aggregateWinnerRankings } from '../engagement/model.js'
-import { missionEventOptions, transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel } from './adminSchema.js'
+import { missionEventOptions, transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel, translationLocales, translationNamespace } from './adminSchema.js'
 import {
   formatReward, coinPackPriceUsd, wheelBalanced, prizeLabel, validateWheel, validateCheckin, validateMissions, validateCoinPack,
-  validateMonthlyPass, validateChestOffer, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels,
+  validateMonthlyPass, validateChestOffer, validateTranslations, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels,
   getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, validateSnapshot, WHEEL_SLOTS,
 } from './adminRules.js'
 
@@ -16,6 +16,7 @@ const navGroups = [
   { title: '活动中心', items: [['activities', '活动管理', 'gift'], ['checkin', '签到活动', 'calendar'], ['wheel', '幸运转盘', 'refresh'], ['missions', '每日任务', 'flag']] },
   { title: '商品与权益', items: [['store', '商品与权益', 'store'], ['orders', '订单管理', 'wallet'], ['ledger', '钱包流水', 'coin']] },
   { title: '玩家', items: [['players', '玩家管理', 'user']] },
+  { title: '内容与语言', items: [['translations', '多语言内容', 'globe']] },
   { title: '系统管理', items: [['adminUsers', '权限与账号', 'lock']] },
 ]
 
@@ -39,6 +40,7 @@ const pageMeta = {
   ledger: ['钱包流水', '追踪金币、宝石的来源、消耗和人工调整。'],
   players: ['玩家管理', '查询玩家资料、资产、奖励领取、月卡权益、宝箱记录和账号状态。'],
   adminUsers: ['权限与账号', '管理后台账号、角色范围与生产环境操作权限。'],
+  translations: ['多语言内容', '配置玩家侧大厅的全部文案与游戏说明，覆盖 24 种语言。后台自身界面为中文，不在此范围内。'],
 }
 
 const actionConfig = {
@@ -69,6 +71,7 @@ const configurationNotes = {
   store: ['金币礼包与月度特权卡通过宿主支付桥接完成购买；明日宝箱按次直接从钱包扣款，不生成订单记录。', '明日宝箱报价版本变更会使旧客户端报价失效（409 stale）；三类商品的变更都先进草稿，审核通过后才生效。'],
   orders: ['订单仅覆盖金币礼包与月度特权卡的宿主支付流程。', '状态链路：待支付 → 处理中 → 已支付/失败；已支付后可能进入退款处理中 → 已退款；异常订单需人工介入并写入操作日志。'],
   ledger: ['流水来源与前台一致，固定为 chest_purchase / chest_reward / game_reward / game_cost / checkin / task 六类；后台人工调整使用 manual_adjust，前台流水枚举需在联调时补充该来源。', '既有流水不可编辑；人工调整以追加一条"处理中"流水的方式写入，财务确认入账后才变为成功。'],
+  translations: ['这里管理的是玩家在大厅里看到的文字，不是后台界面。英文是所有语言的兜底，必须保持完整；某个语言缺翻译时，玩家会看到英文而不是空白或键名。', '带占位符的文案（例如 {coins}）在各语言里必须保留同样的占位符，否则保存会被拦截。改动进入草稿，经发布审核通过后才对玩家生效。'],
   players: ['玩家资产、等级与最近战绩以宿主/服务端上下文为准；隐私偏好由玩家自己设置，后台只读展示默认值。', '账号状态变更（活动限制、封禁、待复核、解除）一律需要填写原因并写入操作日志。'],
 }
 
@@ -76,7 +79,7 @@ const configurationNotes = {
 const moduleToPage = (moduleId) => {
   if (!moduleId) return null
   if (String(moduleId).startsWith('games:')) return 'games'
-  return { wheel: 'wheel', checkin: 'checkin', missions: 'missions', coinPacks: 'store', monthlyPass: 'store', chestOffer: 'store', versions: 'versions', test: 'versions', production: 'versions' }[moduleId] || null
+  return { translations: 'translations', wheel: 'wheel', checkin: 'checkin', missions: 'missions', coinPacks: 'store', monthlyPass: 'store', chestOffer: 'store', versions: 'versions', test: 'versions', production: 'versions' }[moduleId] || null
 }
 
 const tagLabel = { slots: 'Slots', casual: '休闲', realtime: '实时' }
@@ -770,6 +773,164 @@ function MissionsPage({ store, update, journal }) {
   </>
 }
 
+// ---- 多语言内容 -----------------------------------------------------------
+// 管理的是玩家侧文案；后台界面本身是中文，不参与翻译。
+const SOURCE_LOCALE = 'zh-Hans'
+const FALLBACK = 'en'
+
+function placeholdersOf(text) {
+  return [...String(text ?? '').matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
+}
+
+function TranslationEditor({ entryKey, entry, onSave, onClose }) {
+  const [draft, setDraft] = useState(() => ({ ...entry }))
+  const errors = validateTranslations({ [entryKey]: draft })
+  const dirty = translationLocales.some(({ code }) => (draft[code] ?? '') !== (entry[code] ?? ''))
+  const source = draft[FALLBACK] ?? ''
+  return <Modal wide eyebrow="玩家侧文案" title={entryKey} subtitle={`共 ${translationLocales.length} 种语言 · 英文为兜底，缺翻译时玩家看到英文`} onClose={onClose}
+    footer={<><span className="modal-foot-note">{dirty ? '保存后进入草稿，需发布审核通过才对玩家生效' : '尚未修改'}</span><button className="admin-btn subtle" onClick={onClose}>取消</button><button className="admin-btn primary" disabled={!dirty || errors.length > 0} onClick={() => { onSave(draft); onClose() }}>保存</button></>}>
+    <div className="game-form">
+      <fieldset><legend>源文案</legend><p className="fieldset-note">中文与英文是这条文案的基准。英文不能为空，其他语言以它为兜底。</p>
+        <div className="translation-rows">
+          {[SOURCE_LOCALE, FALLBACK].map((code) => {
+            const meta = translationLocales.find((l) => l.code === code)
+            return <label className="translation-row is-source" key={code}>
+              <span className="translation-locale">{meta?.nativeName}<small>{code}</small></span>
+              <textarea value={draft[code] ?? ''} dir={meta?.dir} onChange={(event) => setDraft((d) => ({ ...d, [code]: event.target.value }))} />
+            </label>
+          })}
+        </div>
+      </fieldset>
+      <fieldset><legend>其他语言</legend><p className="fieldset-note">留空表示尚未翻译，玩家会看到英文。占位符必须与英文一致{source.includes('{') ? `（本条含 ${placeholdersOf(source).split(',').map((p) => `{${p}}`).join(' ')}）` : ''}。</p>
+        <div className="translation-rows">
+          {translationLocales.filter(({ code }) => code !== SOURCE_LOCALE && code !== FALLBACK).map(({ code, nativeName, dir }) => {
+            const value = draft[code] ?? ''
+            const mismatch = value.trim() && placeholdersOf(value) !== placeholdersOf(source)
+            return <label className={`translation-row ${value.trim() ? '' : 'is-empty'} ${mismatch ? 'is-bad' : ''}`} key={code}>
+              <span className="translation-locale">{nativeName}<small>{code}</small></span>
+              <textarea value={value} dir={dir} placeholder="未翻译 · 玩家看到英文" onChange={(event) => setDraft((d) => ({ ...d, [code]: event.target.value }))} />
+            </label>
+          })}
+        </div>
+      </fieldset>
+      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
+    </div>
+  </Modal>
+}
+
+function TranslationsPage({ store, update, journal }) {
+  const entries = store.translations
+  const keys = useMemo(() => Object.keys(entries).sort(), [entries])
+  const [namespace, setNamespace] = useState('all')
+  const [locale, setLocale] = useState('zh-Hant')
+  const [onlyMissing, setOnlyMissing] = useState(false)
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(0)
+  const [editing, setEditing] = useState(null)
+
+  const namespaces = useMemo(() => [...new Set(keys.map(translationNamespace))].sort(), [keys])
+  const coverage = useMemo(() => translationLocales.map(({ code, nativeName }) => {
+    const done = keys.filter((key) => String(entries[key][code] ?? '').trim()).length
+    return { code, nativeName, done, total: keys.length, percent: keys.length ? Math.round((done / keys.length) * 100) : 0 }
+  }), [entries, keys])
+
+  const filtered = keys.filter((key) => {
+    if (namespace !== 'all' && translationNamespace(key) !== namespace) return false
+    if (onlyMissing && String(entries[key][locale] ?? '').trim()) return false
+    if (query && !`${key} ${entries[key][SOURCE_LOCALE] ?? ''} ${entries[key][FALLBACK] ?? ''}`.toLowerCase().includes(query.toLowerCase())) return false
+    return true
+  })
+  const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const differs = draftDiffers(store, 'translations')
+  const errors = validateTranslations(entries)
+  const activeMeta = translationLocales.find((l) => l.code === locale)
+
+  const saveEntry = (key) => (next) => {
+    const before = entries[key]
+    update('translations', (current) => ({ ...current, [key]: next }))
+    const changed = translationLocales.filter(({ code }) => (next[code] ?? '') !== (before[code] ?? '')).map(({ code }) => code)
+    journal.logAudit({ action: '编辑玩家侧文案（草稿）', target: key, targetModule: 'translations', targetId: key,
+      before: changed.map((c) => `${c}=${before[c] || '空'}`).join('；'), after: changed.map((c) => `${c}=${next[c] || '空'}`).join('；') })
+  }
+  const saveDraft = () => {
+    const done = coverage.filter((c) => c.done > 0).length
+    journal.logAudit({ action: '保存多语言内容草稿', target: '玩家侧文案', targetModule: 'translations', targetId: 'all',
+      before: `${keys.length} 键`, after: `${keys.length} 键 · ${done}/${translationLocales.length} 种语言有翻译` })
+    journal.queuePublish({ name: '玩家侧文案更新', type: '内容版本', scope: '生产环境', sourceModule: 'translations', sourceId: 'all', snapshot: getSlice(store, 'translations'), todoSource: '内容与语言' })
+  }
+  const exportCurrent = () => exportCsv(`玩家侧文案-${locale}`, ['键', '命名空间', '简体中文', '英文', activeMeta?.nativeName ?? locale],
+    filtered.map((key) => [key, translationNamespace(key), entries[key][SOURCE_LOCALE] ?? '', entries[key][FALLBACK] ?? '', entries[key][locale] ?? '']))
+
+  const importCsv = (file) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const text = String(reader.result ?? '').replace(/^\ufeff/, '')
+      // 解析导出的同一种格式：键在第 1 列，目标语言在最后一列
+      const rows = text.split(/\r?\n/).filter(Boolean).slice(1)
+      const parse = (line) => line.match(/("(?:[^"]|"")*"|[^,]*)/g)?.filter((_, i) => i % 2 === 0)
+        .map((cell) => cell.replace(/^"|"$/g, '').replace(/""/g, '"')) ?? []
+      let applied = 0, skipped = 0
+      const next = { ...entries }
+      rows.forEach((line) => {
+        const cells = parse(line)
+        const key = cells[0]
+        const value = cells[cells.length - 1] ?? ''
+        if (!key || !Object.hasOwn(next, key)) { skipped += 1; return }
+        if ((next[key][locale] ?? '') === value) return
+        next[key] = { ...next[key], [locale]: value }
+        applied += 1
+      })
+      update('translations', () => next)
+      journal.logAudit({ action: '导入翻译', target: `${activeMeta?.nativeName ?? locale}（${locale}）`, targetModule: 'translations', targetId: locale,
+        after: `更新 ${applied} 条`, result: skipped ? `成功 · 跳过 ${skipped} 条未知键` : '成功' })
+    }
+    reader.readAsText(file)
+  }
+
+  return <>
+    <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes.translations[0]}</span><small>{configurationNotes.translations[1]}</small></div></div>
+    <ConfigBadge store={store} moduleId="translations" onDiscard={() => journal.discardDraft('translations')} />
+    <section className="admin-card"><div className="card-heading"><div><h2>翻译覆盖率</h2><p>共 {keys.length} 条玩家侧文案 · {translationLocales.length} 种语言。英文必须保持 100%，它是所有语言的兜底。</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
+      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.slice(0, 4).join('；')}{errors.length > 4 ? ` 等 ${errors.length} 项` : ''}</span></div></div>}
+      <div className="coverage-grid">{coverage.map((row) => <button className={`coverage-cell ${row.code === locale ? 'is-active' : ''}`} key={row.code} onClick={() => { setLocale(row.code); setPage(0) }}>
+        <span className="coverage-name">{row.nativeName}<small>{row.code}</small></span>
+        <span className="coverage-bar"><i style={{ width: `${row.percent}%` }} className={row.percent === 100 ? 'is-full' : row.percent === 0 ? 'is-none' : ''} /></span>
+        <span className="coverage-value">{row.percent}%<small>{row.done}/{row.total}</small></span>
+      </button>)}</div>
+    </section>
+    <div className="admin-toolbar">
+      <div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="搜索键名或中英文文案..." /></div>
+      <select value={namespace} onChange={(event) => { setNamespace(event.target.value); setPage(0) }}><option value="all">全部命名空间</option>{namespaces.map((ns) => <option key={ns} value={ns}>{ns}（{keys.filter((k) => translationNamespace(k) === ns).length}）</option>)}</select>
+      <select value={locale} onChange={(event) => { setLocale(event.target.value); setPage(0) }}>{translationLocales.map(({ code, nativeName }) => <option key={code} value={code}>{nativeName}</option>)}</select>
+      <button className={`admin-btn ${onlyMissing ? 'primary' : 'subtle'}`} onClick={() => { setOnlyMissing((v) => !v); setPage(0) }}><Icon name="filter" />只看未翻译</button>
+    </div>
+    <section className="admin-card table-card">
+      <div className="table-top"><div><strong>文案列表</strong><span>共 {filtered.length} 条 · 当前对照语言：{activeMeta?.nativeName}</span></div>
+        <div className="table-actions">
+          <label className="admin-btn subtle import-label">导入 {activeMeta?.nativeName} CSV<input type="file" accept=".csv,text/csv" onChange={(event) => { const f = event.target.files?.[0]; if (f) importCsv(f); event.target.value = '' }} /></label>
+          <button className="admin-btn subtle" onClick={exportCurrent}>导出 CSV</button>
+        </div>
+      </div>
+      <div className="table-wrap"><table><thead><tr><th>键</th><th>简体中文</th><th>英文</th><th>{activeMeta?.nativeName}</th><th>覆盖</th><th>操作</th></tr></thead><tbody>
+        {visible.map((key) => {
+          const entry = entries[key]
+          const done = translationLocales.filter(({ code }) => String(entry[code] ?? '').trim()).length
+          return <tr key={key} onClick={() => setEditing(key)}>
+            <td><code className="translation-key">{key}</code></td>
+            <td>{entry[SOURCE_LOCALE]}</td>
+            <td>{entry[FALLBACK]}</td>
+            <td dir={activeMeta?.dir}>{String(entry[locale] ?? '').trim() || <em className="sample-tag">未翻译</em>}</td>
+            <td>{done}/{translationLocales.length}</td>
+            <td><button className="row-action" onClick={(event) => { event.stopPropagation(); setEditing(key) }}>编辑全部语言</button></td>
+          </tr>
+        })}
+      </tbody></table>{!filtered.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配的文案</strong><p>调整命名空间、搜索词或取消「只看未翻译」。</p></div>}</div>
+      <Pager page={page} total={filtered.length} onChange={setPage} />
+    </section>
+    {editing && <TranslationEditor key={editing} entryKey={editing} entry={entries[editing]} onSave={saveEntry(editing)} onClose={() => setEditing(null)} />}
+  </>
+}
+
 // ---- activity centre ------------------------------------------------------
 // Each activity type owns a different reward config, so the modal swaps its editor by type.
 const activityTypeMeta = {
@@ -1088,6 +1249,7 @@ function AdminApp() {
     if (activePage === 'wheel') return <WheelPage {...common} />
     if (activePage === 'missions') return <MissionsPage store={store} update={update} journal={journal} />
     if (activePage === 'activities') return <ActivitiesPage key={pageKey} {...common} />
+    if (activePage === 'translations') return <TranslationsPage key={pageKey} store={store} update={update} journal={journal} />
     if (activePage === 'store') return <ProductsPage {...common} />
     if (activePage === 'orders') return <GenericPage key={pageKey} page="orders" describe={describeOrder} {...common} intent={intent} />
     if (activePage === 'players') return <PlayersCenterPage key={pageKey} {...common} navigate={navigate} intent={intent} />
