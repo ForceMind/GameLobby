@@ -1,10 +1,14 @@
 // The published activity configuration: the single source both the player lobby
 // and the admin console read.
 //
-// In production this is what the config service returns for the currently
-// published version. Here it is a static file so the two sides cannot drift:
-// the admin seeds its live version from it, and the lobby renders from it, so a
-// preview in the admin is a preview of the same numbers the player gets.
+// In production this is what a backend "已发布配置" (published config) endpoint
+// would return for the currently published version — one GET per activity type,
+// versioned, replaced only through the admin's draft → review → publish flow.
+// Here it is a static file so the two sides cannot drift in the prototype: the
+// admin seeds its live version from it, and the lobby renders from it, so a
+// preview in the admin is a preview of the same numbers the player gets. A real
+// backend does not need to keep this exact file shape, only the same contract:
+// wheel/checkin/missions config plus a geographic scope for each.
 //
 // Ordering matters for the wheel: slot N in this array is the Nth segment of the
 // wheel the player sees, clockwise from the top.
@@ -28,4 +32,15 @@ export const PRIZE_KEYS = {
   coins: 'events.prizeCoins',
   gems: 'events.prizeGems',
   freeSpin: 'events.prizeFreeSpin',
+}
+
+// Geographic scope per activity type, in the same {mode, countries} shape as a
+// game's region. The admin's ActivityModal writes here (through draft/review,
+// same as games); EventsPage reads here to decide which sections to show.
+// Defaulting to 'all' matches games: an activity nobody has scoped is open
+// everywhere, and narrowing it is an explicit whitelist action.
+export const activityRegions = {
+  wheel: { mode: 'all', countries: [] },
+  checkin: { mode: 'all', countries: [] },
+  missions: { mode: 'all', countries: [] },
 }

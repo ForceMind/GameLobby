@@ -2302,6 +2302,32 @@ section[id] {
   overflow: hidden;
 }
 
+.settings-language-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 13px 15px;
+}
+
+.settings-language-row > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-language-row > span small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.settings-language-row .language-picker {
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+
+
 .record-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

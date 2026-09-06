@@ -3,11 +3,12 @@ import { checkinDays, dailyMissions } from '../data.js'
 import liteContent from '../data/liteContent.json'
 import { Progress, SectionHeader } from '../ui.jsx'
 import { formatNumber } from '../format.js'
-import { nextWheelAngle } from '../demoModel.js'
+import { nextWheelAngle, regionAllows } from '../demoModel.js'
 import { Icon } from '../icons.jsx'
 import { useLocale } from '../useLocale.js'
+import { useH5 } from '../h5/useH5.js'
 import '../h5/eventsCompact.css'
-import { wheelConfig, PRIZE_KEYS } from '../data/publishedConfig.js'
+import { wheelConfig, PRIZE_KEYS, activityRegions } from '../data/publishedConfig.js'
 
 // Read from the published activity config, the same file the admin console seeds
 // its live version from, so what an operator previews is what a player gets.
@@ -21,6 +22,13 @@ const missionTitles = {
 
 export default function EventsPage({ openModal, toast, showFullEntryHint }) {
   const { t, href, format } = useLocale()
+  const { country } = useH5()
+  // Mirrors the game catalogue's region rule: a section outside the player's
+  // country does not render at all, rather than showing disabled controls.
+  const checkinInRegion = regionAllows(activityRegions.checkin, country)
+  const wheelInRegion = regionAllows(activityRegions.wheel, country)
+  const missionsInRegion = regionAllows(activityRegions.missions, country)
+  const nothingInRegion = !checkinInRegion && !wheelInRegion && !missionsInRegion
   const latestTranslation = useRef(t)
   useEffect(() => {
     latestTranslation.current = t
@@ -37,10 +45,10 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
   const spinTimer = useRef(null)
   const spinLocked = useRef(false)
   useEffect(() => () => window.clearTimeout(spinTimer.current), [])
-  const claimableTasks = dailyMissions.filter(
+  const claimableTasks = missionsInRegion ? dailyMissions.filter(
     (m) => m.current >= m.total && !m.expired && !claimedTasks.has(m.id),
-  ).length
-  const claimable = (checkinClaimed ? 0 : 1) + claimableTasks
+  ).length : 0
+  const claimable = (checkinInRegion && !checkinClaimed ? 1 : 0) + claimableTasks
   const recordReward = (sourceKey, rewardKey, rewardValues) =>
     setRewardHistory((current) => [
       { id: current.length + 1, sourceKey, rewardKey, rewardValues },
@@ -136,6 +144,12 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           <strong className="events-compact-count">{claimable}</strong>
           <span>{t('events.readyToClaimSuffixShort')}</span>
         </section>
+        {nothingInRegion && (
+        <section className="events-compact-card card" role="status">
+          <p>{t('events.noneAvailableInRegion')}</p>
+        </section>
+      )}
+      {checkinInRegion && (
         <section
           className="events-compact-card card"
           aria-labelledby="compact-checkin-title"
@@ -155,6 +169,8 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
             </button>
           </div>
         </section>
+      )}
+        {wheelInRegion && (
         <section
           className="events-compact-card card"
           aria-labelledby="compact-wheel-title"
@@ -186,6 +202,8 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
             <Icon name="clock" /> {t('events.historyAction')}
           </button>
         </section>
+      )}
+        {missionsInRegion && (
         <section
           className="events-compact-card card"
           aria-labelledby="compact-tasks-title"
@@ -231,16 +249,24 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
             {t('events.moreMissions')}
           </button>
         </section>
+      )}
       </div>
     )
   }
   return (
     <>
       <section className="page-head">
-        <p className="eyebrow">REWARDS · DAILY PLAY</p>
+        <p className="eyebrow">{t('events.eyebrow')}</p>
         <h1>{t('events.title')}</h1>
         <p>{t('events.subtitle')}</p>
       </section>
+      {nothingInRegion ? (
+        <section className="event-page-state card" role="status">
+          <Icon name="gift" />
+          <p>{t('events.noneAvailableInRegion')}</p>
+        </section>
+      ) : (
+        <>
       <section
         className="event-page-state card"
         role="status"
@@ -263,26 +289,33 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           <p>{t('events.overviewHint')}</p>
         </div>
         <nav className="overview-stats" aria-label={t('events.overviewShortcutsLabel')}>
-          <a className="overview-shortcut" href="#checkin">
+          {checkinInRegion && (
+<a className="overview-shortcut" href="#checkin">
             <span>{t('events.checkinTitle')}</span>
             <strong>
               {checkinClaimed ? t('events.checkinClaimedToday') : t('events.checkinReadyToday')}
             </strong>
             <small>{t('events.checkinRewardSummary')}</small>
           </a>
-          <a className="overview-shortcut" href="#wheel">
+)}
+          {wheelInRegion && (
+<a className="overview-shortcut" href="#wheel">
             <span>{t('events.wheelTitle')}</span>
             <strong>{t('events.wheelSpinsAvailable', { count: wheelCount })}</strong>
             <small>{t('events.wheelDailyChances')}</small>
           </a>
-          <a className="overview-shortcut" href="#tasks">
+)}
+          {missionsInRegion && (
+<a className="overview-shortcut" href="#tasks">
             <span>{t('events.missionsTitle')}</span>
             <strong>{t('events.readyToClaimCount', { count: claimableTasks })}</strong>
             <small>{t('events.missionsResetShort')}</small>
           </a>
+)}
         </nav>
       </section>
-      <section className="section" id="checkin" aria-labelledby="checkin-title">
+      {checkinInRegion && (
+<section className="section" id="checkin" aria-labelledby="checkin-title">
         <SectionHeader
           title={t('events.checkinTitle')}
           titleId="checkin-title"
@@ -367,8 +400,10 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
           </div>
         </div>
       </section>
+)}
       <div className="activity-layout">
-        <section className="section" id="wheel" aria-labelledby="wheel-title">
+        {wheelInRegion && (
+<section className="section" id="wheel" aria-labelledby="wheel-title">
           <SectionHeader
             title={t('events.wheelTitle')}
             titleId="wheel-title"
@@ -444,7 +479,9 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
             </div>
           </div>
         </section>
-        <section className="section" id="tasks" aria-labelledby="tasks-title">
+)}
+        {missionsInRegion && (
+<section className="section" id="tasks" aria-labelledby="tasks-title">
           <SectionHeader
             title={t('events.missionsTitle')}
             titleId="tasks-title"
@@ -526,7 +563,10 @@ export default function EventsPage({ openModal, toast, showFullEntryHint }) {
             })}
           </div>
         </section>
+)}
       </div>
+        </>
+      )}
     </>
   )
 }

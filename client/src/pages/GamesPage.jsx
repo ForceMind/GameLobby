@@ -7,7 +7,7 @@ export default function GamesPage({ openModal, toast, showFullEntryHint }) {
   return (
     <div className="games-page compact-games">
       <section className="page-head">
-        <p className="eyebrow">GAME LIBRARY</p>
+        <p className="eyebrow">{t('games.eyebrow')}</p>
         <h1>{t('games.allTitle')}</h1>
         <p>
           {t('games.allSubtitle', {

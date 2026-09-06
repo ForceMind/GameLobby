@@ -5,7 +5,7 @@ import liteContent from '../data/liteContent.json'
 import engagementPreview from '../data/engagementPreview.json' with { type: 'json' }
 import { prizeLabel } from './adminRules.js'
 import messages from '../locales/index.js'
-import { wheelConfig } from '../data/publishedConfig.js'
+import { wheelConfig, activityRegions } from '../data/publishedConfig.js'
 import { locales as localeRegistry, FALLBACK_LOCALE } from '../locales/registry.js'
 
 // The admin console is Chinese; continent names are fixed here rather than taken
@@ -278,9 +278,11 @@ export function createInitialStore() {
     cover: g.cover, sortWeight: (index + 1) * 10,
     maintenanceNote: g.status === 'maintenance' ? '服务端例行维护中，预计 2 小时内恢复。' : '',
     launchAt: g.status === 'upcoming' ? '2026-09-15 10:00' : '',
-    description: liteContent.gameDetails?.[g.id]?.descriptionKey || '',
+    // 游戏简介现在是多语言目录里的一个键，不是后台自己存的一份文本；descriptionKey 只用来在
+    // 游戏配置弹窗里定位并跳转到「多语言内容」编辑，不参与游戏模块自身的草稿/审核。
+    descriptionKey: liteContent.gameDetails?.[g.id]?.descriptionKey || '',
     winRate: liteContent.gameDetails?.[g.id]?.winRate || '', rtp: liteContent.gameDetails?.[g.id]?.rtp || '',
-    winRange: liteContent.gameDetails?.[g.id]?.winRange || '', maxMultiplier: liteContent.gameDetails?.[g.id]?.maxMultiplier || '',
+    winRangeMin: liteContent.gameDetails?.[g.id]?.winRangeMin ?? '', winRangeMax: liteContent.gameDetails?.[g.id]?.winRangeMax ?? '', maxMultiplier: liteContent.gameDetails?.[g.id]?.maxMultiplier || '',
     // Standard slot parameters the current front-end does not read yet; kept empty rather than filled with invented values.
     minBet: '', paylines: '', volatility: '',
   }))
@@ -288,10 +290,13 @@ export function createInitialStore() {
     games: { test: gameRecords(), production: gameRecords() },
     // 前台数据现在直接携带数值（W1 起不再是拼好的「800 金币」字符串）
     checkinDays: checkinDaysData.map((d) => ({ ...d, coins: Number(d.coins) || 0, gems: Number(d.gems) || 0, grand: !!d.grand })),
+    // 地区与前台读取同一份 activityRegions；改动走草稿审核，通过后覆盖这份已发布配置
+    checkinRegion: { ...activityRegions.checkin },
     // 与前台读取同一份已发布配置，避免两边各存一份而悄悄不一致
     wheelPrizes: wheelConfig.prizes.map((p) => ({ ...p, label: prizeLabel(p.kind, p.amount) })),
     wheelFreeSpins: wheelConfig.freeSpinsPerDay,
     wheelVersion: wheelConfig.version,
+    wheelRegion: { ...activityRegions.wheel },
     missions: dailyMissions.map((m) => ({
       // 前台任务标题是稳定键；后台界面为中文，这里解析为中文展示名
       id: m.id, name: messages['zh-Hans']?.[m.title] ?? m.title, event: missionEventLabel[m.id] || m.id, target: m.total,
@@ -299,6 +304,7 @@ export function createInitialStore() {
       titleKey: m.title,
       status: m.expired ? '已过期' : '生效中', expired: !!m.expired,
     })),
+    missionsRegion: { ...activityRegions.missions },
     coinPacks: coinPacksData.map((p) => ({ ...p, status: '生效中' })),
     monthlyPass: { ...liteContent.products.monthlyPass, status: '生效中' },
     chestOffer: { ...engagementPreview.offer, productId: liteContent.products.tomorrowChest.productId },
@@ -317,8 +323,10 @@ export function createInitialStore() {
     ...JSON.parse(JSON.stringify(config)),
     live: JSON.parse(JSON.stringify(config)),
     liveHistory: {},
+    // 投放地区不再单独存在这条记录上：它就是该活动类型对应的 wheelRegion/checkinRegion/
+    // missionsRegion，随对应模块一起走草稿审核（见 ActivityModal 与 moduleKeys）。
     activities: zip(rawRows.activities, 'activities').map((a, i) => ({ ...a, audience: ['全部玩家', '全部玩家', '全部玩家', '新用户（注册 7 日内）'][i] || '全部玩家',
-      region: i === 3 ? { mode: 'custom', countries: ['BR', 'MX', 'AR', 'CO', 'CL'] } : { mode: 'all', countries: [] }, budget: ['单日上限 800,000 金币', '总预算 6,800,000 金币', '单日上限 300,000 金币', '总预算 1,200,000 金币'][i] || '—' })),
+      budget: ['单日上限 800,000 金币', '总预算 6,800,000 金币', '单日上限 300,000 金币', '总预算 1,200,000 金币'][i] || '—' })),
     orders: zip(rawRows.orders, 'orders'),
     players: zip(rawRows.players, 'players'),
     todo,

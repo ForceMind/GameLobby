@@ -20,13 +20,16 @@ test('昵称按Unicode字符计数并覆盖空值与边界', () => {
 })
 
 test('分类包含双标签游戏，服务状态过滤可组合', () => {
-  assert.equal(filterGames(games, 'all').length, 8)
+  // Ocean 777 带地区白名单；不传国家时按 fail-closed 规则默认不可见，
+  // 因此不传 country 的计数比总数少 1 —— 这条测试只关心分类/状态过滤，
+  // 地区过滤本身的行为由下面「按玩家所在国家过滤」那条测试单独覆盖。
+  assert.equal(filterGames(games, 'all').length, 7)
   assert.deepEqual(filterGames([], 'all'), [])
   assert.deepEqual(
     filterGames(games, 'realtime').map((game) => game.id),
     ['golden-pharaoh', 'fish-hunter'],
   )
-  assert.equal(filterGames(games, 'slots').length, 4)
+  assert.equal(filterGames(games, 'slots').length, 3)
   assert.equal(filterGames(games, 'slots', true).length, 2)
   assert.ok(
     filterGames(games, 'all', true).every((game) => game.status === 'ready'),
@@ -92,6 +95,8 @@ test('游戏目录按玩家所在国家过滤：白名单之外的游戏不出�
 
   assert.deepEqual(filterGames(catalog, 'all', false, false, 'JP').map((g) => g.id), ['global', 'asia-only', 'explicit-all'])
   assert.deepEqual(filterGames(catalog, 'all', false, false, 'CN').map((g) => g.id), ['global', 'explicit-all'])
-  // 宿主未提供国家时不做任何地理过滤，而不是猜测玩家位置
-  assert.equal(filterGames(catalog, 'all', false, false, null).length, 3)
+  // 宿主未提供国家时，白名单限定的游戏一律不显示（fail-closed）：未知位置不能当作默认放行，
+  // 否则白名单形同虚设；没有地理限制的游戏不受影响。
+  assert.deepEqual(filterGames(catalog, 'all', false, false, null).map((g) => g.id), ['global', 'explicit-all'])
+  assert.equal(openInCountry(catalog[1], null), false)
 })

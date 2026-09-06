@@ -247,10 +247,12 @@ function Dashboard({ onNavigate, store, environment }) {
   </>
 }
 
-const gameFieldLabels = [['name', '游戏名称'], ['tags', '分类标签'], ['badges', '角标'], ['status', '运行状态'], ['popular', '大厅热门推荐'], ['region', '可用地区'], ['description', '游戏简介'], ['cover', '封面资源'], ['sortWeight', '排序权重'], ['maintenanceNote', '维护公告文案'], ['launchAt', '预计上线时间'], ['heat', '热度值'], ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRange', '中奖金额范围'], ['maxMultiplier', '最大赔率'], ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性']]
+const gameFieldLabels = [['name', '游戏名称'], ['tags', '分类标签'], ['badges', '角标'], ['status', '运行状态'], ['popular', '大厅热门推荐'], ['region', '可用地区'], ['cover', '封面资源'], ['sortWeight', '排序权重'], ['maintenanceNote', '维护公告文案'], ['launchAt', '预计上线时间'], ['heat', '热度值'], ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRangeMin', '中奖金额下限'], ['winRangeMax', '中奖金额上限'], ['maxMultiplier', '最大赔率'], ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性']]
 const gameDraftFields = gameFieldLabels.filter(([key]) => key !== 'status' && key !== 'maintenanceNote')
 
 // Every configurable field for a game, grouped the way an operator thinks about them.
+// Description text is owned by the 多语言内容 module, not by this record, so it is
+// shown read-only here with a jump link rather than as an editable field.
 function gameFormSections(draft) {
   const slots = (draft.tags || []).includes('slots')
   return [
@@ -262,7 +264,7 @@ function gameFormSections(draft) {
       { key: 'cover', label: '封面资源', note: '资源上传接口待联调，当前仅记录文件名' },
       { key: 'region', label: '可用地区', type: 'region', full: true, note: '白名单：只有勾选的国家/地区能看到并进入这款游戏' },
       { key: 'sortWeight', label: '排序权重', type: 'number', note: '数值越小越靠前；目录页拖拽会覆盖该顺序' },
-      { key: 'description', label: '游戏简介', type: 'textarea', full: true, note: '显示在前台「游戏说明」弹窗正文' },
+      { key: 'descriptionKey', label: '游戏简介', type: 'translationLink', full: true, note: '游戏简介是多语言文案，24 种语言都在「多语言内容」里维护，这里不能直接改' },
     ] },
     { title: '运行状态', tone: 'warning', note: '运行状态与维护公告是紧急操作：保存后直接改写生效版本并写入日志，不经发布审核。', fields: [
       { key: 'status', label: '运行状态', type: 'select', options: ['正常可玩', '维护中', '即将上线', '暂不可用'] },
@@ -274,10 +276,11 @@ function gameFormSections(draft) {
       { key: 'heat', label: '热度值（0–100）', type: 'number', min: 0, max: 100 },
       { key: 'players', label: '在线人数', readOnly: true, note: '由实时统计服务写入，后台不可修改' },
     ] },
-    ...(slots ? [{ title: 'Slots 玩法参数', note: '前四项显示在前台「游戏说明」弹窗；后三项前台尚未接入，留空即可。', fields: [
+    ...(slots ? [{ title: 'Slots 玩法参数', note: '中奖金额范围会按玩家语言格式化数字并自动加上币种文案；后三项前台尚未接入，留空即可。', fields: [
       { key: 'winRate', label: '中奖率', placeholder: '例如 4.8%' },
       { key: 'rtp', label: 'RTP', placeholder: '例如 96.12%' },
-      { key: 'winRange', label: '中奖金额范围', placeholder: '例如 20–500,000 金币' },
+      { key: 'winRangeMin', label: '中奖金额下限', type: 'number', min: 0, placeholder: '例如 20' },
+      { key: 'winRangeMax', label: '中奖金额上限', type: 'number', min: 0, placeholder: '例如 500000' },
       { key: 'maxMultiplier', label: '最大赔率', placeholder: '例如 x5,000' },
       { key: 'minBet', label: '最小投注', placeholder: '前台未接入', pending: true },
       { key: 'paylines', label: '赔付线数', placeholder: '前台未接入', pending: true },
@@ -295,11 +298,28 @@ function validateGameDraft(draft) {
   if (!(Number(draft.sortWeight) > 0)) errors.push('排序权重必须大于 0')
   if (draft.status === '维护中' && !String(draft.maintenanceNote || '').trim()) errors.push('维护中状态必须填写维护公告文案')
   if (draft.status === '即将上线' && !String(draft.launchAt || '').trim()) errors.push('即将上线状态必须填写预计上线时间')
+  if ((draft.tags || []).includes('slots') && draft.winRangeMin !== '' && draft.winRangeMax !== '') {
+    if (!(Number(draft.winRangeMin) >= 0) || !(Number(draft.winRangeMax) >= 0)) errors.push('中奖金额范围不能为负数')
+    else if (Number(draft.winRangeMin) > Number(draft.winRangeMax)) errors.push('中奖金额下限不能大于上限')
+  }
   errors.push(...validateRegion(draft.region))
   return errors
 }
 
-function GameEditModal({ record, store, update, journal, environment, onClose }) {
+// The description shown here is content, not config: it lives in the multilingual
+// catalogue (see TranslationsPage) so 24 languages share one source. This link jumps
+// there instead of duplicating a free-text field that would only ever hold Chinese.
+function TranslationLinkField({ entryKey, translations, onJump }) {
+  const entry = translations?.[entryKey]
+  if (!entryKey || !entry) return <p className="field-note field-note-danger">找不到对应的翻译键（{entryKey || '未设置'}），需要先在数据里补上，否则玩家会看到空白说明。</p>
+  return <div className="translation-link-field">
+    <p><span className="translation-link-locale">简体中文</span>{entry['zh-Hans'] || <em className="sample-tag">未填写</em>}</p>
+    <p><span className="translation-link-locale">English</span>{entry.en || <em className="sample-tag">未填写</em>}</p>
+    <button type="button" className="admin-btn subtle" onClick={onJump}><Icon name="globe" />在多语言内容中编辑（24 种语言）</button>
+  </div>
+}
+
+function GameEditModal({ record, store, update, journal, environment, navigate, onClose }) {
   const [draft, setDraft] = useState(() => ({ ...record, badges: record.badges.join(', ') }))
   const setField = (key, value) => setDraft((current) => ({ ...current, [key]: value }))
   const sections = gameFormSections(draft)
@@ -332,9 +352,11 @@ function GameEditModal({ record, store, update, journal, environment, onClose })
       {sections.map((section) => <fieldset key={section.title} className={section.tone === 'warning' ? 'is-warning' : ''}>
         <legend>{section.title}</legend>
         {section.note && <p className="fieldset-note">{section.note}</p>}
-        <div className="form-grid">{section.fields.map((field) => <label key={field.key} className={field.full || field.type === 'textarea' ? 'full' : ''}>
+        <div className="form-grid">{section.fields.map((field) => <label key={field.key} className={field.full || field.type === 'textarea' || field.type === 'translationLink' ? 'full' : ''}>
           {field.label}{field.pending && <em className="sample-tag">前台未接入</em>}
-          <FieldEditor field={field} value={draft[field.key]} onChange={(value) => setField(field.key, value)} />
+          {field.type === 'translationLink'
+            ? <TranslationLinkField entryKey={draft[field.key]} translations={store.translations} onJump={() => navigate('translations', { query: draft[field.key] })} />
+            : <FieldEditor field={field} value={draft[field.key]} onChange={(value) => setField(field.key, value)} />}
           {field.note && <small className="field-note">{field.note}</small>}
         </label>)}</div>
       </fieldset>)}
@@ -344,7 +366,7 @@ function GameEditModal({ record, store, update, journal, environment, onClose })
   </Modal>
 }
 
-function GameCatalogPage({ environment, store, update, journal, intent }) {
+function GameCatalogPage({ environment, store, update, journal, intent, navigate }) {
   const items = store.games[environment]
   const moduleId = `games:${environment}`
   const [dragging, setDragging] = useState(null)
@@ -380,7 +402,7 @@ function GameCatalogPage({ environment, store, update, journal, intent }) {
     <div className="drag-hint">分类统计（当前草稿）：{gameCategories.filter((c) => c.id !== 'all').map((c) => `${c.label} ${items.filter((g) => g.tags.includes(c.id)).length} 款`).join(' · ')}</div>
     <div className="catalog-toolbar"><div className="view-toggle"><button className={view === 'table' ? 'is-active' : ''} onClick={() => setView('table')}>表格视图</button><button className={view === 'cards' ? 'is-active' : ''} onClick={() => setView('cards')}>卡片视图</button></div><span className="drag-hint"><Icon name="flag" />拖拽调整排序，开关切换大厅热门推荐，点击行编辑详情</span>{differs && <button className="admin-btn primary" onClick={saveDraft}>保存草稿并提交审核</button>}</div>
     {view === 'table' ? <section className="admin-card table-card"><div className="table-top"><div><strong>游戏目录</strong><span>按 {environment === 'production' ? '生产' : '测试'} 环境排序</span></div><div className="table-actions"><button className="admin-btn subtle" disabled title="批量导入依赖资源服务，待联调">导入目录（待联调）</button><button className="admin-btn subtle" onClick={() => exportCsv(`游戏目录-${environment}`, headers, items.map((g, i) => [i + 1, g.name, g.gameId, g.categoryLabel, g.status, regionText(g), g.players, g.heat, g.popular ? '是' : '否']))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{headers.map((h) => <th key={h}>{h}</th>)}<th>操作</th></tr></thead><tbody>{items.map((game, index) => <tr key={game.id} draggable onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={dragging === game.id ? 'is-dragging' : ''} onClick={() => openDetail(game)}><td><span className="drag-handle" aria-label="拖拽排序">⋮⋮</span><b className="sort-number">{index + 1}</b></td><td><span className="game-name-cell"><span className={`game-thumb thumb-${index % 4}`} /><strong>{game.name}</strong></span></td><td>{game.gameId}</td><td>{game.categoryLabel}</td><td><Status>{game.status}</Status></td><td><span className={`region-cell ${normalizeRegion(game.region).mode === 'all' ? '' : 'is-limited'}`}>{regionText(game)}</span></td><td>{game.players}</td><td><span className="heat-bar"><i style={{ width: `${game.heat}%` }} /></span><small>{game.heat || '—'}</small></td><td><button className={`toggle-switch ${game.popular ? 'is-on' : ''}`} onClick={(event) => { event.stopPropagation(); togglePopular(game.id) }} aria-pressed={game.popular} aria-label="大厅热门推荐"><i /></button></td><td><button className="row-action" onClick={(event) => { event.stopPropagation(); openDetail(game) }}>编辑</button></td></tr>)}</tbody></table></div></section> : <section className="catalog-cards">{items.map((game, index) => <article draggable key={game.id} onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={`game-admin-card ${dragging === game.id ? 'is-dragging' : ''}`}><span className={`game-cover cover-${index % 4}`}><b>{index + 1}</b><i>⋮⋮</i></span><div><div className="game-card-top"><Status>{game.status}</Status><small>热度 {game.heat || '—'}</small></div><h3>{game.name}</h3><p>{game.categoryLabel}</p><span>{game.players} 在线 · {game.popular ? '已推荐' : '未推荐'}</span></div><button className="row-action" onClick={() => openDetail(game)}>编辑</button></article>)}</section>}
-    {editing && <GameEditModal key={editing.id} record={editing} store={store} update={update} journal={journal} environment={environment} onClose={() => setEditingId(null)} />}
+    {editing && <GameEditModal key={editing.id} record={editing} store={store} update={update} journal={journal} environment={environment} navigate={navigate} onClose={() => setEditingId(null)} />}
   </>
 }
 
@@ -965,15 +987,17 @@ function TranslationEditor({ entryKey, entry, onSave, onClose }) {
   </Modal>
 }
 
-function TranslationsPage({ store, update, journal }) {
+function TranslationsPage({ store, update, journal, intent }) {
   const entries = store.translations
+  const liveEntries = store.live.translations
   const keys = useMemo(() => Object.keys(entries).sort(), [entries])
   const [namespace, setNamespace] = useState('all')
   const [locale, setLocale] = useState('zh-Hant')
   const [onlyMissing, setOnlyMissing] = useState(false)
-  const [query, setQuery] = useState('')
+  const [onlyChanged, setOnlyChanged] = useState(false)
+  const [query, setQuery] = useState(intent?.query || '')
   const [page, setPage] = useState(0)
-  const [editing, setEditing] = useState(null)
+  const [editing, setEditing] = useState(intent?.query && entries[intent.query] ? intent.query : null)
 
   const namespaces = useMemo(() => [...new Set(keys.map(translationNamespace))].sort(), [keys])
   const coverage = useMemo(() => translationLocales.map(({ code, nativeName }) => {
@@ -981,9 +1005,11 @@ function TranslationsPage({ store, update, journal }) {
     return { code, nativeName, done, total: keys.length, percent: keys.length ? Math.round((done / keys.length) * 100) : 0 }
   }), [entries, keys])
 
+  const isChanged = (key) => JSON.stringify(entries[key]) !== JSON.stringify(liveEntries[key])
   const filtered = keys.filter((key) => {
     if (namespace !== 'all' && translationNamespace(key) !== namespace) return false
     if (onlyMissing && String(entries[key][locale] ?? '').trim()) return false
+    if (onlyChanged && !isChanged(key)) return false
     if (query && !`${key} ${entries[key][SOURCE_LOCALE] ?? ''} ${entries[key][FALLBACK] ?? ''}`.toLowerCase().includes(query.toLowerCase())) return false
     return true
   })
@@ -1008,30 +1034,41 @@ function TranslationsPage({ store, update, journal }) {
   const exportCurrent = () => exportCsv(`玩家侧文案-${locale}`, ['键', '命名空间', '简体中文', '英文', activeMeta?.nativeName ?? locale],
     filtered.map((key) => [key, translationNamespace(key), entries[key][SOURCE_LOCALE] ?? '', entries[key][FALLBACK] ?? '', entries[key][locale] ?? '']))
 
-  const importCsv = (file) => {
+  const parseCsvLine = (line) => line.match(/("(?:[^"]|"")*"|[^,]*)/g)?.filter((_, i) => i % 2 === 0)
+    .map((cell) => cell.replace(/^"|"$/g, '').replace(/""/g, '"')) ?? []
+
+  // 先解析并给出预览（会覆盖多少条 / 跳过多少条未知键 / 文件语言是否与当前选中语言一致），
+  // 运营确认后才真正写入草稿——避免像"选错语言导入"这种一步到位、难以发现的误操作。
+  const [importPreview, setImportPreview] = useState(null)
+  const prepareImport = (file) => {
     const reader = new FileReader()
     reader.onload = () => {
       const text = String(reader.result ?? '').replace(/^\ufeff/, '')
-      // 解析导出的同一种格式：键在第 1 列，目标语言在最后一列
-      const rows = text.split(/\r?\n/).filter(Boolean).slice(1)
-      const parse = (line) => line.match(/("(?:[^"]|"")*"|[^,]*)/g)?.filter((_, i) => i % 2 === 0)
-        .map((cell) => cell.replace(/^"|"$/g, '').replace(/""/g, '"')) ?? []
-      let applied = 0, skipped = 0
+      const lines = text.split(/\r?\n/).filter(Boolean)
+      const headerCells = lines[0] ? parseCsvLine(lines[0]) : []
+      const fileLocaleLabel = headerCells[headerCells.length - 1] ?? ''
+      const detected = translationLocales.find((l) => l.nativeName === fileLocaleLabel || l.code === fileLocaleLabel)
+      let applied = 0, unchanged = 0, unknown = 0
       const next = { ...entries }
-      rows.forEach((line) => {
-        const cells = parse(line)
+      lines.slice(1).forEach((line) => {
+        const cells = parseCsvLine(line)
         const key = cells[0]
         const value = cells[cells.length - 1] ?? ''
-        if (!key || !Object.hasOwn(next, key)) { skipped += 1; return }
-        if ((next[key][locale] ?? '') === value) return
+        if (!key || !Object.hasOwn(next, key)) { unknown += 1; return }
+        if ((next[key][locale] ?? '') === value) { unchanged += 1; return }
         next[key] = { ...next[key], [locale]: value }
         applied += 1
       })
-      update('translations', () => next)
-      journal.logAudit({ action: '导入翻译', target: `${activeMeta?.nativeName ?? locale}（${locale}）`, targetModule: 'translations', targetId: locale,
-        after: `更新 ${applied} 条`, result: skipped ? `成功 · 跳过 ${skipped} 条未知键` : '成功' })
+      setImportPreview({ fileName: file.name, fileLocaleLabel, detectedCode: detected?.code, mismatch: !!detected && detected.code !== locale, applied, unchanged, unknown, next, confirmMismatch: false })
     }
     reader.readAsText(file)
+  }
+  const commitImport = () => {
+    if (!importPreview) return
+    update('translations', () => importPreview.next)
+    journal.logAudit({ action: '导入翻译', target: `${activeMeta?.nativeName ?? locale}（${locale}）`, targetModule: 'translations', targetId: locale,
+      after: `更新 ${importPreview.applied} 条`, result: importPreview.unknown ? `成功 · 跳过 ${importPreview.unknown} 条未知键` : '成功' })
+    setImportPreview(null)
   }
 
   return <>
@@ -1050,11 +1087,12 @@ function TranslationsPage({ store, update, journal }) {
       <select value={namespace} onChange={(event) => { setNamespace(event.target.value); setPage(0) }}><option value="all">全部命名空间</option>{namespaces.map((ns) => <option key={ns} value={ns}>{ns}（{keys.filter((k) => translationNamespace(k) === ns).length}）</option>)}</select>
       <select value={locale} onChange={(event) => { setLocale(event.target.value); setPage(0) }}>{translationLocales.map(({ code, nativeName }) => <option key={code} value={code}>{nativeName}</option>)}</select>
       <button className={`admin-btn ${onlyMissing ? 'primary' : 'subtle'}`} onClick={() => { setOnlyMissing((v) => !v); setPage(0) }}><Icon name="filter" />只看未翻译</button>
+      <button className={`admin-btn ${onlyChanged ? 'primary' : 'subtle'}`} onClick={() => { setOnlyChanged((v) => !v); setPage(0) }}><Icon name="clock" />只看已改动</button>
     </div>
     <section className="admin-card table-card">
       <div className="table-top"><div><strong>文案列表</strong><span>共 {filtered.length} 条 · 当前对照语言：{activeMeta?.nativeName}</span></div>
         <div className="table-actions">
-          <label className="admin-btn subtle import-label">导入 {activeMeta?.nativeName} CSV<input type="file" accept=".csv,text/csv" onChange={(event) => { const f = event.target.files?.[0]; if (f) importCsv(f); event.target.value = '' }} /></label>
+          <label className="admin-btn subtle import-label">导入 {activeMeta?.nativeName} CSV<input type="file" accept=".csv,text/csv" onChange={(event) => { const f = event.target.files?.[0]; if (f) prepareImport(f); event.target.value = '' }} /></label>
           <button className="admin-btn subtle" onClick={exportCurrent}>导出 CSV</button>
         </div>
       </div>
@@ -1062,8 +1100,8 @@ function TranslationsPage({ store, update, journal }) {
         {visible.map((key) => {
           const entry = entries[key]
           const done = translationLocales.filter(({ code }) => String(entry[code] ?? '').trim()).length
-          return <tr key={key} onClick={() => setEditing(key)}>
-            <td><code className="translation-key">{key}</code></td>
+          return <tr key={key} onClick={() => setEditing(key)} className={isChanged(key) ? 'is-changed-row' : ''}>
+            <td><code className="translation-key">{key}</code>{isChanged(key) && <em className="sample-tag is-dirty">已改动</em>}</td>
             <td>{entry[SOURCE_LOCALE]}</td>
             <td>{entry[FALLBACK]}</td>
             <td dir={activeMeta?.dir}>{String(entry[locale] ?? '').trim() || <em className="sample-tag">未翻译</em>}</td>
@@ -1075,33 +1113,49 @@ function TranslationsPage({ store, update, journal }) {
       <Pager page={page} total={filtered.length} onChange={setPage} />
     </section>
     {editing && <TranslationEditor key={editing} entryKey={editing} entry={entries[editing]} onSave={saveEntry(editing)} onClose={() => setEditing(null)} />}
+    {importPreview && <Modal eyebrow="导入确认" title={`导入 ${importPreview.fileName}`} onClose={() => setImportPreview(null)}
+      footer={<><button className="admin-btn subtle" onClick={() => setImportPreview(null)}>取消</button><button className="admin-btn primary" disabled={importPreview.mismatch && !importPreview.confirmMismatch} onClick={commitImport}>确认导入</button></>}>
+      <div className="import-preview">
+        {importPreview.mismatch ? <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>文件语言与当前选中语言不一致</strong><span>文件表头写的是「{importPreview.fileLocaleLabel}」，当前选中的导入目标是「{activeMeta?.nativeName}」。继续会把文件里的内容写入「{activeMeta?.nativeName}」，这通常不是你想要的。</span></div></div>
+          : importPreview.fileLocaleLabel && <div className="admin-config-note"><Icon name="shield" /><div><strong>文件语言与目标一致</strong><span>表头「{importPreview.fileLocaleLabel}」与当前选中的「{activeMeta?.nativeName}」匹配。</span></div></div>}
+        <div className="import-summary">
+          <div><strong>{importPreview.applied}</strong><span>条将更新</span></div>
+          <div><strong>{importPreview.unchanged}</strong><span>条内容相同，不受影响</span></div>
+          <div><strong>{importPreview.unknown}</strong><span>条键不存在，将跳过</span></div>
+        </div>
+        {importPreview.mismatch && <label className="import-confirm-check"><input type="checkbox" checked={importPreview.confirmMismatch} onChange={(event) => setImportPreview((p) => ({ ...p, confirmMismatch: event.target.checked }))} />我确认这份文件确实要导入到「{activeMeta?.nativeName}」</label>}
+      </div>
+    </Modal>}
   </>
 }
 
 // ---- activity centre ------------------------------------------------------
 // Each activity type owns a different reward config, so the modal swaps its editor by type.
 const activityTypeMeta = {
-  '转盘': { moduleId: 'wheel', title: '转盘奖项与概率', note: '奖项固定 8 格，概率总和必须为 100%；保存后版本号按生效版本自动 +1。' },
-  '签到': { moduleId: 'checkin', title: '签到奖励梯度', note: '按自然日发放，大奖固定在最后一天；不支持补签。' },
-  '任务': { moduleId: 'missions', title: '任务列表与奖励', note: '任务进度由服务端事件汇总，领取需幂等键；已过期任务不可编辑。' },
+  '转盘': { moduleId: 'wheel', regionKey: 'wheelRegion', title: '转盘奖项与概率', note: '奖项固定 8 格，概率总和必须为 100%；保存后版本号按生效版本自动 +1。' },
+  '签到': { moduleId: 'checkin', regionKey: 'checkinRegion', title: '签到奖励梯度', note: '按自然日发放，大奖固定在最后一天；不支持补签。' },
+  '任务': { moduleId: 'missions', regionKey: 'missionsRegion', title: '任务列表与奖励', note: '任务进度由服务端事件汇总，领取需幂等键；已过期任务不可编辑。' },
 }
 
 function ActivityModal({ record, store, update, journal, onClose }) {
   const meta = activityTypeMeta[record.type]
   const moduleId = meta?.moduleId
-  const [shell, setShell] = useState({ name: record.name, period: record.period, audience: record.audience || '全部玩家', budget: record.budget || '—', owner: record.owner, region: normalizeRegion(record.region) })
+  const regionKey = meta?.regionKey
+  const [mode, setMode] = useState('preview')
+  const [shell, setShell] = useState({ name: record.name, period: record.period, audience: record.audience || '全部玩家', budget: record.budget || '—', owner: record.owner })
   const [config, setConfig] = useState(() => (moduleId ? getSlice(store, moduleId) : null))
+  // 投放地区是 config 快照里的一个字段（与 wheelPrizes/checkinDays 同级），不是独立的
+  // 活动信息字段：它就是前台读取的那份地区配置，因此和奖励配置一起走草稿审核。
   const configErrors = moduleId ? validateSnapshot(moduleId, config) : []
-  const shellErrors = [...(!String(shell.name).trim() ? ['活动名称不能为空'] : []), ...(!String(shell.period).trim() ? ['活动周期不能为空'] : []), ...validateRegion(shell.region, '投放地区')]
+  const shellErrors = [...(!String(shell.name).trim() ? ['活动名称不能为空'] : []), ...(!String(shell.period).trim() ? ['活动周期不能为空'] : [])]
   const errors = [...shellErrors, ...configErrors]
   const shellChanged = ['name', 'period', 'audience', 'budget', 'owner'].some((key) => shell[key] !== (record[key] ?? (key === 'audience' ? '全部玩家' : key === 'budget' ? '—' : '')))
-    || JSON.stringify(shell.region) !== JSON.stringify(normalizeRegion(record.region))
   const configChanged = moduleId ? JSON.stringify(config) !== JSON.stringify(getSlice(store.live, moduleId)) : false
   const history = store.audit.filter((a) => (a.targetModule === 'activities' && a.targetId === record.id) || (moduleId && a.targetModule === moduleId))
   const save = () => {
     if (shellChanged) {
       update('activities', (list) => list.map((a) => (a.id === record.id ? { ...a, ...shell } : a)))
-      journal.logAudit({ action: '编辑活动信息', target: shell.name, targetModule: 'activities', targetId: record.id, after: diffSummary(record, { ...record, ...shell }, [['name', '活动名称'], ['period', '活动周期'], ['audience', '适用人群'], ['budget', '奖励预算'], ['owner', '负责人'], ['region', '投放地区']]) })
+      journal.logAudit({ action: '编辑活动信息', target: shell.name, targetModule: 'activities', targetId: record.id, after: diffSummary(record, { ...record, ...shell }, [['name', '活动名称'], ['period', '活动周期'], ['audience', '适用人群'], ['budget', '奖励预算'], ['owner', '负责人']]) })
     }
     if (configChanged && moduleId) {
       const snapshot = moduleId === 'wheel' ? { ...config, wheelVersion: store.live.wheelVersion + 1 } : config
@@ -1121,14 +1175,21 @@ function ActivityModal({ record, store, update, journal, onClose }) {
         <label>适用人群<select className="ladder-input" value={shell.audience} onChange={(event) => setShell((v) => ({ ...v, audience: event.target.value }))}>{['全部玩家', '新用户（注册 7 日内）', '活跃玩家', '付费玩家', '流失召回'].map((o) => <option key={o}>{o}</option>)}</select></label>
         <label>奖励预算<input className="ladder-input" value={shell.budget} onChange={(event) => setShell((v) => ({ ...v, budget: event.target.value }))} /></label>
         <label>负责人<input className="ladder-input" value={shell.owner} onChange={(event) => setShell((v) => ({ ...v, owner: event.target.value }))} /></label>
-        <label className="full">投放地区<RegionPicker value={shell.region} onChange={(region) => setShell((v) => ({ ...v, region }))} label="投放地区" /><small className="field-note">白名单：只有勾选的国家/地区能看到并参与这个活动；与「适用人群」是两个独立维度</small></label>
         <label>当前状态<input className="ladder-input" value={record.status} readOnly /><small className="field-note">状态通过列表页的操作流转（提交审核 / 暂停 / 结束）</small></label>
         <label>参与人数<input className="ladder-input" value={record.participants} readOnly /><small className="field-note">由统计服务写入，后台只读</small></label>
       </div></fieldset>
       {meta ? <fieldset><legend>{meta.title}</legend><p className="fieldset-note">{meta.note}该配置与「{moduleLabels[moduleId]}」子页面共用同一份草稿，两处修改等价。</p>
-        {record.type === '签到' && <CheckinLadderEditor days={config.checkinDays} onChange={(days) => setConfig({ checkinDays: days })} />}
-        {record.type === '转盘' && <WheelPrizeEditor prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} onChange={({ prizes, freeSpins }) => setConfig((c) => ({ ...c, wheelPrizes: prizes, wheelFreeSpins: freeSpins }))} />}
-        {record.type === '任务' && <MissionListEditor missions={config.missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(missions) => setConfig({ missions })} />}
+        <PreviewEditSwitch mode={mode} onChange={setMode} dirty={configChanged} />
+        {mode === 'preview' ? <>
+          {record.type === '签到' && <CheckinPreview days={config.checkinDays} />}
+          {record.type === '转盘' && <WheelPreview prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} />}
+          {record.type === '任务' && <MissionsPreview missions={config.missions} />}
+        </> : <>
+          <label className="full">投放地区<RegionPicker value={config[regionKey]} onChange={(region) => setConfig((c) => ({ ...c, [regionKey]: region }))} label="投放地区" /><small className="field-note">白名单：只有勾选的国家/地区能看到并参与这个活动；与「适用人群」是两个独立维度。这里改的就是「{moduleLabels[moduleId]}」页面上的同一份地区，随奖励配置一起进入审核。</small></label>
+          {record.type === '签到' && <CheckinLadderEditor days={config.checkinDays} onChange={(days) => setConfig((c) => ({ ...c, checkinDays: days }))} />}
+          {record.type === '转盘' && <WheelPrizeEditor prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} onChange={({ prizes, freeSpins }) => setConfig((c) => ({ ...c, wheelPrizes: prizes, wheelFreeSpins: freeSpins }))} />}
+          {record.type === '任务' && <MissionListEditor missions={config.missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(missions) => setConfig((c) => ({ ...c, missions }))} />}
+        </>}
       </fieldset> : <fieldset><legend>奖励配置</legend><p className="fieldset-note">该活动类型尚未定义奖励配置形态，仅可维护活动信息。</p></fieldset>}
       {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
       <fieldset><legend>最近操作</legend>{history.length ? history.slice(0, 6).map((entry) => <p className="audit-item" key={entry.id}><Icon name="clock" /><span>{entry.actor} · {entry.action}<small>{entry.time} · {entry.result}</small></span></p>) : <p className="audit-item"><Icon name="eye" /><span>暂无操作记录</span></p>}</fieldset>
@@ -1156,8 +1217,9 @@ function ActivitiesPage({ onOpen, store, update, journal, navigate }) {
         { key: 'participants', label: '参与人数', value: record.participants, readOnly: true },
         { key: 'owner', label: '负责人', value: record.owner, readOnly: true },
         { key: 'module', label: '关联配置模块', value: activityTypeMeta[record.type] ? moduleLabels[activityTypeMeta[record.type].moduleId] : '无', readOnly: true },
+        { key: 'region', label: '投放地区（生效版本）', value: activityTypeMeta[record.type] ? regionSummary(store.live[activityTypeMeta[record.type].regionKey], countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code) : '无关联配置模块，不支持地区限制', readOnly: true },
       ],
-      hint: '「编辑活动配置」打开该活动类型专属的配置弹窗；状态流转（提交审核 / 暂停 / 结束）在此处操作。',
+      hint: '「编辑活动配置」打开该活动类型专属的配置弹窗；状态流转（提交审核 / 暂停 / 结束）在此处操作。投放地区随奖励配置一起走草稿审核，这里显示的是已生效的版本。',
     })} />
     {editing && <ActivityModal key={editing.id} record={editing} store={store} update={update} journal={journal} onClose={() => setEditingId(null)} />}
   </>
@@ -1389,7 +1451,7 @@ function AdminApp() {
     const common = { onOpen, store, update, journal, navigate }
     if (activePage === 'dashboard') return <Dashboard onNavigate={navigate} store={store} environment={environment} />
     if (activePage === 'todo') return <TodoPage key={pageKey} store={store} update={update} journal={journal} navigate={navigate} onOpen={onOpen} />
-    if (activePage === 'games') return <GameCatalogPage key={`${environment}-${intent?.stamp || ''}`} environment={environment} intent={intent} store={store} update={update} journal={journal} />
+    if (activePage === 'games') return <GameCatalogPage key={`${environment}-${intent?.stamp || ''}`} environment={environment} intent={intent} store={store} update={update} journal={journal} navigate={navigate} />
     if (activePage === 'versions') return <GameVersionCenterPage {...common} />
     if (activePage === 'publish') return <ReleaseCenterPage {...common} />
     if (activePage === 'adminUsers') return <AdminUsersPage {...common} />
@@ -1398,7 +1460,7 @@ function AdminApp() {
     if (activePage === 'wheel') return <WheelPage {...common} />
     if (activePage === 'missions') return <MissionsPage store={store} update={update} journal={journal} />
     if (activePage === 'activities') return <ActivitiesPage key={pageKey} {...common} />
-    if (activePage === 'translations') return <TranslationsPage key={pageKey} store={store} update={update} journal={journal} />
+    if (activePage === 'translations') return <TranslationsPage key={pageKey} store={store} update={update} journal={journal} intent={intent} />
     if (activePage === 'store') return <ProductsPage {...common} />
     if (activePage === 'orders') return <GenericPage key={pageKey} page="orders" describe={describeOrder} {...common} intent={intent} />
     if (activePage === 'players') return <PlayersCenterPage key={pageKey} {...common} navigate={navigate} intent={intent} />

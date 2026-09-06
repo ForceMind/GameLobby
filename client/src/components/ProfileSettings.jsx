@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react'
 import { EngagementContext } from '../engagement/useEngagement.js'
 import { useLocale } from '../useLocale.js'
+import LanguagePicker from './LanguagePicker.jsx'
 
 export default function ProfileSettings() {
   const { t } = useLocale()
@@ -9,6 +10,10 @@ export default function ProfileSettings() {
   if (!preferences) return <div><p role="status">{t(errors.preferences || 'common.loading')}</p>{errors.preferences && <button className="btn btn-secondary" onClick={() => refresh('preferences')}>{t('common.retry')}</button>}</div>
   const toggle = async key => { setSaved(false); setSaved(await updatePreference(key)) }
   return <div className="profile-settings-dialog">
+    <div className="settings-language-row card">
+      <span><strong>{t('settings.language')}</strong><small>{t('settings.languageHelp')}</small></span>
+      <LanguagePicker />
+    </div>
     <div className="settings-list card">{[
       ['receiveWinNotifications', 'settings.danmaku'],
       ['allowSendWins', 'settings.publish'],

@@ -5,6 +5,7 @@ import { requestHost } from './hostBridge.js'
 import { createDisplayModeDispatcher } from './displayMode.js'
 import { normalizeHostContext } from './hostContext.js'
 import { profile, balances } from '../data.js'
+import { openInCountry } from '../demoModel.js'
 
 export default function H5Provider({ children }) {
   const [displayMode] = useState(() =>
@@ -54,7 +55,9 @@ export default function H5Provider({ children }) {
   }
 
   const openGame = (selected) => {
-    if (activeGame.current || selected.status !== 'ready') return
+    // Last-line check: whatever UI got the player here (catalogue, winner feed,
+    // recent-games rail), a game outside their region must not actually launch.
+    if (activeGame.current || selected.status !== 'ready' || !openInCountry(selected, hostContext.country ?? null)) return
     activeGame.current = true
     launchTrigger.current = document.activeElement
     returnMode.current = entry.mode

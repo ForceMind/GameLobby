@@ -1,8 +1,17 @@
 {
   "version": "lite-v1",
   "defaultLocale": "zh",
-  "supportedLocales": ["zh", "en"],
-  "navigation": ["lobby", "games", "events", "store", "profile"],
+  "supportedLocales": [
+    "zh",
+    "en"
+  ],
+  "navigation": [
+    "lobby",
+    "games",
+    "events",
+    "store",
+    "profile"
+  ],
   "products": {
     "tomorrowChest": {
       "titleKey": "chest.title",
@@ -24,44 +33,48 @@
   },
   "gameDetails": {
     "golden-pharaoh": {
-      "descriptionKey": "经典埃及主题老虎机，包含扩展 Wild 和累积大奖玩法。",
+      "descriptionKey": "games.desc.golden-pharaoh",
       "winRate": "4.8%",
       "rtp": "96.12%",
-      "winRange": "20–500,000 金币",
-      "maxMultiplier": "x5,000"
+      "maxMultiplier": "x5,000",
+      "winRangeMin": 20,
+      "winRangeMax": 500000
     },
     "ocean-777": {
-      "descriptionKey": "深海寻宝主题老虎机，支持瀑布消除和宝藏奖励回合。",
+      "descriptionKey": "games.desc.ocean-777",
       "winRate": "4.2%",
       "rtp": "95.86%",
-      "winRange": "20–300,000 金币",
-      "maxMultiplier": "x3,000"
+      "maxMultiplier": "x3,000",
+      "winRangeMin": 20,
+      "winRangeMax": 300000
     },
     "fruit-party": {
-      "descriptionKey": "缤纷水果主题老虎机，包含连消、倍数和免费旋转。",
+      "descriptionKey": "games.desc.fruit-party",
       "winRate": "5.1%",
       "rtp": "96.30%",
-      "winRange": "10–200,000 金币",
-      "maxMultiplier": "x2,500"
+      "maxMultiplier": "x2,500",
+      "winRangeMin": 10,
+      "winRangeMax": 200000
     },
     "wild-west-deluxe": {
-      "descriptionKey": "西部主题老虎机，包含堆叠图标、Wild 重转和边境奖励。",
+      "descriptionKey": "games.desc.wild-west-deluxe",
       "winRate": "4.5%",
       "rtp": "96.05%",
-      "winRange": "20–400,000 金币",
-      "maxMultiplier": "x4,000"
+      "maxMultiplier": "x4,000",
+      "winRangeMin": 20,
+      "winRangeMax": 400000
     },
     "fish-hunter": {
-      "descriptionKey": "实时休闲捕鱼游戏，瞄准、射击并使用限时强化道具收集鱼群。"
+      "descriptionKey": "games.desc.fish-hunter"
     },
     "bubble-pop": {
-      "descriptionKey": "轻松的连线消除游戏，通过连续反应获得组合奖励。"
+      "descriptionKey": "games.desc.bubble-pop"
     },
     "dice-merge": {
-      "descriptionKey": "休闲合成解谜游戏，匹配骰子并解锁更高价值组合。"
+      "descriptionKey": "games.desc.dice-merge"
     },
     "mini-golf-rush": {
-      "descriptionKey": "短局迷你高尔夫挑战，完成小球场并争取精准得分。"
+      "descriptionKey": "games.desc.mini-golf-rush"
     }
   }
 }

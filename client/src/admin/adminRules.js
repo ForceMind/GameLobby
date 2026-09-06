@@ -123,9 +123,13 @@ export function diffSummary(before, after, fields) {
 // moduleId: wheel | checkin | missions | coinPacks | monthlyPass | chestOffer | games:test | games:production
 export const moduleKeys = {
   translations: ['translations'],
-  wheel: ['wheelPrizes', 'wheelFreeSpins', 'wheelVersion'],
-  checkin: ['checkinDays'],
-  missions: ['missions'],
+  // Region travels with each activity's own config, not on a separate untracked
+  // "activity shell" field: it is exactly what the front-end reads (see
+  // data/publishedConfig.js activityRegions), so it goes through the same
+  // draft → review → publish path as the prizes/days/missions it sits next to.
+  wheel: ['wheelPrizes', 'wheelFreeSpins', 'wheelVersion', 'wheelRegion'],
+  checkin: ['checkinDays', 'checkinRegion'],
+  missions: ['missions', 'missionsRegion'],
   coinPacks: ['coinPacks'],
   monthlyPass: ['monthlyPass'],
   chestOffer: ['chestOffer'],
@@ -187,9 +191,9 @@ export function validateTranslations(entries) {
 
 export function validateSnapshot(moduleId, slice) {
   if (moduleId === 'translations') return validateTranslations(slice.translations)
-  if (moduleId === 'wheel') return validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins })
-  if (moduleId === 'checkin') return validateCheckin(slice.checkinDays)
-  if (moduleId === 'missions') return validateMissions(slice.missions)
+  if (moduleId === 'wheel') return [...validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins }), ...validateRegion(slice.wheelRegion, '投放地区')]
+  if (moduleId === 'checkin') return [...validateCheckin(slice.checkinDays), ...validateRegion(slice.checkinRegion, '投放地区')]
+  if (moduleId === 'missions') return [...validateMissions(slice.missions), ...validateRegion(slice.missionsRegion, '投放地区')]
   if (moduleId === 'coinPacks') return slice.coinPacks.flatMap(validateCoinPack)
   if (moduleId === 'monthlyPass') return validateMonthlyPass(slice.monthlyPass)
   if (moduleId === 'chestOffer') return validateChestOffer(slice.chestOffer)
@@ -251,11 +255,13 @@ const regionCell = (value) => {
   return scope.mode === 'all' ? '全球开放' : `${scope.countries.length} 个国家/地区：${scope.countries.join(' ')}`
 }
 
+// 'description' is not here: game copy now lives in the translations module and shows
+// up in ITS OWN diff, keyed per language, instead of being summarised into one string here.
 const gameDiffFields = [
   ['name', '游戏名称'], ['status', '运行状态'], ['categoryLabel', '分类'], ['tags', '标签'], ['badges', '角标'],
-  ['popular', '大厅推荐', yesNo], ['heat', '热度值'], ['sortWeight', '排序权重'], ['region', '可用地区'], ['cover', '封面资源'],
-  ['description', '游戏简介'], ['maintenanceNote', '维护公告'], ['launchAt', '预计上线时间'], ['region', '可用地区', regionCell],
-  ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRange', '中奖金额范围'], ['maxMultiplier', '最大赔率'],
+  ['popular', '大厅推荐', yesNo], ['heat', '热度值'], ['sortWeight', '排序权重'], ['cover', '封面资源'],
+  ['maintenanceNote', '维护公告'], ['launchAt', '预计上线时间'], ['region', '可用地区', regionCell],
+  ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRangeMin', '中奖金额下限'], ['winRangeMax', '中奖金额上限'], ['maxMultiplier', '最大赔率'],
   ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性'],
 ]
 
@@ -263,13 +269,13 @@ const gameDiffFields = [
 function snapshotRows(moduleId, slice) {
   if (!slice) return []
   if (moduleId === 'wheel') {
-    const rows = [['freeSpins', '每日免费次数', `${slice.wheelFreeSpins} 次 / 日`], ['version', '配置版本', `v${slice.wheelVersion}`]]
+    const rows = [['freeSpins', '每日免费次数', `${slice.wheelFreeSpins} 次 / 日`], ['version', '配置版本', `v${slice.wheelVersion}`], ['region', '投放地区', regionCell(slice.wheelRegion)]]
     slice.wheelPrizes.forEach((p, i) => rows.push([`slot-${i}`, `第 ${i + 1} 格`, `${prizeLabel(p.kind, p.amount)} · ${p.probability}%`]))
     rows.push(['sum', '概率总和', `${slice.wheelPrizes.reduce((sum, p) => sum + Number(p.probability), 0)}%`])
     return rows
   }
-  if (moduleId === 'checkin') return slice.checkinDays.map((d, i) => [`day-${i}`, d.day, `${Number(d.coins).toLocaleString('en-US')} 金币 · ${d.gems} 宝石${d.grand ? ' · 大奖' : ''}`])
-  if (moduleId === 'missions') return slice.missions.map((m) => [`mission-${m.id}`, m.name || m.id, `目标 ${m.target} · ${m.coinReward} 金币 · ${m.gemReward} 宝石 · ${m.status}`])
+  if (moduleId === 'checkin') return [['region', '投放地区', regionCell(slice.checkinRegion)], ...slice.checkinDays.map((d, i) => [`day-${i}`, d.day, `${Number(d.coins).toLocaleString('en-US')} 金币 · ${d.gems} 宝石${d.grand ? ' · 大奖' : ''}`])]
+  if (moduleId === 'missions') return [['region', '投放地区', regionCell(slice.missionsRegion)], ...slice.missions.map((m) => [`mission-${m.id}`, m.name || m.id, `目标 ${m.target} · ${m.coinReward} 金币 · ${m.gemReward} 宝石 · ${m.status}`])]
   if (moduleId === 'coinPacks') return slice.coinPacks.map((p) => [`pack-${p.id}`, `${Number(p.coins).toLocaleString('en-US')} 金币礼包`, `${coinPackPriceUsd(p)} · 折扣 ${p.discountPercent}% · 赠 ${p.gemBonus} 宝石 · 标签 ${p.tag || '无'}${p.recommended ? ' · 推荐款' : ''}`])
   if (moduleId === 'monthlyPass') {
     const m = slice.monthlyPass

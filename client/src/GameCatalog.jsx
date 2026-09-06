@@ -3,7 +3,7 @@ import { Icon } from './icons.jsx'
 import { gameCategories, games, recentGames } from './data.js'
 import useGameDetails from './useGameDetails.jsx'
 import { GameArtwork, SectionHeader } from './ui.jsx'
-import { filterGames } from './demoModel.js'
+import { filterGames, openInCountry } from './demoModel.js'
 import { useLocale } from './useLocale.js'
 import { useH5 } from './h5/useH5.js'
 import { useCategoryLabel } from './useCategoryLabel.js'
@@ -66,6 +66,10 @@ export function RecentGames({ openModal, recentVisibility = true }) {
   const { t } = useLocale()
   const categoryLabel = useCategoryLabel()
   const showGameDetails = useGameDetails(openModal)
+  const { country } = useH5()
+  // Same rule as the main catalogue: a game outside the player's region does not
+  // appear here either, recently played or not.
+  const visibleRecent = recentGames.filter((game) => openInCountry(game, country))
   const onKeyDown = (event) => {
     if (
       event.target !== event.currentTarget ||
@@ -85,7 +89,7 @@ export function RecentGames({ openModal, recentVisibility = true }) {
     <section className="section lobby-recent" aria-labelledby="recent-title">
       <div className="section-head">
         <div>
-          <p className="eyebrow">WELCOME BACK</p>
+          <p className="eyebrow">{t('lobby.recentEyebrow')}</p>
           <h1 id="recent-title">{t('lobby.recentTitle')}</h1>
           <p id="recent-games-hint">
             {t('lobby.recentHint')}
@@ -102,7 +106,7 @@ export function RecentGames({ openModal, recentVisibility = true }) {
         aria-keyshortcuts="ArrowLeft ArrowRight"
         aria-describedby="recent-games-hint"
       >
-        {recentGames.map((game) => (
+        {visibleRecent.map((game) => (
           <button
             className="recent-card card"
             type="button"

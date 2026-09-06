@@ -45,7 +45,7 @@ test('礼包售价、版本递增、流水编号与昵称规则', () => {
 })
 
 const baseStore = () => {
-  const live = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3, games: { test: [{ id: 'g1', status: '正常可玩' }], production: [{ id: 'g1', status: '正常可玩' }] } }
+  const live = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3, wheelRegion: { mode: 'all', countries: [] }, games: { test: [{ id: 'g1', status: '正常可玩' }], production: [{ id: 'g1', status: '正常可玩' }] } }
   return { ...JSON.parse(JSON.stringify(live)), live: JSON.parse(JSON.stringify(live)), liveHistory: {}, publish: [], todo: [], audit: [] }
 }
 
@@ -97,15 +97,28 @@ test('按环境隔离的游戏目录切片可以单独读写', () => {
 })
 
 test('配置差异：逐字段列出，只有变化项标记为 changed', () => {
-  const live = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3 }
-  const draft = { wheelPrizes: prizes([25, 12, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 5, wheelVersion: 4 }
+  const region = { mode: 'all', countries: [] }
+  const live = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3, wheelRegion: region }
+  const draft = { wheelPrizes: prizes([25, 12, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 5, wheelVersion: 4, wheelRegion: region }
   const rows = snapshotDiff('wheel', live, draft)
   const changed = rows.filter((r) => r.changed).map((r) => r.label)
   assert.deepEqual(changed, ['每日免费次数', '配置版本', '第 1 格', '第 2 格'])
   assert.equal(rows.find((r) => r.label === '每日免费次数').before, '3 次 / 日')
   assert.equal(rows.find((r) => r.label === '每日免费次数').after, '5 次 / 日')
   assert.equal(rows.find((r) => r.label === '概率总和').changed, false)
-  assert.equal(rows.length, 11)
+  assert.equal(rows.find((r) => r.label === '投放地区').changed, false, '两边地区相同，不应标记为改动')
+  assert.equal(rows.length, 12)
+})
+
+test('配置差异：活动投放地区随对应模块一起出现在差异里', () => {
+  const base = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3 }
+  const before = { ...base, wheelRegion: { mode: 'all', countries: [] } }
+  const after = { ...base, wheelRegion: { mode: 'custom', countries: ['JP', 'KR'] } }
+  const rows = snapshotDiff('wheel', before, after)
+  const regionRow = rows.find((r) => r.label === '投放地区')
+  assert.equal(regionRow.changed, true)
+  assert.equal(regionRow.before, '全球开放')
+  assert.match(regionRow.after, /2 个国家\/地区/)
 })
 
 test('配置差异：新增与移除的条目分别标记', () => {

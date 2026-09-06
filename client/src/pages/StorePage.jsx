@@ -74,7 +74,7 @@ export default function StorePage({
         if (purchaseLock.current) return
         purchaseLock.current = true
         setPendingSku(pack.id)
-        setPurchaseMessage('正在处理购买请求…')
+        setPurchaseMessage('store.purchaseProcessingToast')
         toast(t('store.purchaseProcessingToast'))
         let result
         try {
@@ -91,8 +91,8 @@ export default function StorePage({
         if (!alive.current) return
         const translate = latestTranslation.current
         if (result?.code === 'timeout') {
-          setPurchaseMessage('购买结果仍在确认，请返回 App 查看。')
-          toast(translate('购买结果仍在确认，请返回 App 查看。'))
+          setPurchaseMessage('store.purchaseConfirming')
+          toast(translate('store.purchaseConfirming'))
           return
         }
         setPendingSku(null)
@@ -101,9 +101,9 @@ export default function StorePage({
           setReceipts((current) => [
             {
               id: current.length + 1,
-              titleKey: '{coins} 金币礼包',
+              titleKey: 'store.coinPackTitle',
               titleValues: { coins: formatNumber(pack.coins) },
-              detailKey: '已购买 {total} 金币 · 赠送 {gems} 宝石 · {price}',
+              detailKey: 'store.coinPackReceiptDetail',
               detailValues: {
                 total: formatNumber(summary.totalCoins),
                 gems: summary.gems,
@@ -112,14 +112,14 @@ export default function StorePage({
             },
             ...current,
           ])
-          setPurchaseMessage('购买成功')
-          toast(translate('购买成功'))
+          setPurchaseMessage('store.purchaseSuccess')
+          toast(translate('store.purchaseSuccess'))
         } else if (result?.status === 'cancelled') {
-          setPurchaseMessage('购买已取消')
-          toast(translate('购买已取消'))
+          setPurchaseMessage('store.purchaseCancelled')
+          toast(translate('store.purchaseCancelled'))
         } else {
-          setPurchaseMessage('暂时无法完成购买，请稍后重试')
-          toast(translate('暂时无法完成购买，请稍后重试'))
+          setPurchaseMessage('store.purchaseFailed')
+          toast(translate('store.purchaseFailed'))
         }
       },
     })
@@ -149,7 +149,7 @@ export default function StorePage({
         setPendingSku(null)
         purchaseLock.current = false
         if (result?.status === 'completed') {
-          setReceipts((current) => [{ id: current.length + 1, titleKey: '月度特权卡', detailKey: '已购买月卡 · 每日 {coins} 金币 + {gems} 宝石 · 有效 {days} 天', detailValues: { coins: formatNumber(product.dailyCoins), gems: product.dailyGems, days: product.validDays } }, ...current])
+          setReceipts((current) => [{ id: current.length + 1, titleKey: 'store.monthlyPassTitle', detailKey: 'store.monthlyPassReceiptDetail', detailValues: { coins: formatNumber(product.dailyCoins), gems: product.dailyGems, days: product.validDays } }, ...current])
           toast(t('store.purchaseSuccess'))
         } else if (result?.status === 'cancelled') toast(t('store.purchaseCancelled'))
         else toast(t('store.purchaseFailed'))
@@ -160,7 +160,7 @@ export default function StorePage({
   return (
     <div className="store-page compact-store">
       <section className="page-head">
-        <p className="eyebrow">STORE · SECURE CHECKOUT</p>
+        <p className="eyebrow">{t('store.eyebrow')}</p>
         <h1>{t('store.title')}</h1>
         <p>{t('store.subtitle')}</p>
       </section>
@@ -242,7 +242,7 @@ export default function StorePage({
             action={<span className="status">{t('store.passStatusAvailable')}</span>}
           />
           <article className="membership-card card">
-            <span className="pill">MONTHLY PASS</span>
+            <span className="pill">{t('store.passBadge')}</span>
             <h2>{t('store.passHeadline')}</h2>
             <p>{t('store.passSubhead')}</p>
             <div className="benefit-grid">

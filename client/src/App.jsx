@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
 import { navItems, games } from './data.js'
+import { openInCountry } from './demoModel.js'
 import { Icon } from './icons.jsx'
 import { Modal } from './ui.jsx'
 import { useLocale } from './useLocale.js'
@@ -101,7 +102,7 @@ function AppHeader({ page, openWallet, onExit }) {
           </span>
           <span className="brand-copy">
             <strong>Joyloop</strong>
-            <small>Play on the bright side.</small>
+            <small>{t('nav.tagline')}</small>
             <small className="brand-version">v{appVersion}</small>
           </span>
         </a>
@@ -116,8 +117,8 @@ function AppHeader({ page, openWallet, onExit }) {
               onClick={() => openWallet(currency)}
               aria-label={t(
                 currency === 'coins'
-                  ? '金币余额：{value}'
-                  : '宝石余额：{value}',
+                  ? 'ledger.coinsBalanceLabel'
+                  : 'ledger.gemsBalanceLabel',
                 {
                   value:
                     balances[currency === 'coins' ? 'coinsLabel' : 'gemsLabel'],
@@ -158,7 +159,7 @@ function PrototypeLanguageSwitcher({ source, mode }) {
 
 export default function App() {
   const { t, locale, href } = useLocale()
-  const { mode, game, closeGame, closeLobby, account } = useH5()
+  const { mode, game, closeGame, closeLobby, account, country } = useH5()
   const { page, url: routeUrl, action: navigationAction } = useNavigation()
   const mainRef = useRef(null)
   const scrollPositions = useRef(new Map())
@@ -179,7 +180,9 @@ export default function App() {
   const showGameDetails = useGameDetails(setModal)
   const playWin = (id) => {
     const selected = games.find(item => item.id === id)
-    if (selected) showGameDetails(selected)
+    // A win event about a game outside the player's region must not become a way
+    // to reach that game's launch button — same rule as the catalogue filter.
+    if (selected && openInCountry(selected, country)) showGameDetails(selected)
     else toast(t('wins.status'))
   }
   const toastLocale = useRef(locale)

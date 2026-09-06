@@ -4,16 +4,23 @@ export function isValidNickname(value) {
   return length >= 2 && length <= 20
 }
 
-// A game's geographic scope is a whitelist: no scope at all means open everywhere,
-// and a country that was never selected is closed rather than open by default.
+// A whitelist is a whitelist: no scope at all means open everywhere, and a
+// country that was never selected is closed rather than open by default. When
+// the host has not told the lobby which country the player is in, a scoped item
+// fails CLOSED rather than open — an unknown location must not be treated as
+// automatic access, or the whitelist offers no real guarantee. Items with no
+// scope at all are unaffected either way, since they were never restricted.
+export function regionAllows(scope, country) {
+  if (!scope || typeof scope !== 'object' || scope.mode !== 'custom') return true
+  if (!country) return false
+  return Array.isArray(scope.countries) && scope.countries.includes(country)
+}
+
 // Games outside the player's country are removed from the catalogue entirely
 // rather than shown as locked — a title a player cannot legally be offered should
 // not be advertised to them.
 export function openInCountry(game, country) {
-  const scope = game.region
-  if (!scope || typeof scope !== 'object' || scope.mode !== 'custom') return true
-  if (!country) return true
-  return Array.isArray(scope.countries) && scope.countries.includes(country)
+  return regionAllows(game.region, country)
 }
 
 export function filterGames(
