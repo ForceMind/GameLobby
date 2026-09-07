@@ -28,7 +28,7 @@
   box-shadow: 0 0 0 4px rgba(255, 224, 140, 0.18);
 }
 
-@media (max-width: 720px) {
+@container lobby (max-width: 720px) {
   .banner-live-meta {
     margin-top: 14px;
     font-size: 0.68rem;

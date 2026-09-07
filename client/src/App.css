@@ -801,7 +801,11 @@ section[id] {
   gap: 24px;
 }
 
-@media (min-width: 1024px) {
+/* A container query, not a viewport one: on the desktop phone mockup the real
+   window can be wide while `.h5-lobby` itself stays phone-width, and this
+   two-column widening is only correct when the lobby box itself is actually
+   that wide (a real large-screen device, not just a wide browser window). */
+@container lobby (min-width: 1024px) {
   .lobby-games-row {
     grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
@@ -2579,7 +2583,7 @@ section[id] {
   background: #fff;
 }
 
-@media (max-width: 640px) {
+@container lobby (max-width: 640px) {
   .prototype-language-float {
     right: 10px;
     bottom: calc(74px + env(safe-area-inset-bottom));
@@ -2692,7 +2696,7 @@ section[id] {
   }
 }
 
-@media (max-width: 1179px) {
+@container lobby (max-width: 1179px) {
   .tournament-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2713,7 +2717,7 @@ section[id] {
   }
 }
 
-@media (max-width: 979px) {
+@container lobby (max-width: 979px) {
   .header-inner {
     min-height: 66px;
   }
@@ -2791,7 +2795,7 @@ section[id] {
   }
 }
 
-@media (max-width: 719px) {
+@container lobby (max-width: 719px) {
   .header-inner,
   .page-shell {
     width: min(100% - 24px, var(--content));
@@ -2937,7 +2941,7 @@ section[id] {
   }
 }
 
-@media (max-width: 519px) {
+@container lobby (max-width: 519px) {
   .demo-bar {
     justify-content: flex-start;
     text-align: left;

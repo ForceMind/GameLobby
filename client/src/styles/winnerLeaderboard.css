@@ -65,7 +65,7 @@
   font-size: .58rem;
 }
 
-@media (max-width: 719px) {
+@container lobby (max-width: 719px) {
   .winner-self {
     grid-template-columns: 26px minmax(0, 1fr);
     gap: 8px;

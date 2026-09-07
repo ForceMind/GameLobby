@@ -196,7 +196,7 @@
 @keyframes latest-wins-spin { to { transform: rotate(360deg); } }
 @keyframes latest-wins-shimmer { to { background-position: -120% 0; } }
 
-@media (max-width: 719px) {
+@container lobby (max-width: 719px) {
   .latest-win-card { grid-template-columns: 34px minmax(0, 1fr); gap: 9px; padding: 10px; }
   .latest-win-avatar { width: 34px; height: 34px; font-size: .78rem; }
   .latest-win-play { grid-column: 2; justify-self: start; min-height: 30px; }

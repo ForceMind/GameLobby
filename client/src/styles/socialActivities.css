@@ -78,5 +78,5 @@
 .room-modal-art { width: 100%; height: 96px; font-size: 2rem; }
 .room-modal .safety-strip { width: 100%; margin-top: 2px; text-align: left; }
 
-@media (max-width: 900px) { .social-panel { grid-template-columns: 1fr; }.family-rank-card { min-height: 0; gap: 8px; }.party-room-list { grid-template-columns: 1fr; }.party-room { grid-template-columns: 58px minmax(0,1fr) 14px; }.room-art { width: 58px; height: 58px; } }
+@container lobby (max-width: 900px) { .social-panel { grid-template-columns: 1fr; }.family-rank-card { min-height: 0; gap: 8px; }.party-room-list { grid-template-columns: 1fr; }.party-room { grid-template-columns: 58px minmax(0,1fr) 14px; }.room-art { width: 58px; height: 58px; } }
 .h5-lobby.is-half .social-activities { display: none; }

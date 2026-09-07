@@ -223,13 +223,13 @@
   to { background-position: -220% 0; }
 }
 
-@media (max-width: 900px) {
+@container lobby (max-width: 900px) {
   .live-room-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 560px) {
+@container lobby (max-width: 560px) {
   .live-room-grid {
     display: flex;
     gap: 10px;
