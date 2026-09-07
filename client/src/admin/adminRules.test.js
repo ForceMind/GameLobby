@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   validateWheel, wheelBalanced, validateCheckin, validateMissions, validateCoinPack, validateChestOffer,
   coinPackPriceUsd, nextVersionTag, nextLedgerId, diffSummary, validateNickname,
-  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations,
+  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations, settledActivityRegion,
 } from './adminRules.js'
 
 const prizes = (probabilities) => probabilities.map((probability, i) => ({ id: `p${i}`, kind: 'coins', amount: 100 + i, probability }))
@@ -45,7 +45,14 @@ test('礼包售价、版本递增、流水编号与昵称规则', () => {
 })
 
 const baseStore = () => {
-  const live = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3, wheelRegion: { mode: 'all', countries: [] }, games: { test: [{ id: 'g1', status: '正常可玩' }], production: [{ id: 'g1', status: '正常可玩' }] } }
+  const live = {
+    wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3,
+    games: { test: [{ id: 'g1', status: '正常可玩' }], production: [{ id: 'g1', status: '正常可玩' }] },
+    activities: [
+      { id: 'act-1', type: '签到', status: '进行中', region: { mode: 'all', countries: [] } },
+      { id: 'act-2', type: '签到', status: '已结束', region: { mode: 'custom', countries: ['BR', 'MX'] } },
+    ],
+  }
   return { ...JSON.parse(JSON.stringify(live)), live: JSON.parse(JSON.stringify(live)), liveHistory: {}, publish: [], todo: [], audit: [] }
 }
 
@@ -96,25 +103,43 @@ test('按环境隔离的游戏目录切片可以单独读写', () => {
   assert.equal(draftDiffers(resetDraftToLive(next, 'games:test'), 'games:test'), false)
 })
 
+test('活动地区按记录独立读写：同类型的另一条记录不受影响', () => {
+  const store = baseStore()
+  assert.deepEqual(getSlice(store, 'activityRegion:act-1'), { region: { mode: 'all', countries: [] } })
+  const next = setSlice(store, 'activityRegion:act-1', { region: { mode: 'custom', countries: ['JP'] } })
+  assert.deepEqual(getSlice(next, 'activityRegion:act-1').region, { mode: 'custom', countries: ['JP'] })
+  // act-2 是同一活动类型（签到）的另一条记录，地区必须保持不变
+  assert.deepEqual(getSlice(next, 'activityRegion:act-2').region, { mode: 'custom', countries: ['BR', 'MX'] })
+  assert.equal(draftDiffers(next, 'activityRegion:act-1'), true)
+  assert.equal(draftDiffers(next, 'activityRegion:act-2'), false)
+})
+
+test('结算地区取自该类型状态为"进行中"的那一条记录，与其他记录无关', () => {
+  const store = baseStore()
+  // act-1（进行中）是全球开放，act-2（已结束）是自定义地区——结算结果应该是 act-1 的
+  assert.deepEqual(settledActivityRegion(store.live.activities, '签到'), { mode: 'all', countries: [] })
+  const reassigned = store.live.activities.map((a) => (a.id === 'act-1' ? { ...a, status: '已结束' } : a.id === 'act-2' ? { ...a, status: '进行中' } : a))
+  assert.deepEqual(settledActivityRegion(reassigned, '签到'), { mode: 'custom', countries: ['BR', 'MX'] })
+  assert.deepEqual(settledActivityRegion(store.live.activities, '转盘'), { mode: 'all', countries: [] })
+})
+
 test('配置差异：逐字段列出，只有变化项标记为 changed', () => {
-  const region = { mode: 'all', countries: [] }
-  const live = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3, wheelRegion: region }
-  const draft = { wheelPrizes: prizes([25, 12, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 5, wheelVersion: 4, wheelRegion: region }
+  const live = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3 }
+  const draft = { wheelPrizes: prizes([25, 12, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 5, wheelVersion: 4 }
   const rows = snapshotDiff('wheel', live, draft)
   const changed = rows.filter((r) => r.changed).map((r) => r.label)
   assert.deepEqual(changed, ['每日免费次数', '配置版本', '第 1 格', '第 2 格'])
   assert.equal(rows.find((r) => r.label === '每日免费次数').before, '3 次 / 日')
   assert.equal(rows.find((r) => r.label === '每日免费次数').after, '5 次 / 日')
   assert.equal(rows.find((r) => r.label === '概率总和').changed, false)
-  assert.equal(rows.find((r) => r.label === '投放地区').changed, false, '两边地区相同，不应标记为改动')
-  assert.equal(rows.length, 12)
+  assert.equal(rows.length, 11)
 })
 
-test('配置差异：活动投放地区随对应模块一起出现在差异里', () => {
-  const base = { wheelPrizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), wheelFreeSpins: 3, wheelVersion: 3 }
-  const before = { ...base, wheelRegion: { mode: 'all', countries: [] } }
-  const after = { ...base, wheelRegion: { mode: 'custom', countries: ['JP', 'KR'] } }
-  const rows = snapshotDiff('wheel', before, after)
+test('配置差异：活动投放地区按记录出现在差异里，不与奖励配置的差异混在一起', () => {
+  const before = { region: { mode: 'all', countries: [] } }
+  const after = { region: { mode: 'custom', countries: ['JP', 'KR'] } }
+  const rows = snapshotDiff('activityRegion:act-2', before, after)
+  assert.equal(rows.length, 1)
   const regionRow = rows.find((r) => r.label === '投放地区')
   assert.equal(regionRow.changed, true)
   assert.equal(regionRow.before, '全球开放')

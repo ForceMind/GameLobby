@@ -5,7 +5,7 @@ import liteContent from '../data/liteContent.json'
 import engagementPreview from '../data/engagementPreview.json' with { type: 'json' }
 import { prizeLabel } from './adminRules.js'
 import messages from '../locales/index.js'
-import { wheelConfig, activityRegions } from '../data/publishedConfig.js'
+import { wheelConfig } from '../data/publishedConfig.js'
 import { locales as localeRegistry, FALLBACK_LOCALE } from '../locales/registry.js'
 
 // The admin console is Chinese; continent names are fixed here rather than taken
@@ -290,13 +290,10 @@ export function createInitialStore() {
     games: { test: gameRecords(), production: gameRecords() },
     // 前台数据现在直接携带数值（W1 起不再是拼好的「800 金币」字符串）
     checkinDays: checkinDaysData.map((d) => ({ ...d, coins: Number(d.coins) || 0, gems: Number(d.gems) || 0, grand: !!d.grand })),
-    // 地区与前台读取同一份 activityRegions；改动走草稿审核，通过后覆盖这份已发布配置
-    checkinRegion: { ...activityRegions.checkin },
     // 与前台读取同一份已发布配置，避免两边各存一份而悄悄不一致
     wheelPrizes: wheelConfig.prizes.map((p) => ({ ...p, label: prizeLabel(p.kind, p.amount) })),
     wheelFreeSpins: wheelConfig.freeSpinsPerDay,
     wheelVersion: wheelConfig.version,
-    wheelRegion: { ...activityRegions.wheel },
     missions: dailyMissions.map((m) => ({
       // 前台任务标题是稳定键；后台界面为中文，这里解析为中文展示名
       id: m.id, name: messages['zh-Hans']?.[m.title] ?? m.title, event: missionEventLabel[m.id] || m.id, target: m.total,
@@ -304,7 +301,6 @@ export function createInitialStore() {
       titleKey: m.title,
       status: m.expired ? '已过期' : '生效中', expired: !!m.expired,
     })),
-    missionsRegion: { ...activityRegions.missions },
     coinPacks: coinPacksData.map((p) => ({ ...p, status: '生效中' })),
     monthlyPass: { ...liteContent.products.monthlyPass, status: '生效中' },
     chestOffer: { ...engagementPreview.offer, productId: liteContent.products.tomorrowChest.productId },
@@ -319,14 +315,20 @@ export function createInitialStore() {
   ]
   const todo = zip(rawRows.todo, 'todo').map((t, i) => ({ ...t, publishId: i === 1 ? publish[2].id : '', link: todoLinks[i] || null, claimedBy: t.status === '处理中' ? t.owner : '', resolution: '' }))
   config.translations = buildTranslations()
+  // 每条活动独立存一份投放地区，各自走草稿审核、互不影响——即使两条记录是同一
+  // 活动类型（同一 moduleId）。放进 config 而不是单独拼进返回对象，是为了让
+  // store.live.activities 也自动带上这份地区（config 同时被 clone 进 store 顶层
+  // 草稿和 store.live），activityRegion:<id> 模块才能正确对比草稿与生效版本。
+  config.activities = zip(rawRows.activities, 'activities').map((a, i) => ({
+    ...a,
+    audience: ['全部玩家', '全部玩家', '全部玩家', '新用户（注册 7 日内）'][i] || '全部玩家',
+    budget: ['单日上限 800,000 金币', '总预算 6,800,000 金币', '单日上限 300,000 金币', '总预算 1,200,000 金币'][i] || '—',
+    region: i === 3 ? { mode: 'custom', countries: ['BR', 'MX', 'AR', 'CO', 'CL'] } : { mode: 'all', countries: [] },
+  }))
   return {
     ...JSON.parse(JSON.stringify(config)),
     live: JSON.parse(JSON.stringify(config)),
     liveHistory: {},
-    // 投放地区不再单独存在这条记录上：它就是该活动类型对应的 wheelRegion/checkinRegion/
-    // missionsRegion，随对应模块一起走草稿审核（见 ActivityModal 与 moduleKeys）。
-    activities: zip(rawRows.activities, 'activities').map((a, i) => ({ ...a, audience: ['全部玩家', '全部玩家', '全部玩家', '新用户（注册 7 日内）'][i] || '全部玩家',
-      budget: ['单日上限 800,000 金币', '总预算 6,800,000 金币', '单日上限 300,000 金币', '总预算 1,200,000 金币'][i] || '—' })),
     orders: zip(rawRows.orders, 'orders'),
     players: zip(rawRows.players, 'players'),
     todo,

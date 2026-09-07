@@ -7,9 +7,9 @@ import { missionEventOptions, transitions, columns, createInitialStore, ledgerSo
 import { continents, countryContinent, countriesOf, countryName } from '../data/regions.js'
 import {
   formatReward, coinPackPriceUsd, wheelBalanced, prizeLabel, validateWheel, validateCheckin, validateMissions, validateCoinPack,
-  validateMonthlyPass, validateChestOffer, validateTranslations, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels,
+  validateMonthlyPass, validateChestOffer, validateTranslations, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels, moduleLabel,
   getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, validateSnapshot, WHEEL_SLOTS,
-  normalizeRegion, regionByContinent, regionSummary, validateRegion, REGION_ALL, REGION_CUSTOM,
+  normalizeRegion, regionByContinent, regionSummary, validateRegion, REGION_ALL, REGION_CUSTOM, activityTypeMeta, settledActivityRegion,
 } from './adminRules.js'
 
 const navGroups = [
@@ -81,8 +81,11 @@ const configurationNotes = {
 const moduleToPage = (moduleId) => {
   if (!moduleId) return null
   if (String(moduleId).startsWith('games:')) return 'games'
+  if (String(moduleId).startsWith('activityRegion:')) return 'activities'
   return { translations: 'translations', wheel: 'wheel', checkin: 'checkin', missions: 'missions', coinPacks: 'store', monthlyPass: 'store', chestOffer: 'store', versions: 'versions', test: 'versions', production: 'versions' }[moduleId] || null
 }
+
+const activityRegionId = (moduleId) => String(moduleId).slice('activityRegion:'.length)
 
 const tagLabel = { slots: 'Slots', casual: '休闲', realtime: '实时' }
 const categoryLabelFor = (tags) => tags.map((t) => tagLabel[t] || t).join(' · ')
@@ -458,10 +461,11 @@ function GenericPage({ page, onOpen, store, update, journal, intent, describe, n
     const { label0, history, actions } = describeGeneric(page, record, store, { update, journal })
     const fields = cols.filter(([key]) => key !== 'status').map(([key, label]) => ({ key, label, value: record[key], readOnly: true }))
     if (page === 'audit') fields.push({ key: 'targetModule', label: '对象模块', value: moduleLabels[record.targetModule] || pageMeta[record.targetModule]?.[0] || record.targetModule || '—', readOnly: true }, { key: 'before', label: '变更前', value: record.before || '—', readOnly: true }, { key: 'after', label: '变更后', value: record.after || '—', readOnly: true })
-    if (page === 'publish') fields.push({ key: 'sourceModule', label: '来源模块', value: moduleLabels[record.sourceModule] || (record.sourceModule ? pageMeta[record.sourceModule]?.[0] : '') || '—', readOnly: true }, { key: 'snapshot', label: '配置快照', value: record.snapshot ? '有 · 审核通过后覆盖生效版本' : '无 · 仅变更任务状态', readOnly: true }, { key: 'note', label: '发布说明', value: record.note || '—', readOnly: true })
+    if (page === 'publish') fields.push({ key: 'sourceModule', label: '来源模块', value: moduleLabel(record.sourceModule) || (record.sourceModule ? pageMeta[record.sourceModule]?.[0] : '') || '—', readOnly: true }, { key: 'snapshot', label: '配置快照', value: record.snapshot ? '有 · 审核通过后覆盖生效版本' : '无 · 仅变更任务状态', readOnly: true }, { key: 'note', label: '发布说明', value: record.note || '—', readOnly: true })
     const diff = page === 'publish' && record.snapshot && isConfigModule(record.sourceModule) ? snapshotDiff(record.sourceModule, getSlice(store.live, record.sourceModule), record.snapshot) : page === 'publish' ? [] : null
     const sourcePage = page === 'publish' ? moduleToPage(record.sourceModule) : null
-    const allActions = sourcePage && navigate ? [...actions, { label: '查看来源配置', tone: 'subtle', run: () => navigate(sourcePage) }] : actions
+    const sourceIntent = String(record.sourceModule).startsWith('activityRegion:') ? { focusId: activityRegionId(record.sourceModule) } : null
+    const allActions = sourcePage && navigate ? [...actions, { label: '查看来源配置', tone: 'subtle', run: () => navigate(sourcePage, sourceIntent) }] : actions
     onOpen({ id: `${page}-${record.id}`, eyebrow: `${meta[0]}详情`, title: label0, status: record.status, history, actions: allActions, fields, diff })
   }
   useEffect(() => {
@@ -1131,31 +1135,37 @@ function TranslationsPage({ store, update, journal, intent }) {
 
 // ---- activity centre ------------------------------------------------------
 // Each activity type owns a different reward config, so the modal swaps its editor by type.
-const activityTypeMeta = {
-  '转盘': { moduleId: 'wheel', regionKey: 'wheelRegion', title: '转盘奖项与概率', note: '奖项固定 8 格，概率总和必须为 100%；保存后版本号按生效版本自动 +1。' },
-  '签到': { moduleId: 'checkin', regionKey: 'checkinRegion', title: '签到奖励梯度', note: '按自然日发放，大奖固定在最后一天；不支持补签。' },
-  '任务': { moduleId: 'missions', regionKey: 'missionsRegion', title: '任务列表与奖励', note: '任务进度由服务端事件汇总，领取需幂等键；已过期任务不可编辑。' },
-}
-
 function ActivityModal({ record, store, update, journal, onClose }) {
   const meta = activityTypeMeta[record.type]
   const moduleId = meta?.moduleId
-  const regionKey = meta?.regionKey
   const [mode, setMode] = useState('preview')
   const [shell, setShell] = useState({ name: record.name, period: record.period, audience: record.audience || '全部玩家', budget: record.budget || '—', owner: record.owner })
   const [config, setConfig] = useState(() => (moduleId ? getSlice(store, moduleId) : null))
-  // 投放地区是 config 快照里的一个字段（与 wheelPrizes/checkinDays 同级），不是独立的
-  // 活动信息字段：它就是前台读取的那份地区配置，因此和奖励配置一起走草稿审核。
+  // 投放地区不是 config 快照里的字段：它存在这条活动记录自己身上（record.region），
+  // 与同类型的其他活动记录互不共享，各自独立走草稿审核（见 activityRegion:<id> 模块）。
+  const [regionDraft, setRegionDraft] = useState(() => normalizeRegion(record.region))
+  const liveRegion = normalizeRegion(store.live.activities.find((a) => a.id === record.id)?.region)
+  const regionErrors = validateRegion(regionDraft, '投放地区')
   const configErrors = moduleId ? validateSnapshot(moduleId, config) : []
   const shellErrors = [...(!String(shell.name).trim() ? ['活动名称不能为空'] : []), ...(!String(shell.period).trim() ? ['活动周期不能为空'] : [])]
-  const errors = [...shellErrors, ...configErrors]
+  const errors = [...shellErrors, ...regionErrors, ...configErrors]
   const shellChanged = ['name', 'period', 'audience', 'budget', 'owner'].some((key) => shell[key] !== (record[key] ?? (key === 'audience' ? '全部玩家' : key === 'budget' ? '—' : '')))
+  const regionChanged = JSON.stringify(regionDraft) !== JSON.stringify(liveRegion)
   const configChanged = moduleId ? JSON.stringify(config) !== JSON.stringify(getSlice(store.live, moduleId)) : false
-  const history = store.audit.filter((a) => (a.targetModule === 'activities' && a.targetId === record.id) || (moduleId && a.targetModule === moduleId))
+  const history = store.audit.filter((a) => (a.targetModule === 'activities' && a.targetId === record.id) || (moduleId && a.targetModule === moduleId) || a.targetModule === `activityRegion:${record.id}`)
+  const reviewChanges = [configChanged && meta.title, regionChanged && '投放地区'].filter(Boolean)
+  const footNote = shellChanged && reviewChanges.length ? `活动信息立即保存，${reviewChanges.join('、')}进入草稿并提交审核`
+    : reviewChanges.length ? `${reviewChanges.join('、')}保存后进入草稿，需审核通过才生效`
+    : shellChanged ? '活动信息保存后立即生效' : '尚未修改任何字段'
   const save = () => {
     if (shellChanged) {
       update('activities', (list) => list.map((a) => (a.id === record.id ? { ...a, ...shell } : a)))
       journal.logAudit({ action: '编辑活动信息', target: shell.name, targetModule: 'activities', targetId: record.id, after: diffSummary(record, { ...record, ...shell }, [['name', '活动名称'], ['period', '活动周期'], ['audience', '适用人群'], ['budget', '奖励预算'], ['owner', '负责人']]) })
+    }
+    if (regionChanged) {
+      update('activities', (list) => list.map((a) => (a.id === record.id ? { ...a, region: regionDraft } : a)))
+      journal.logAudit({ action: '保存活动投放地区草稿', target: shell.name, targetModule: `activityRegion:${record.id}`, targetId: record.id, before: regionSummary(liveRegion, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code), after: regionSummary(regionDraft, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code) })
+      journal.queuePublish({ name: `${shell.name} · 投放地区调整`, type: '活动版本', scope: '生产环境', sourceModule: `activityRegion:${record.id}`, sourceId: record.id, snapshot: { region: regionDraft }, todoSource: '活动中心' })
     }
     if (configChanged && moduleId) {
       const snapshot = moduleId === 'wheel' ? { ...config, wheelVersion: store.live.wheelVersion + 1 } : config
@@ -1166,7 +1176,7 @@ function ActivityModal({ record, store, update, journal, onClose }) {
     onClose()
   }
   return <Modal wide eyebrow={`活动配置 · ${record.type}`} title={record.name} subtitle={`${record.status} · 参与人数 ${record.participants} · 配置模块：${meta ? moduleLabels[moduleId] : '无关联配置模块'}`} onClose={onClose}
-    footer={<><span className="modal-foot-note">{configChanged && shellChanged ? '活动信息立即保存，奖励配置进入草稿并提交审核' : configChanged ? '奖励配置保存后进入草稿，需审核通过才生效' : shellChanged ? '活动信息保存后立即生效' : '尚未修改任何字段'}</span><button className="admin-btn subtle" onClick={onClose}>取消</button><button className="admin-btn primary" disabled={errors.length > 0 || (!shellChanged && !configChanged)} onClick={save}>保存</button></>}>
+    footer={<><span className="modal-foot-note">{footNote}</span><button className="admin-btn subtle" onClick={onClose}>取消</button><button className="admin-btn primary" disabled={errors.length > 0 || (!shellChanged && !configChanged && !regionChanged)} onClick={save}>保存</button></>}>
     <div className="game-form">
       <fieldset><legend>活动信息</legend><div className="form-grid">
         <label>活动名称<input className="ladder-input" value={shell.name} onChange={(event) => setShell((v) => ({ ...v, name: event.target.value }))} /></label>
@@ -1175,8 +1185,9 @@ function ActivityModal({ record, store, update, journal, onClose }) {
         <label>适用人群<select className="ladder-input" value={shell.audience} onChange={(event) => setShell((v) => ({ ...v, audience: event.target.value }))}>{['全部玩家', '新用户（注册 7 日内）', '活跃玩家', '付费玩家', '流失召回'].map((o) => <option key={o}>{o}</option>)}</select></label>
         <label>奖励预算<input className="ladder-input" value={shell.budget} onChange={(event) => setShell((v) => ({ ...v, budget: event.target.value }))} /></label>
         <label>负责人<input className="ladder-input" value={shell.owner} onChange={(event) => setShell((v) => ({ ...v, owner: event.target.value }))} /></label>
-        <label>当前状态<input className="ladder-input" value={record.status} readOnly /><small className="field-note">状态通过列表页的操作流转（提交审核 / 暂停 / 结束）</small></label>
+        <label>当前状态<input className="ladder-input" value={record.status} readOnly /><small className="field-note">状态通过列表页的操作流转（提交审核 / 暂停 / 结束）；只有状态为「进行中」的这一条{record.type}类活动，它的投放地区才会真正影响玩家。</small></label>
         <label>参与人数<input className="ladder-input" value={record.participants} readOnly /><small className="field-note">由统计服务写入，后台只读</small></label>
+        <label className="full">投放地区<RegionPicker value={regionDraft} onChange={setRegionDraft} label="投放地区" /><small className="field-note">白名单：只有勾选的国家/地区能看到并参与这条活动记录；这份地区只属于这一条记录，同类型的其他{record.type}类活动记录各自独立，互不影响。</small></label>
       </div></fieldset>
       {meta ? <fieldset><legend>{meta.title}</legend><p className="fieldset-note">{meta.note}该配置与「{moduleLabels[moduleId]}」子页面共用同一份草稿，两处修改等价。</p>
         <PreviewEditSwitch mode={mode} onChange={setMode} dirty={configChanged} />
@@ -1185,7 +1196,6 @@ function ActivityModal({ record, store, update, journal, onClose }) {
           {record.type === '转盘' && <WheelPreview prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} />}
           {record.type === '任务' && <MissionsPreview missions={config.missions} />}
         </> : <>
-          <label className="full">投放地区<RegionPicker value={config[regionKey]} onChange={(region) => setConfig((c) => ({ ...c, [regionKey]: region }))} label="投放地区" /><small className="field-note">白名单：只有勾选的国家/地区能看到并参与这个活动；与「适用人群」是两个独立维度。这里改的就是「{moduleLabels[moduleId]}」页面上的同一份地区，随奖励配置一起进入审核。</small></label>
           {record.type === '签到' && <CheckinLadderEditor days={config.checkinDays} onChange={(days) => setConfig((c) => ({ ...c, checkinDays: days }))} />}
           {record.type === '转盘' && <WheelPrizeEditor prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} onChange={({ prizes, freeSpins }) => setConfig((c) => ({ ...c, wheelPrizes: prizes, wheelFreeSpins: freeSpins }))} />}
           {record.type === '任务' && <MissionListEditor missions={config.missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(missions) => setConfig((c) => ({ ...c, missions }))} />}
@@ -1197,8 +1207,8 @@ function ActivityModal({ record, store, update, journal, onClose }) {
   </Modal>
 }
 
-function ActivitiesPage({ onOpen, store, update, journal, navigate }) {
-  const [editingId, setEditingId] = useState(null)
+function ActivitiesPage({ onOpen, store, update, journal, navigate, intent }) {
+  const [editingId, setEditingId] = useState(intent?.focusId && store.activities.some((a) => a.id === intent.focusId) ? intent.focusId : null)
   const editing = editingId ? store.activities.find((a) => a.id === editingId) : null
   return <>
     <ActivityTypeLegend />
@@ -1216,10 +1226,13 @@ function ActivitiesPage({ onOpen, store, update, journal, navigate }) {
         { key: 'budget', label: '奖励预算', value: record.budget || '—', readOnly: true },
         { key: 'participants', label: '参与人数', value: record.participants, readOnly: true },
         { key: 'owner', label: '负责人', value: record.owner, readOnly: true },
-        { key: 'module', label: '关联配置模块', value: activityTypeMeta[record.type] ? moduleLabels[activityTypeMeta[record.type].moduleId] : '无', readOnly: true },
-        { key: 'region', label: '投放地区（生效版本）', value: activityTypeMeta[record.type] ? regionSummary(store.live[activityTypeMeta[record.type].regionKey], countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code) : '无关联配置模块，不支持地区限制', readOnly: true },
+        { key: 'module', label: '关联奖励配置模块', value: activityTypeMeta[record.type] ? moduleLabels[activityTypeMeta[record.type].moduleId] : '无', readOnly: true },
+        { key: 'region', label: '投放地区（本记录）', value: regionSummary(record.region, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code), readOnly: true },
+        { key: 'regionEffective', label: '是否为该类型当前生效地区', value: record.status === '进行中'
+          ? '是 · 状态为「进行中」，玩家看到的就是这份地区'
+          : `否 · 当前生效地区来自${record.type}类活动里状态为「进行中」的那一条（${regionSummary(settledActivityRegion(store.live.activities, record.type), countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code)}）`, readOnly: true },
       ],
-      hint: '「编辑活动配置」打开该活动类型专属的配置弹窗；状态流转（提交审核 / 暂停 / 结束）在此处操作。投放地区随奖励配置一起走草稿审核，这里显示的是已生效的版本。',
+      hint: '「编辑活动配置」打开该活动类型专属的配置弹窗，投放地区也在其中维护；每条活动记录的地区各自独立、各自走草稿审核，互不影响。只有状态为「进行中」的那条记录，其地区才会真正影响玩家。',
     })} />
     {editing && <ActivityModal key={editing.id} record={editing} store={store} update={update} journal={journal} onClose={() => setEditingId(null)} />}
   </>
@@ -1459,7 +1472,7 @@ function AdminApp() {
     if (activePage === 'checkin') return <CheckinPage {...common} />
     if (activePage === 'wheel') return <WheelPage {...common} />
     if (activePage === 'missions') return <MissionsPage store={store} update={update} journal={journal} />
-    if (activePage === 'activities') return <ActivitiesPage key={pageKey} {...common} />
+    if (activePage === 'activities') return <ActivitiesPage key={pageKey} {...common} intent={intent} />
     if (activePage === 'translations') return <TranslationsPage key={pageKey} store={store} update={update} journal={journal} intent={intent} />
     if (activePage === 'store') return <ProductsPage {...common} />
     if (activePage === 'orders') return <GenericPage key={pageKey} page="orders" describe={describeOrder} {...common} intent={intent} />

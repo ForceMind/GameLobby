@@ -123,16 +123,22 @@ export function diffSummary(before, after, fields) {
 // moduleId: wheel | checkin | missions | coinPacks | monthlyPass | chestOffer | games:test | games:production
 export const moduleKeys = {
   translations: ['translations'],
-  // Region travels with each activity's own config, not on a separate untracked
-  // "activity shell" field: it is exactly what the front-end reads (see
-  // data/publishedConfig.js activityRegions), so it goes through the same
-  // draft → review → publish path as the prizes/days/missions it sits next to.
-  wheel: ['wheelPrizes', 'wheelFreeSpins', 'wheelVersion', 'wheelRegion'],
-  checkin: ['checkinDays', 'checkinRegion'],
-  missions: ['missions', 'missionsRegion'],
+  wheel: ['wheelPrizes', 'wheelFreeSpins', 'wheelVersion'],
+  checkin: ['checkinDays'],
+  missions: ['missions'],
   coinPacks: ['coinPacks'],
   monthlyPass: ['monthlyPass'],
   chestOffer: ['chestOffer'],
+}
+
+// Which activity type a "转盘/签到/任务"-typed activity maps onto: which reward
+// module it shares a draft with. Region is NOT here — every activity record has
+// its own, independent of type (see the activityRegion: module and
+// settledActivityRegion below).
+export const activityTypeMeta = {
+  '转盘': { moduleId: 'wheel', title: '转盘奖项与概率', note: '奖项固定 8 格，概率总和必须为 100%；保存后版本号按生效版本自动 +1。' },
+  '签到': { moduleId: 'checkin', title: '签到奖励梯度', note: '按自然日发放，大奖固定在最后一天；不支持补签。' },
+  '任务': { moduleId: 'missions', title: '任务列表与奖励', note: '任务进度由服务端事件汇总，领取需幂等键；已过期任务不可编辑。' },
 }
 
 export const moduleLabels = {
@@ -142,15 +148,34 @@ export const moduleLabels = {
 }
 
 export function isConfigModule(moduleId) {
-  return !!moduleKeys[moduleId] || String(moduleId || '').startsWith('games:')
+  return !!moduleKeys[moduleId] || String(moduleId || '').startsWith('games:') || String(moduleId || '').startsWith('activityRegion:')
+}
+
+// moduleLabels only has static keys; activityRegion:<id> is per-activity and not
+// enumerable in advance, so it gets a generic label here instead of a name-specific
+// one — the review task's own title already names the activity.
+export function moduleLabel(moduleId) {
+  if (!moduleId) return undefined
+  if (String(moduleId).startsWith('activityRegion:')) return '活动投放地区'
+  return moduleLabels[moduleId]
 }
 
 const clone = (value) => JSON.parse(JSON.stringify(value))
+
+// An activity's own region lives on its own record, addressed by id, exactly like
+// a game's region lives on its own record addressed by gameId — the same
+// per-record-not-per-type governance, using the same games:<env> style prefix.
+const activityRegionId = (moduleId) => moduleId.slice('activityRegion:'.length)
 
 export function getSlice(container, moduleId) {
   if (moduleId.startsWith('games:')) {
     const env = moduleId.split(':')[1]
     return { games: clone(container.games[env]) }
+  }
+  if (moduleId.startsWith('activityRegion:')) {
+    const id = activityRegionId(moduleId)
+    const activity = container.activities.find((a) => a.id === id)
+    return { region: clone(activity ? activity.region : { mode: 'all', countries: [] }) }
   }
   return Object.fromEntries(moduleKeys[moduleId].map((key) => [key, clone(container[key])]))
 }
@@ -159,6 +184,10 @@ export function setSlice(container, moduleId, slice) {
   if (moduleId.startsWith('games:')) {
     const env = moduleId.split(':')[1]
     return { ...container, games: { ...container.games, [env]: clone(slice.games) } }
+  }
+  if (moduleId.startsWith('activityRegion:')) {
+    const id = activityRegionId(moduleId)
+    return { ...container, activities: container.activities.map((a) => (a.id === id ? { ...a, region: clone(slice.region) } : a)) }
   }
   return { ...container, ...clone(slice) }
 }
@@ -191,12 +220,13 @@ export function validateTranslations(entries) {
 
 export function validateSnapshot(moduleId, slice) {
   if (moduleId === 'translations') return validateTranslations(slice.translations)
-  if (moduleId === 'wheel') return [...validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins }), ...validateRegion(slice.wheelRegion, '投放地区')]
-  if (moduleId === 'checkin') return [...validateCheckin(slice.checkinDays), ...validateRegion(slice.checkinRegion, '投放地区')]
-  if (moduleId === 'missions') return [...validateMissions(slice.missions), ...validateRegion(slice.missionsRegion, '投放地区')]
+  if (moduleId === 'wheel') return validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins })
+  if (moduleId === 'checkin') return validateCheckin(slice.checkinDays)
+  if (moduleId === 'missions') return validateMissions(slice.missions)
   if (moduleId === 'coinPacks') return slice.coinPacks.flatMap(validateCoinPack)
   if (moduleId === 'monthlyPass') return validateMonthlyPass(slice.monthlyPass)
   if (moduleId === 'chestOffer') return validateChestOffer(slice.chestOffer)
+  if (String(moduleId).startsWith('activityRegion:')) return validateRegion(slice.region, '投放地区')
   return []
 }
 
@@ -269,13 +299,13 @@ const gameDiffFields = [
 function snapshotRows(moduleId, slice) {
   if (!slice) return []
   if (moduleId === 'wheel') {
-    const rows = [['freeSpins', '每日免费次数', `${slice.wheelFreeSpins} 次 / 日`], ['version', '配置版本', `v${slice.wheelVersion}`], ['region', '投放地区', regionCell(slice.wheelRegion)]]
+    const rows = [['freeSpins', '每日免费次数', `${slice.wheelFreeSpins} 次 / 日`], ['version', '配置版本', `v${slice.wheelVersion}`]]
     slice.wheelPrizes.forEach((p, i) => rows.push([`slot-${i}`, `第 ${i + 1} 格`, `${prizeLabel(p.kind, p.amount)} · ${p.probability}%`]))
     rows.push(['sum', '概率总和', `${slice.wheelPrizes.reduce((sum, p) => sum + Number(p.probability), 0)}%`])
     return rows
   }
-  if (moduleId === 'checkin') return [['region', '投放地区', regionCell(slice.checkinRegion)], ...slice.checkinDays.map((d, i) => [`day-${i}`, d.day, `${Number(d.coins).toLocaleString('en-US')} 金币 · ${d.gems} 宝石${d.grand ? ' · 大奖' : ''}`])]
-  if (moduleId === 'missions') return [['region', '投放地区', regionCell(slice.missionsRegion)], ...slice.missions.map((m) => [`mission-${m.id}`, m.name || m.id, `目标 ${m.target} · ${m.coinReward} 金币 · ${m.gemReward} 宝石 · ${m.status}`])]
+  if (moduleId === 'checkin') return slice.checkinDays.map((d, i) => [`day-${i}`, d.day, `${Number(d.coins).toLocaleString('en-US')} 金币 · ${d.gems} 宝石${d.grand ? ' · 大奖' : ''}`])
+  if (moduleId === 'missions') return slice.missions.map((m) => [`mission-${m.id}`, m.name || m.id, `目标 ${m.target} · ${m.coinReward} 金币 · ${m.gemReward} 宝石 · ${m.status}`])
   if (moduleId === 'coinPacks') return slice.coinPacks.map((p) => [`pack-${p.id}`, `${Number(p.coins).toLocaleString('en-US')} 金币礼包`, `${coinPackPriceUsd(p)} · 折扣 ${p.discountPercent}% · 赠 ${p.gemBonus} 宝石 · 标签 ${p.tag || '无'}${p.recommended ? ' · 推荐款' : ''}`])
   if (moduleId === 'monthlyPass') {
     const m = slice.monthlyPass
@@ -289,6 +319,7 @@ function snapshotRows(moduleId, slice) {
     return Object.entries(slice.translations).flatMap(([key, byLocale]) =>
       Object.entries(byLocale).map(([locale, text]) => [`${key}|${locale}`, `${key} · ${locale}`, cell(text)]))
   }
+  if (String(moduleId).startsWith('activityRegion:')) return [['region', '投放地区', regionCell(slice.region)]]
   if (String(moduleId).startsWith('games:')) {
     const rows = [['order', '目录排序', slice.games.map((g) => g.name).join(' → ')]]
     slice.games.forEach((g) => {
@@ -372,4 +403,14 @@ export function regionSummary(region, countryContinent, continentCodes, continen
   const parts = groups.map((g) =>
     g.state === 'all' ? `${continentName(g.continent)}全境` : `${continentName(g.continent)} ${g.selected.length} 个`)
   return `${scope.countries.length} 个国家/地区 · ${parts.join('、')}`
+}
+
+// A type (转盘/签到/任务) can have several activity records, each with its own
+// region — but only one of them is ever "进行中" at a time, and that is the one
+// actually reachable by players of that type. Computed on demand from live
+// records rather than stored anywhere, so it cannot drift out of sync with
+// which record is actually 进行中.
+export function settledActivityRegion(activities, type) {
+  const live = (activities || []).find((a) => a.type === type && a.status === '进行中')
+  return live ? normalizeRegion(live.region) : { mode: REGION_ALL, countries: [] }
 }
