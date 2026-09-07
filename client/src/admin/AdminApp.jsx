@@ -5,6 +5,7 @@ import liteContent from '../data/liteContent.json'
 import { rankings as aggregateWinnerRankings } from '../engagement/model.js'
 import { missionEventOptions, transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel, translationLocales, translationNamespace, CONTINENT_NAMES } from './adminSchema.js'
 import { continents, countryContinent, countriesOf, countryName } from '../data/regions.js'
+import { PHASES, phaseOf } from '../data/phases.js'
 import {
   formatReward, coinPackPriceUsd, wheelBalanced, prizeLabel, validateWheel, validateCheckin, validateMissions, validateCoinPack,
   validateMonthlyPass, validateChestOffer, validateTranslations, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels, moduleLabel,
@@ -86,6 +87,12 @@ const moduleToPage = (moduleId) => {
 }
 
 const activityRegionId = (moduleId) => String(moduleId).slice('activityRegion:'.length)
+
+function PhaseTag({ moduleId, size = 'sm' }) {
+  const phase = phaseOf(moduleId)
+  const meta = PHASES[phase]
+  return <em className={`phase-tag is-phase-${phase} ${size === 'lg' ? 'is-lg' : ''}`} title={`${meta.label}：${meta.name}`}>{meta.label}</em>
+}
 
 const tagLabel = { slots: 'Slots', casual: '休闲', realtime: '实时' }
 const categoryLabelFor = (tags) => tags.map((t) => tagLabel[t] || t).join(' · ')
@@ -247,7 +254,26 @@ function Dashboard({ onNavigate, store, environment }) {
       <section className="admin-card"><div className="card-heading"><div><h2>待处理事项</h2><p>需要运营或审核跟进的事项</p></div><button className="admin-link" onClick={() => onNavigate('todo')}>全部事项 <Icon name="chevronRight" /></button></div><div className="todo-list">{pendingTodo.length ? pendingTodo.map((t) => <button key={t.id} onClick={() => onNavigate('todo')}><span className={`todo-dot ${t.priority === '高' ? 'danger' : t.priority === '中' ? 'warning' : ''}`} /><span><strong>{t.title}</strong><small>{t.source} · {t.time}</small></span><Icon name="chevronRight" /></button>) : <p className="audit-item"><Icon name="eye" /><span>暂无待处理事项</span></p>}</div></section>
       <section className="admin-card release-card"><div className="card-heading"><div><h2>最近发布</h2><p>配置版本和发布状态</p></div><button className="admin-link" onClick={() => onNavigate('publish')}>发布中心 <Icon name="chevronRight" /></button></div>{recentPublish.length ? recentPublish.map((p) => <div className="release-row" key={p.id}><span className="release-icon"><Icon name="gift" /></span><span><strong>{p.name}</strong><small>{p.scope} · {p.owner} · {p.time}</small></span><Status>{p.status}</Status></div>) : <p className="audit-item"><Icon name="eye" /><span>暂无发布记录</span></p>}</section>
     </div>
+    <PhasePlan onNavigate={onNavigate} />
   </>
+}
+
+// 后台原型是一次性铺满的，但交付要分三期。这张卡片让评审的人一眼看出
+// 哪些模块属于一期，哪些是后面才做的，不必逐页点开确认。
+function PhasePlan({ onNavigate }) {
+  const allItems = navGroups.flatMap((group) => group.items)
+  return <section className="admin-card phase-plan">
+    <div className="card-heading"><div><h2>交付分期</h2><p>原型里所有模块都能点，但交付分三期；侧边栏和每页标题上的标签就是这里的分期</p></div></div>
+    <div className="phase-plan-grid">
+      {[1, 2, 3].map((phase) => <div className={`phase-plan-col is-phase-${phase}`} key={phase}>
+        <div className="phase-plan-head"><em className={`phase-tag is-phase-${phase} is-lg`}>{PHASES[phase].label}</em><strong>{PHASES[phase].name}</strong></div>
+        <p>{PHASES[phase].summary}</p>
+        <div className="phase-plan-modules">
+          {allItems.filter(([id]) => phaseOf(id) === phase).map(([id, label, icon]) => <button key={id} onClick={() => onNavigate(id)}><Icon name={icon} />{label}</button>)}
+        </div>
+      </div>)}
+    </div>
+  </section>
 }
 
 const gameFieldLabels = [['name', '游戏名称'], ['tags', '分类标签'], ['badges', '角标'], ['status', '运行状态'], ['popular', '大厅热门推荐'], ['region', '可用地区'], ['cover', '封面资源'], ['sortWeight', '排序权重'], ['maintenanceNote', '维护公告文案'], ['launchAt', '预计上线时间'], ['heat', '热度值'], ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRangeMin', '中奖金额下限'], ['winRangeMax', '中奖金额上限'], ['maxMultiplier', '最大赔率'], ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性']]
@@ -1481,8 +1507,8 @@ function AdminApp() {
     return <GenericPage key={pageKey} page={activePage} {...common} intent={intent} />
   }
   return <div className="admin-shell">
-    <aside className={`admin-sidebar ${mobileNav ? 'is-open' : ''}`}><div className="admin-brand"><span className="admin-brand-mark">J</span><span><strong>Joyloop</strong><small>运营后台原型</small></span><button className="mobile-close icon-button" onClick={() => setMobileNav(false)}><Icon name="close" /></button></div><div className="env-chip"><span className="env-dot" />{environment === 'production' ? '生产环境' : '测试环境'} <small>v0.6.0</small></div><nav>{navGroups.map((group) => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(([id, label, icon]) => <button key={id} className={activePage === id ? 'is-active' : ''} onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span>{id === 'todo' && <b>{store.todo.filter((t) => t.status !== '已解决').length}</b>}{id === 'publish' && store.publish.some((p) => p.status === '待审核') && <b>{store.publish.filter((p) => p.status === '待审核').length}</b>}</button>)}</div>)}</nav><a className="back-to-lobby" href="./index.html"><Icon name="chevronLeft" />返回大厅原型首页</a></aside>
-    <div className="admin-main"><header className="admin-header"><button className="mobile-menu icon-button" onClick={() => setMobileNav(true)}><Icon name="flag" /></button><div className="crumb"><span>Joyloop 后台</span><Icon name="chevronRight" /><strong>{meta[0]}</strong></div><div className="header-actions"><label className="environment-select"><span>环境（当前只影响游戏目录）</span><select value={environment} onChange={(event) => setEnvironment(event.target.value)}><option value="test">测试环境</option><option value="production">生产环境</option></select></label><div className="global-search"><Icon name="eye" /><input value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && runGlobalSearch()} placeholder="搜索玩家 / 订单号 / 流水号，回车跳转" /></div><button className="header-icon" title="待处理事项" onClick={() => navigate('todo')}><Icon name="bell" />{store.todo.some((t) => t.status !== '已解决') && <i />}</button><button className="header-icon" title="权限与账号" onClick={() => navigate('adminUsers')}><Icon name="gear" /></button><span className="admin-avatar">OP</span><span className="operator-name">运营管理员</span></div></header><div className="admin-tabs"><button className="tab active">{meta[0]} {activePage !== 'dashboard' && <span onClick={() => navigate('dashboard')} title="关闭并返回概览"><Icon name="close" /></span>}</button>{activePage !== 'dashboard' && <button className="tab" onClick={() => navigate('dashboard')}>运营概览</button>}</div><main className="admin-content"><div className="page-title"><div><span className="eyebrow">{activePage === 'dashboard' ? 'OPERATIONS OVERVIEW' : 'JOYLOOP ADMIN CONSOLE'}</span><h1>{meta[0]}</h1><p>{meta[1]}</p></div></div>{renderContent()}</main></div>
+    <aside className={`admin-sidebar ${mobileNav ? 'is-open' : ''}`}><div className="admin-brand"><span className="admin-brand-mark">J</span><span><strong>Joyloop</strong><small>运营后台原型</small></span><button className="mobile-close icon-button" onClick={() => setMobileNav(false)}><Icon name="close" /></button></div><div className="env-chip"><span className="env-dot" />{environment === 'production' ? '生产环境' : '测试环境'} <small>v0.6.0</small></div><nav>{navGroups.map((group) => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(([id, label, icon]) => <button key={id} className={activePage === id ? 'is-active' : ''} onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span><PhaseTag moduleId={id} />{id === 'todo' && <b>{store.todo.filter((t) => t.status !== '已解决').length}</b>}{id === 'publish' && store.publish.some((p) => p.status === '待审核') && <b>{store.publish.filter((p) => p.status === '待审核').length}</b>}</button>)}</div>)}</nav><a className="back-to-lobby" href="./index.html"><Icon name="chevronLeft" />返回大厅原型首页</a></aside>
+    <div className="admin-main"><header className="admin-header"><button className="mobile-menu icon-button" onClick={() => setMobileNav(true)}><Icon name="flag" /></button><div className="crumb"><span>Joyloop 后台</span><Icon name="chevronRight" /><strong>{meta[0]}</strong></div><div className="header-actions"><label className="environment-select"><span>环境（当前只影响游戏目录）</span><select value={environment} onChange={(event) => setEnvironment(event.target.value)}><option value="test">测试环境</option><option value="production">生产环境</option></select></label><div className="global-search"><Icon name="eye" /><input value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && runGlobalSearch()} placeholder="搜索玩家 / 订单号 / 流水号，回车跳转" /></div><button className="header-icon" title="待处理事项" onClick={() => navigate('todo')}><Icon name="bell" />{store.todo.some((t) => t.status !== '已解决') && <i />}</button><button className="header-icon" title="权限与账号" onClick={() => navigate('adminUsers')}><Icon name="gear" /></button><span className="admin-avatar">OP</span><span className="operator-name">运营管理员</span></div></header><div className="admin-tabs"><button className="tab active">{meta[0]} {activePage !== 'dashboard' && <span onClick={() => navigate('dashboard')} title="关闭并返回概览"><Icon name="close" /></span>}</button>{activePage !== 'dashboard' && <button className="tab" onClick={() => navigate('dashboard')}>运营概览</button>}</div><main className="admin-content"><div className="page-title"><div><span className="eyebrow">{activePage === 'dashboard' ? 'OPERATIONS OVERVIEW' : 'JOYLOOP ADMIN CONSOLE'}</span><h1>{meta[0]}<PhaseTag moduleId={activePage} size="lg" /></h1><p>{meta[1]}</p>{phaseOf(activePage) > 1 && <p className="phase-note">{PHASES[phaseOf(activePage)].label}功能 · {PHASES[phaseOf(activePage)].name}：本页在原型里已经可以操作，但排期在{PHASES[phaseOf(activePage)].label}，一期不交付。{PHASES[phaseOf(activePage)].summary}</p>}</div></div>{renderContent()}</main></div>
     <RecordDrawer key={openRecord?.id || 'none'} descriptor={openRecord} onClose={() => setDrawerSource(null)} />
     {showAdjust && <Modal eyebrow="钱包流水" title="人工调整流水（追加一条处理中流水）" onClose={() => setShowAdjust(false)} footer={<><button className="admin-btn subtle" onClick={() => setShowAdjust(false)}>取消</button><button className="admin-btn primary" disabled={!adjustValid} onClick={submitAdjust}>提交调整</button></>}><div className="form-grid"><label>玩家<select value={adjustForm.player} onChange={(event) => setAdjustForm((f) => ({ ...f, player: event.target.value }))}>{store.players.map((p) => <option key={p.id} value={p.name}>{p.name} · {p.playerId}</option>)}</select></label><label>币种<select value={adjustForm.currency} onChange={(event) => setAdjustForm((f) => ({ ...f, currency: event.target.value }))}><option value="coins">金币</option><option value="gems">宝石</option></select></label><label>金额（不能为 0，可为负数）<input type="number" value={adjustForm.amount} onChange={(event) => setAdjustForm((f) => ({ ...f, amount: Number(event.target.value) || 0 }))} /></label><label className="full">原因（必填）<textarea value={adjustForm.reason} onChange={(event) => setAdjustForm((f) => ({ ...f, reason: event.target.value }))} placeholder="填写调整原因，将写入操作日志并生成财务复核待办；财务确认入账后流水才变为成功" /></label></div></Modal>}
   </div>

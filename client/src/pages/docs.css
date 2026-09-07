@@ -40,3 +40,6 @@
 @media (max-width:900px) { .docs-roles { grid-template-columns:1fr; } }
 @media (max-width:560px) { .docs-states > div { grid-template-columns:1fr; } .docs-states strong { grid-row:auto; } }
 .docs-code code { display:block; white-space:pre; }
+
+/* 分期这一列只放一个短标签，压窄了会把「一期」竖着断行 */
+.docs-table th.docs-phase-cell,.docs-table td.docs-phase-cell { white-space:nowrap; }

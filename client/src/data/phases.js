@@ -1,0 +1,52 @@
+// 后台功能的交付分期。后台侧边栏、页头和说明文档都从这里读，避免三处各写
+// 一份而慢慢对不上。
+//
+// 分期的依据是依赖关系，不是页面数量：一期只需要后台自己就能跑通；二期要接
+// 支付与活动结算；三期要接财务对账和客户端构建/分发，依赖最重，所以排最后。
+export const PHASES = {
+  1: {
+    label: '一期',
+    name: '基础大厅运营',
+    summary: '把玩家在大厅里看到的东西管起来：游戏目录、文案、赢家展示、玩家与后台权限，配上草稿、审核、留痕这条最小治理闭环。',
+  },
+  2: {
+    label: '二期',
+    name: '活动与商业化',
+    summary: '接上会花钱和发奖励的部分：签到、转盘、任务三类活动，以及商品、权益与订单。依赖支付通道和活动结算服务。',
+  },
+  3: {
+    label: '三期',
+    name: '资金流水与版本发布',
+    summary: '依赖外部系统的重能力：钱包流水要和财务对账系统打通，游戏版本发布要接包上传、校验与灰度分发。',
+  },
+}
+
+export const modulePhase = {
+  dashboard: 1,
+  todo: 1,
+  publish: 1,
+  audit: 1,
+  games: 1,
+  wins: 1,
+  players: 1,
+  translations: 1,
+  adminUsers: 1,
+  activities: 2,
+  checkin: 2,
+  wheel: 2,
+  missions: 2,
+  store: 2,
+  orders: 2,
+  ledger: 3,
+  versions: 3,
+  // 版本发布内部的四个标签页，与 versions 同期
+  uploads: 3,
+  test: 3,
+  production: 3,
+}
+
+// 没登记的模块按一期处理：新增页面默认属于当前正在交付的这一期，
+// 漏登记时不会被误标成"以后才做"。
+export function phaseOf(moduleId) {
+  return modulePhase[moduleId] ?? 1
+}

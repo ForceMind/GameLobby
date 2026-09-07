@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { appVersion } from '../version.js'
+import { PHASES, phaseOf } from '../data/phases.js'
 import './docs.css'
 
 const toc = [
@@ -19,6 +20,25 @@ const toc = [
   ['admin-modules', '后台模块清单'],
   ['api', '接口与数据契约'],
   ['qa', '验收清单'],
+]
+
+// 第一列是后台的模块 id，分期一栏由它查 phases.js 得出，文档不再自己记一份期号。
+const adminModules = [
+  ['dashboard', '运营概览', '按当前环境的生效版本统计游戏可玩情况、待处理事项数量、最近发布', '只读'],
+  ['todo', '待处理事项', '认领、跳转到对象处理、填结论关闭、转交他人', '直接生效'],
+  ['publish', '发布审核', '查看逐字段配置差异、通过 / 灰度 / 驳回 / 暂停 / 回滚、跳转来源配置', '决定生效版本'],
+  ['audit', '操作日志', '全量操作留痕，含对象模块与变更前后值', '只读'],
+  ['games', '游戏管理', '目录排序、热门推荐、游戏配置弹窗（基础信息 / 运行状态 / 大厅展示 / 可用地区 / Slots 参数）', '运行状态与维护公告立即生效，其余走草稿审核'],
+  ['wins', '赢家与动态', '只读核对今日赢家榜、最近中奖与宝箱幸运榜', '不可编辑，管理在风控与内容审核系统'],
+  ['players', '玩家管理', '玩家列表、奖励领取记录、月卡权益、宝箱记录四个标签；状态处置需填原因', '直接生效，隐私偏好只读'],
+  ['translations', '多语言内容', '按语言维护玩家侧全部文案与游戏说明，查看覆盖率与缺失清单，CSV 导入导出', '草稿审核'],
+  ['adminUsers', '权限与账号', '后台账号与角色的菜单范围、操作权限、生产环境权限', '直接生效（权限拦截待接入）'],
+  ['activities', '活动管理', '按活动类型打开不同的配置弹窗：转盘配奖项概率、签到配奖励梯度、任务配任务列表；共通字段含周期、人群、预算、投放地区', '活动信息立即生效，奖励配置与投放地区走草稿审核'],
+  ['checkin', '签到 / 转盘 / 任务', '默认打开玩家视角预览，点「编辑」才进入编辑态；与活动弹窗共用同一份草稿', '草稿审核'],
+  ['store', '商品与权益', '金币礼包、月度特权卡、明日宝箱报价', '草稿审核'],
+  ['orders', '订单管理', '查询与人工处置：取消、退款、标记异常、人工确认', '直接生效，需填原因'],
+  ['ledger', '钱包流水', '查询、对账、导出；人工调整追加一条处理中流水待财务确认', '既有流水只读'],
+  ['versions', '游戏版本发布', '版本记录、上传记录、测试环境、生产环境四个标签的流转', '提交生产发布进入审核'],
 ]
 
 function SectionTitle({ id, eyebrow, title, description }) {
@@ -456,25 +476,25 @@ export default function DocsPage() {
           </section>
 
           <section className="docs-section">
-            <SectionTitle id="admin-modules" eyebrow="13 · ADMIN MODULES" title="后台模块清单" description="每个菜单负责什么，改动走哪条路径。" />
+            <SectionTitle id="admin-modules" eyebrow="13 · ADMIN MODULES" title="后台模块清单" description="每个菜单负责什么，改动走哪条路径，排在哪一期交付。" />
+            <Logic title="分期怎么划的">
+              <p>后台原型是一次铺满的：所有菜单都能点、都能操作。但交付分三期，依据是依赖关系而不是页面多少——一期只需要后台自己就能跑通，二期要接支付通道和活动结算，三期要接财务对账和客户端构建分发。所以看起来"只差一点"的模块可能排在后面，因为它卡在外部系统上。</p>
+              <p>后台侧边栏的每个菜单和每页标题旁边都有同一个分期标签，运营概览页顶部也有一张分期总览卡片，和这里说的是同一份划分。</p>
+            </Logic>
+            <States items={[1, 2, 3].map((phase) => [
+              `${PHASES[phase].label} · ${PHASES[phase].name}`,
+              PHASES[phase].summary,
+              adminModules.filter(([id]) => phaseOf(id) === phase).map(([, name]) => name).join('、'),
+            ])} />
             <div className="docs-table-wrap"><table className="docs-table">
-              <thead><tr><th>模块</th><th>能做什么</th><th>改动路径</th></tr></thead>
+              <thead><tr><th>模块</th><th className="docs-phase-cell">交付分期</th><th>能做什么</th><th>改动路径</th></tr></thead>
               <tbody>
-                <tr><td><strong>运营概览</strong></td><td>按当前环境的生效版本统计游戏可玩情况、待处理事项数量、最近发布</td><td>只读</td></tr>
-                <tr><td><strong>待处理事项</strong></td><td>认领、跳转到对象处理、填结论关闭、转交他人</td><td>直接生效</td></tr>
-                <tr><td><strong>发布审核</strong></td><td>查看逐字段配置差异、通过 / 灰度 / 驳回 / 暂停 / 回滚、跳转来源配置</td><td>决定生效版本</td></tr>
-                <tr><td><strong>操作日志</strong></td><td>全量操作留痕，含对象模块与变更前后值</td><td>只读</td></tr>
-                <tr><td><strong>游戏管理</strong></td><td>目录排序、热门推荐、游戏配置弹窗（基础信息 / 运行状态 / 大厅展示 / 可用地区 / Slots 参数）</td><td>运行状态与维护公告立即生效，其余走草稿审核</td></tr>
-                <tr><td><strong>游戏版本发布</strong></td><td>版本记录、上传记录、测试环境、生产环境四个标签的流转</td><td>提交生产发布进入审核</td></tr>
-                <tr><td><strong>赢家与动态</strong></td><td>只读核对今日赢家榜、最近中奖与宝箱幸运榜</td><td>不可编辑，管理在风控与内容审核系统</td></tr>
-                <tr><td><strong>多语言内容</strong></td><td>按语言维护玩家侧全部文案与游戏说明，查看覆盖率与缺失清单，CSV 导入导出</td><td>草稿审核</td></tr>
-                <tr><td><strong>活动管理</strong></td><td>按活动类型打开不同的配置弹窗：转盘配奖项概率、签到配奖励梯度、任务配任务列表；共通字段含周期、人群、预算</td><td>活动信息立即生效，奖励配置走草稿审核</td></tr>
-                <tr><td><strong>签到 / 转盘 / 任务</strong></td><td>默认打开玩家视角预览，点「编辑」才进入编辑态；与活动弹窗共用同一份草稿</td><td>草稿审核</td></tr>
-                <tr><td><strong>商品与权益</strong></td><td>金币礼包、月度特权卡、明日宝箱报价</td><td>草稿审核</td></tr>
-                <tr><td><strong>订单管理</strong></td><td>查询与人工处置：取消、退款、标记异常、人工确认</td><td>直接生效，需填原因</td></tr>
-                <tr><td><strong>钱包流水</strong></td><td>查询、对账、导出；人工调整追加一条处理中流水待财务确认</td><td>既有流水只读</td></tr>
-                <tr><td><strong>玩家管理</strong></td><td>玩家列表、奖励领取记录、月卡权益、宝箱记录四个标签；状态处置需填原因</td><td>直接生效，隐私偏好只读</td></tr>
-                <tr><td><strong>权限与账号</strong></td><td>后台账号与角色的菜单范围、操作权限、生产环境权限</td><td>直接生效（权限拦截待接入）</td></tr>
+                {adminModules.map(([id, name, ability, path]) => <tr key={id}>
+                  <td><strong>{name}</strong></td>
+                  <td className="docs-phase-cell"><StatusChip tone={phaseOf(id) === 1 ? 'current' : 'planned'}>{PHASES[phaseOf(id)].label}</StatusChip></td>
+                  <td>{ability}</td>
+                  <td>{path}</td>
+                </tr>)}
               </tbody>
             </table></div>
           </section>
