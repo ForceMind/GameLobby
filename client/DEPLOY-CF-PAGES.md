@@ -2,7 +2,19 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。
 
-## 最近部署：2026-09-08 · v0.3.2
+## 最近部署：2026-09-08 · v0.3.3
+
+- 源码：`4c302eb75a55626c9cf8a63d137d1e9aa796b25a`。修复说明首页默认中文、固定比例变窄、游戏脱离设备框及圆角/安全区。
+- 项目与分支：`joyloop` / `lobby-admin-lite-v1`，保持现有分支预览发布，不改main生产。
+- 唯一部署：https://472bcf1e.joyloop.pages.dev
+- 分支入口：https://lobby-admin-lite-v1.joyloop.pages.dev/start-v0.3.3-7c1915c7e8589465.html
+- ZIP：`artifacts/joyloop-cf-pages-2026-09-08-4c302eb.zip`，18文件，SHA-256 `c3e325ba6f5df669ee1350ec3b5903b4a826bccc3dafe204d40da4d6571f1825`。
+- 验证：98项测试、lint、build、check:dist及ZIP校验通过；线上17个可访问文件的哈希、no-store、JS/CSS MIME与缺失脚本404通过，记录在 `artifacts/pages-v0.3.3-online-verification.json`。
+- 线上浏览器实测：无lang新入口为中文；1440×800下18:9为368×736、21:9为315.42×736；圆角16px；加载/游玩的四边与手机框一致，关闭按钮顶部24px、右侧12px，关闭后比例保持。
+- manifest仍如实标为dirty，因为原交接文件未跟踪且保留；文件不在部署目录中。部署后的Markdown记录不改变已发布静态产物。
+- 回退参考：上一版 https://72e250f9.joyloop.pages.dev 。需回退时重发对应旧产物到同一分支，不能仅更换提交标签。
+
+## 上一部署：2026-09-08 · v0.3.2
 
 - 发布范围：现有 `joyloop` 项目的 `lobby-admin-lite-v1` 分支预览，未改动 `main` 生产部署。
 - 源码提交：`26815bd8d118add3cd861f441dd9b07c9385881a`，包含游戏进入门槛、运营标签、宿主缺字段拦截和紧急运行状态保护。

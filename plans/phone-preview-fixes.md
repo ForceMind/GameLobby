@@ -32,4 +32,6 @@
 - 独立审查：Sol/ultra只读复核通过；无阻断。游戏主体在容器内按顺序排列，已实际检查普通与短窗口构图。
 - 完整检查：`npm run verify`退出0；98/98测试、lint、build、check:dist通过，`git diff --check`通过。
 - 构建入口：`start-v0.3.3-7c1915c7e8589465.html`。开发验收页面不进入生产构建。
-- 待完成：提交同步、Pages分支发布与线上复验；main生产环境不改动。
+- 代码提交：`4c302eb`；Pages部署 `https://472bcf1e.joyloop.pages.dev`，分支入口不变。
+- 线上复验：无lang新入口中文，两档尺寸与本地一致；加载及playing均在设备框内，安全边距和关闭恢复通过。17文件哈希、no-store、JS/CSS MIME、404通过。
+- 状态：实现、审查、验收、Pages发布已完成；本记录随发布文档提交同步当前GitHub分支，远端提交以回读结果为准。main生产环境不改动，原未跟踪交接文件保留。
