@@ -218,6 +218,28 @@ export function validateTranslations(entries) {
   return errors
 }
 
+const gameGateNumbers = [['wealthLevel', '财富等级'], ['charmLevel', '魅力等级'], ['minBalance', '账户余额'], ['playLevel', '可玩等级']]
+const gameGenderValues = ['male', 'female']
+const promoTagValues = ['none', 'club', 'hot', 'new']
+
+// Old published game snapshots did not carry gate fields. Missing values remain
+// unrestricted so a reviewer can still approve or roll back those snapshots.
+export function validateGameGates(game) {
+  const errors = []
+  gameGateNumbers.forEach(([key, label]) => {
+    const value = game?.[key]
+    if (value === undefined || value === null || value === '') return
+    if (!(typeof value === 'number' && Number.isFinite(value) && value >= 0)) errors.push(`${label}门槛必须是大于等于 0 的数字`)
+  })
+  if (game?.genders !== undefined) {
+    if (!Array.isArray(game.genders) || game.genders.length === 0) errors.push('允许性别至少选择一项')
+    else if (game.genders.some((gender) => !gameGenderValues.includes(gender))) errors.push('允许性别只能选择男或女')
+  }
+  if (game?.familyOnly !== undefined && typeof game.familyOnly !== 'boolean') errors.push('家族专属必须是开关值')
+  if (game?.promoTag !== undefined && !promoTagValues.includes(game.promoTag)) errors.push('运营标签无效')
+  return errors
+}
+
 export function validateSnapshot(moduleId, slice) {
   if (moduleId === 'translations') return validateTranslations(slice.translations)
   if (moduleId === 'wheel') return validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins })
@@ -227,6 +249,10 @@ export function validateSnapshot(moduleId, slice) {
   if (moduleId === 'monthlyPass') return validateMonthlyPass(slice.monthlyPass)
   if (moduleId === 'chestOffer') return validateChestOffer(slice.chestOffer)
   if (String(moduleId).startsWith('activityRegion:')) return validateRegion(slice.region, '投放地区')
+  if (String(moduleId).startsWith('games:')) {
+    if (!Array.isArray(slice?.games)) return ['游戏目录快照无效']
+    return slice.games.flatMap(validateGameGates)
+  }
   return []
 }
 
@@ -238,6 +264,28 @@ export const releaseDecisions = {
   pause: { status: '已暂停', action: '暂停' },
   resume: { status: '已发布', action: '恢复发布' },
   resubmit: { status: '待审核', action: '重新提交' },
+}
+
+const gameRecordIds = (game) => [game?.gameId, game?.id].filter((value) => typeof value === 'string' && value)
+
+// Game status and maintenance copy are emergency controls. A reviewed catalogue
+// snapshot must never roll either field back to the value it had when queued.
+function mergeGameSnapshotWithLive(liveSlice, snapshot) {
+  if (!Array.isArray(liveSlice?.games) || !Array.isArray(snapshot?.games)) return snapshot
+  const liveById = new Map()
+  liveSlice.games.forEach((game) => gameRecordIds(game).forEach((id) => liveById.set(id, game)))
+  return {
+    ...snapshot,
+    games: snapshot.games.map((game) => {
+      const live = gameRecordIds(game).map((id) => liveById.get(id)).find(Boolean)
+      if (!live) return game
+      return {
+        ...game,
+        ...(Object.hasOwn(live, 'status') ? { status: live.status } : {}),
+        ...(Object.hasOwn(live, 'maintenanceNote') ? { maintenanceNote: live.maintenanceNote } : {}),
+      }
+    }),
+  }
 }
 
 // Applies a 发布审核 decision to the whole store. Pure: returns a new store.
@@ -259,8 +307,9 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
     if (errors.length) return { ...store, audit: [audit({ after: entry.status, result: `失败 · ${errors.join('；')}` }), ...store.audit] }
     if (entry.status !== '灰度 20%') {
       const previous = getSlice(store.live, moduleId)
-      next = { ...next, live: setSlice(store.live, moduleId, entry.snapshot), liveHistory: { ...store.liveHistory, [moduleId]: [previous, ...(store.liveHistory[moduleId] || [])].slice(0, 10) } }
-      next = setSlice(next, moduleId, entry.snapshot)
+      const applied = String(moduleId).startsWith('games:') ? mergeGameSnapshotWithLive(previous, entry.snapshot) : entry.snapshot
+      next = { ...next, live: setSlice(store.live, moduleId, applied), liveHistory: { ...store.liveHistory, [moduleId]: [previous, ...(store.liveHistory[moduleId] || [])].slice(0, 10) } }
+      next = setSlice(next, moduleId, applied)
     }
   }
   if (decision === 'reject' && hasSnapshot) next = resetDraftToLive(next, moduleId)
@@ -268,8 +317,9 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
     const history = store.liveHistory[moduleId] || []
     if (!history.length) return { ...store, audit: [audit({ after: entry.status, result: '失败 · 没有可回滚的历史版本' }), ...store.audit] }
     const [previous, ...rest] = history
-    next = { ...next, live: setSlice(next.live, moduleId, previous), liveHistory: { ...next.liveHistory, [moduleId]: rest } }
-    next = setSlice(next, moduleId, previous)
+    const restored = String(moduleId).startsWith('games:') ? mergeGameSnapshotWithLive(getSlice(next.live, moduleId), previous) : previous
+    next = { ...next, live: setSlice(next.live, moduleId, restored), liveHistory: { ...next.liveHistory, [moduleId]: rest } }
+    next = setSlice(next, moduleId, restored)
   }
   next = { ...next, publish: next.publish.map((p) => (p.id === entry.id ? { ...p, status: spec.status, time } : p)) }
   if (['approve', 'reject', 'rollback'].includes(decision)) next = { ...next, todo: next.todo.map((t) => (t.publishId === entry.id ? { ...t, status: '已解决', time } : t)) }
@@ -291,6 +341,9 @@ const gameDiffFields = [
   ['name', '游戏名称'], ['status', '运行状态'], ['categoryLabel', '分类'], ['tags', '标签'], ['badges', '角标'],
   ['popular', '大厅推荐', yesNo], ['heat', '热度值'], ['sortWeight', '排序权重'], ['cover', '封面资源'],
   ['maintenanceNote', '维护公告'], ['launchAt', '预计上线时间'], ['region', '可用地区', regionCell],
+  ['wealthLevel', '财富等级门槛'], ['charmLevel', '魅力等级门槛'], ['minBalance', '账户余额门槛'], ['playLevel', '可玩等级门槛'],
+  ['genders', '允许性别', (value) => Array.isArray(value) ? (value.map((gender) => ({ male: '男', female: '女' })[gender] || gender).join(' / ') || '无') : '不限'],
+  ['familyOnly', '家族专属', yesNo], ['promoTag', '运营标签', (value) => ({ none: '无标签', club: 'Club', hot: 'Hot', new: 'New' })[value] || '无标签'],
   ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRangeMin', '中奖金额下限'], ['winRangeMax', '中奖金额上限'], ['maxMultiplier', '最大赔率'],
   ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性'],
 ]
@@ -336,7 +389,8 @@ function snapshotRows(moduleId, slice) {
 export function snapshotDiff(moduleId, before, after) {
   const toMap = (rows) => new Map(rows.map(([key, label, value]) => [key, { label, value }]))
   const a = toMap(snapshotRows(moduleId, before))
-  const b = toMap(snapshotRows(moduleId, after))
+  const effectiveAfter = String(moduleId).startsWith('games:') ? mergeGameSnapshotWithLive(before, after) : after
+  const b = toMap(snapshotRows(moduleId, effectiveAfter))
   return [...new Set([...a.keys(), ...b.keys()])].map((key) => {
     const before_ = a.get(key)
     const after_ = b.get(key)

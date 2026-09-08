@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   validateWheel, wheelBalanced, validateCheckin, validateMissions, validateCoinPack, validateChestOffer,
   coinPackPriceUsd, nextVersionTag, nextLedgerId, diffSummary, validateNickname,
-  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations, settledActivityRegion,
+  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations, validateGameGates, settledActivityRegion,
 } from './adminRules.js'
 
 const prizes = (probabilities) => probabilities.map((probability, i) => ({ id: `p${i}`, kind: 'coins', amount: 100 + i, probability }))
@@ -159,6 +159,113 @@ test('配置差异：游戏改名按 gameId 归位，不算作删除加新增', 
   const rows = snapshotDiff('games:test', g('旧名'), g('新名'))
   assert.equal(rows.filter((r) => r.added || r.removed).length, 0)
   assert.equal(rows.find((r) => r.key === 'order').changed, true)
+})
+
+const gameRecord = (overrides = {}) => ({
+  id: 'g1', gameId: 'g1', name: '准入示例', status: '正常可玩', categoryLabel: 'Slots', tags: ['slots'], badges: [], popular: false,
+  heat: 50, sortWeight: 10, cover: 'demo.png', maintenanceNote: '', launchAt: '', region: { mode: 'all', countries: [] },
+  wealthLevel: 0, charmLevel: 0, minBalance: 0, playLevel: 0, genders: ['male', 'female'], familyOnly: false, promoTag: 'none',
+  winRate: '', rtp: '', winRangeMin: '', winRangeMax: '', maxMultiplier: '', minBet: '', paylines: '', volatility: '', ...overrides,
+})
+
+test('游戏门槛：缺失字段兼容旧快照，非法门槛和空性别被拦截', () => {
+  assert.deepEqual(validateGameGates({ gameId: 'legacy' }), [])
+  const errors = validateGameGates(gameRecord({ wealthLevel: Number.NaN, minBalance: -1, genders: [], promoTag: 'bad' }))
+  assert.ok(errors.some((error) => error.includes('财富等级')))
+  assert.ok(errors.some((error) => error.includes('账户余额')))
+  assert.ok(errors.some((error) => error.includes('至少选择一项')))
+  assert.ok(errors.some((error) => error.includes('运营标签')))
+  ;['5', true, []].forEach((value) => {
+    assert.ok(validateGameGates(gameRecord({ wealthLevel: value })).some((error) => error.includes('财富等级')), `应拒绝非 number 门槛：${String(value)}`)
+  })
+})
+
+test('游戏门槛：草稿隔离、审核发布与回滚，并逐字段显示可读差异', () => {
+  const liveGame = gameRecord()
+  let store = {
+    games: { test: [gameRecord({ wealthLevel: 5, genders: ['male'], familyOnly: true, promoTag: 'hot' })], production: [gameRecord()] },
+    live: { games: { test: [liveGame], production: [gameRecord()] } }, liveHistory: {}, publish: [], todo: [], audit: [],
+  }
+  const moduleId = 'games:test'
+  assert.equal(draftDiffers(store, moduleId), true)
+  assert.equal(store.live.games.test[0].wealthLevel, 0, '草稿门槛不能直接影响生效版本')
+  const snapshot = getSlice(store, moduleId)
+  const diff = snapshotDiff(moduleId, getSlice(store.live, moduleId), snapshot)
+  assert.equal(diff.length, 28, '目录排序 1 项 + 每游戏 27 个实际审核字段')
+  assert.equal(diff.find((row) => row.label === '准入示例 · 允许性别').after, '男')
+  assert.equal(diff.find((row) => row.label === '准入示例 · 家族专属').after, '是')
+  assert.equal(diff.find((row) => row.label === '准入示例 · 运营标签').after, 'Hot')
+
+  const entry = { id: 'pub-game', name: '准入示例配置更新', status: '待审核', sourceModule: moduleId, snapshot }
+  store = { ...store, publish: [entry] }
+  const approved = applyRelease(store, entry, 'approve', undefined, { seq: 21 })
+  assert.equal(approved.live.games.test[0].wealthLevel, 5)
+  assert.equal(approved.live.games.test[0].promoTag, 'hot')
+  assert.equal(approved.liveHistory[moduleId].length, 1)
+  const rolledBack = applyRelease(approved, { ...entry, status: '已发布' }, 'rollback', '门槛误配', { seq: 22 })
+  assert.equal(rolledBack.live.games.test[0].wealthLevel, 0)
+  assert.equal(rolledBack.games.test[0].promoTag, 'none')
+})
+
+test('游戏门槛：审核时复核快照，脏快照不能绕过表单直接发布', () => {
+  const liveGame = gameRecord()
+  const store = {
+    games: { test: [liveGame], production: [gameRecord()] }, live: { games: { test: [liveGame], production: [gameRecord()] } },
+    liveHistory: {}, publish: [], todo: [], audit: [],
+  }
+  const entry = { id: 'pub-bad-game', name: '脏游戏快照', status: '待审核', sourceModule: 'games:test', snapshot: { games: [gameRecord({ genders: [] })] } }
+  const result = applyRelease(store, entry, 'approve', undefined, { seq: 23 })
+  assert.deepEqual(result.live.games.test, [liveGame])
+  assert.match(result.audit[0].result, /失败.*允许性别至少选择一项/)
+})
+
+test('游戏门槛：审核发布与回滚不覆盖更晚的紧急状态，差异按实际应用结果显示', () => {
+  const moduleId = 'games:test'
+  const queued = gameRecord({ wealthLevel: 5 })
+  const maintenance = gameRecord({ status: '维护中', maintenanceNote: '紧急维护' })
+  let store = {
+    games: { test: [queued], production: [gameRecord()] }, live: { games: { test: [maintenance], production: [gameRecord()] } },
+    liveHistory: {}, publish: [], todo: [], audit: [],
+  }
+  const entry = { id: 'pub-emergency', name: '待审门槛', status: '待审核', sourceModule: moduleId, snapshot: { games: [queued] } }
+  const queuedDiff = snapshotDiff(moduleId, getSlice(store.live, moduleId), entry.snapshot)
+  const queuedStatus = queuedDiff.find((row) => row.label === '准入示例 · 运行状态')
+  assert.equal(queuedStatus.changed, false)
+  assert.equal(queuedStatus.after, '维护中')
+
+  const approved = applyRelease(store, entry, 'approve', undefined, { seq: 24 })
+  assert.equal(approved.live.games.test[0].wealthLevel, 5)
+  assert.equal(approved.live.games.test[0].status, '维护中')
+  assert.equal(approved.live.games.test[0].maintenanceNote, '紧急维护')
+  assert.equal(approved.games.test[0].status, '维护中', '草稿在发布后与生效紧急状态同步')
+
+  const unavailable = gameRecord({ wealthLevel: 5, status: '暂不可用', maintenanceNote: '紧急下架' })
+  store = { ...approved, games: { ...approved.games, test: [unavailable] }, live: { ...approved.live, games: { ...approved.live.games, test: [unavailable] } } }
+  const rollbackDiff = snapshotDiff(moduleId, getSlice(store.live, moduleId), approved.liveHistory[moduleId][0])
+  const rollbackStatus = rollbackDiff.find((row) => row.label === '准入示例 · 运行状态')
+  assert.equal(rollbackStatus.changed, false)
+  assert.equal(rollbackStatus.after, '暂不可用')
+
+  const rolledBack = applyRelease(store, { ...entry, status: '已发布' }, 'rollback', '门槛误配', { seq: 25 })
+  assert.equal(rolledBack.live.games.test[0].wealthLevel, 0)
+  assert.equal(rolledBack.live.games.test[0].status, '暂不可用')
+  assert.equal(rolledBack.live.games.test[0].maintenanceNote, '紧急下架')
+  assert.equal(rolledBack.games.test[0].status, '暂不可用')
+})
+
+test('游戏门槛：灰度发布同样保留已生效的紧急状态', () => {
+  const moduleId = 'games:test'
+  const queued = gameRecord({ gameId: undefined, wealthLevel: 5 })
+  const store = {
+    games: { test: [queued], production: [gameRecord()] },
+    live: { games: { test: [gameRecord({ status: '维护中', maintenanceNote: '紧急维护' })], production: [gameRecord()] } },
+    liveHistory: {}, publish: [], todo: [], audit: [],
+  }
+  const entry = { id: 'pub-gray-emergency', name: '灰度门槛', status: '待审核', sourceModule: moduleId, snapshot: { games: [queued] } }
+  const grayed = applyRelease(store, entry, 'gray', undefined, { seq: 26 })
+  assert.equal(grayed.live.games.test[0].wealthLevel, 5)
+  assert.equal(grayed.live.games.test[0].status, '维护中', '快照仅有 id 时仍须匹配当前游戏')
+  assert.equal(grayed.games.test[0].maintenanceNote, '紧急维护')
 })
 
 test('玩家侧文案：英文不可为空，各语言占位符必须与英文一致', () => {

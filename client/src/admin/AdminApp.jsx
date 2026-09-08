@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { games, gameCategories } from '../data.js'
 import liteContent from '../data/liteContent.json'
+import { appVersion } from '../version.js'
 import { rankings as aggregateWinnerRankings } from '../engagement/model.js'
 import { missionEventOptions, transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel, translationLocales, translationNamespace, CONTINENT_NAMES } from './adminSchema.js'
 import { continents, countryContinent, countriesOf, countryName } from '../data/regions.js'
@@ -10,7 +11,7 @@ import {
   formatReward, coinPackPriceUsd, wheelBalanced, prizeLabel, validateWheel, validateCheckin, validateMissions, validateCoinPack,
   validateMonthlyPass, validateChestOffer, validateTranslations, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels, moduleLabel,
   getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, validateSnapshot, WHEEL_SLOTS,
-  normalizeRegion, regionByContinent, regionSummary, validateRegion, REGION_ALL, REGION_CUSTOM, activityTypeMeta, settledActivityRegion,
+  normalizeRegion, regionByContinent, regionSummary, validateRegion, validateGameGates, REGION_ALL, REGION_CUSTOM, activityTypeMeta, settledActivityRegion,
 } from './adminRules.js'
 
 const navGroups = [
@@ -276,7 +277,7 @@ function PhasePlan({ onNavigate }) {
   </section>
 }
 
-const gameFieldLabels = [['name', '游戏名称'], ['tags', '分类标签'], ['badges', '角标'], ['status', '运行状态'], ['popular', '大厅热门推荐'], ['region', '可用地区'], ['cover', '封面资源'], ['sortWeight', '排序权重'], ['maintenanceNote', '维护公告文案'], ['launchAt', '预计上线时间'], ['heat', '热度值'], ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRangeMin', '中奖金额下限'], ['winRangeMax', '中奖金额上限'], ['maxMultiplier', '最大赔率'], ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性']]
+const gameFieldLabels = [['name', '游戏名称'], ['tags', '分类标签'], ['badges', '角标'], ['status', '运行状态'], ['popular', '大厅热门推荐'], ['region', '可用地区'], ['wealthLevel', '财富等级门槛'], ['charmLevel', '魅力等级门槛'], ['minBalance', '账户余额门槛'], ['playLevel', '可玩等级门槛'], ['genders', '允许性别'], ['familyOnly', '家族专属'], ['promoTag', '运营标签'], ['cover', '封面资源'], ['sortWeight', '排序权重'], ['maintenanceNote', '维护公告文案'], ['launchAt', '预计上线时间'], ['heat', '热度值'], ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRangeMin', '中奖金额下限'], ['winRangeMax', '中奖金额上限'], ['maxMultiplier', '最大赔率'], ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性']]
 const gameDraftFields = gameFieldLabels.filter(([key]) => key !== 'status' && key !== 'maintenanceNote')
 
 // Every configurable field for a game, grouped the way an operator thinks about them.
@@ -295,6 +296,14 @@ function gameFormSections(draft) {
       { key: 'sortWeight', label: '排序权重', type: 'number', note: '数值越小越靠前；目录页拖拽会覆盖该顺序' },
       { key: 'descriptionKey', label: '游戏简介', type: 'translationLink', full: true, note: '游戏简介是多语言文案，24 种语言都在「多语言内容」里维护，这里不能直接改' },
     ] },
+    { title: '进入门槛', note: '填 0 为不限。门槛不满足时游戏仍展示但锁定，与地区限制的隐藏规则不同。演示账号已接入这些字段；真实宿主未提供某项时会挡住对应玩家，本后台无法识别所有真实宿主能力。', fields: [
+      { key: 'wealthLevel', label: '财富等级门槛', type: 'number', min: 0 },
+      { key: 'charmLevel', label: '魅力等级门槛', type: 'number', min: 0 },
+      { key: 'minBalance', label: '账户余额门槛（金币）', type: 'number', min: 0 },
+      { key: 'playLevel', label: '可玩等级门槛', type: 'number', min: 0 },
+      { key: 'genders', label: '允许性别', type: 'checks', options: [['male', '男'], ['female', '女']], full: true },
+      { key: 'familyOnly', label: '家族专属', type: 'toggle', note: '开启后仅有家族归属的玩家可进入' },
+    ] },
     { title: '运行状态', tone: 'warning', note: '运行状态与维护公告是紧急操作：保存后直接改写生效版本并写入日志，不经发布审核。', fields: [
       { key: 'status', label: '运行状态', type: 'select', options: ['正常可玩', '维护中', '即将上线', '暂不可用'] },
       { key: 'maintenanceNote', label: '维护公告文案', placeholder: '仅在「维护中」状态下展示给玩家', disabled: draft.status !== '维护中' },
@@ -302,6 +311,7 @@ function gameFormSections(draft) {
     ] },
     { title: '大厅展示', fields: [
       { key: 'popular', label: '大厅热门推荐', type: 'toggle' },
+      { key: 'promoTag', label: '运营标签', type: 'select', options: [['none', '无标签'], ['club', 'Club'], ['hot', 'Hot'], ['new', 'New']], note: '用于大厅卡片运营位；分类标签决定筛选归属，角标是自由文本，三者分别维护。' },
       { key: 'heat', label: '热度值（0–100）', type: 'number', min: 0, max: 100 },
       { key: 'players', label: '在线人数', readOnly: true, note: '由实时统计服务写入，后台不可修改' },
     ] },
@@ -331,7 +341,7 @@ function validateGameDraft(draft) {
     if (!(Number(draft.winRangeMin) >= 0) || !(Number(draft.winRangeMax) >= 0)) errors.push('中奖金额范围不能为负数')
     else if (Number(draft.winRangeMin) > Number(draft.winRangeMax)) errors.push('中奖金额下限不能大于上限')
   }
-  errors.push(...validateRegion(draft.region))
+  errors.push(...validateRegion(draft.region), ...validateGameGates(draft))
   return errors
 }
 
@@ -353,7 +363,8 @@ function GameEditModal({ record, store, update, journal, environment, navigate, 
   const setField = (key, value) => setDraft((current) => ({ ...current, [key]: value }))
   const sections = gameFormSections(draft)
   const errors = validateGameDraft(draft)
-  const normalized = { ...draft, badges: String(draft.badges).split(',').map((x) => x.trim()).filter(Boolean), categoryLabel: categoryLabelFor(draft.tags), heat: Number(draft.heat), sortWeight: Number(draft.sortWeight) }
+  const gateNumber = (value) => value === '' ? 0 : value
+  const normalized = { ...draft, badges: String(draft.badges).split(',').map((x) => x.trim()).filter(Boolean), categoryLabel: categoryLabelFor(draft.tags), heat: Number(draft.heat), sortWeight: Number(draft.sortWeight), wealthLevel: gateNumber(draft.wealthLevel), charmLevel: gateNumber(draft.charmLevel), minBalance: gateNumber(draft.minBalance), playLevel: gateNumber(draft.playLevel) }
   const statusChanged = normalized.status !== record.status || normalized.maintenanceNote !== record.maintenanceNote
   const draftChanged = gameDraftFields.some(([key]) => JSON.stringify(normalized[key]) !== JSON.stringify(record[key]))
   const history = store.audit.filter((a) => a.targetModule === 'games' && a.targetId === record.id)
@@ -424,13 +435,24 @@ function GameCatalogPage({ environment, store, update, journal, intent, navigate
   const openDetail = (game) => setEditingId(game.id)
   const editing = editingId ? items.find((game) => game.id === editingId) : null
   const regionText = (game) => regionSummary(game.region, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code)
-  const headers = ['排序', '游戏名称', '游戏 ID', '分类', '状态', '可用地区', '在线人数', '热度', '大厅热门推荐']
+  const gateText = (game) => {
+    const parts = []
+    if (Number(game.wealthLevel) > 0) parts.push(`财富 ${game.wealthLevel}`)
+    if (Number(game.charmLevel) > 0) parts.push(`魅力 ${game.charmLevel}`)
+    if (Number(game.minBalance) > 0) parts.push(`余额 ${game.minBalance}`)
+    if (Number(game.playLevel) > 0) parts.push(`可玩 ${game.playLevel}`)
+    const genders = game.genders || ['male', 'female']
+    if (Array.isArray(genders) && genders.length === 1) parts.push(`性别 ${genders[0] === 'male' ? '男' : '女'}`)
+    return parts.join(' · ') || '无门槛'
+  }
+  const promoLabel = (tag) => ({ club: 'Club', hot: 'Hot', new: 'New' })[tag]
+  const headers = ['排序', '游戏名称', '游戏 ID', '分类', '状态', '可用地区', '进入门槛', '家族专属', '在线人数', '热度', '大厅热门推荐']
   return <>
     <ConfigBadge store={store} moduleId={moduleId} onDiscard={() => journal.discardDraft(moduleId)} />
     <section className="admin-card catalog-summary"><div><span>当前环境</span><strong>{environment === 'production' ? '生产环境' : '测试环境'}</strong><small>草稿与生效版本按环境分开保存</small></div><div><span>目录游戏</span><strong>{items.length} 款</strong><small>草稿中正常可玩 {items.filter((item) => item.status === '正常可玩').length} 款</small></div><div><span>草稿状态</span><strong>{differs ? '有未发布变更' : '已同步'}</strong><small>{differs ? '保存后进入发布审核' : '与生效版本一致'}</small></div></section>
     <div className="drag-hint">分类统计（当前草稿）：{gameCategories.filter((c) => c.id !== 'all').map((c) => `${c.label} ${items.filter((g) => g.tags.includes(c.id)).length} 款`).join(' · ')}</div>
     <div className="catalog-toolbar"><div className="view-toggle"><button className={view === 'table' ? 'is-active' : ''} onClick={() => setView('table')}>表格视图</button><button className={view === 'cards' ? 'is-active' : ''} onClick={() => setView('cards')}>卡片视图</button></div><span className="drag-hint"><Icon name="flag" />拖拽调整排序，开关切换大厅热门推荐，点击行编辑详情</span>{differs && <button className="admin-btn primary" onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-    {view === 'table' ? <section className="admin-card table-card"><div className="table-top"><div><strong>游戏目录</strong><span>按 {environment === 'production' ? '生产' : '测试'} 环境排序</span></div><div className="table-actions"><button className="admin-btn subtle" disabled title="批量导入依赖资源服务，待联调">导入目录（待联调）</button><button className="admin-btn subtle" onClick={() => exportCsv(`游戏目录-${environment}`, headers, items.map((g, i) => [i + 1, g.name, g.gameId, g.categoryLabel, g.status, regionText(g), g.players, g.heat, g.popular ? '是' : '否']))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{headers.map((h) => <th key={h}>{h}</th>)}<th>操作</th></tr></thead><tbody>{items.map((game, index) => <tr key={game.id} draggable onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={dragging === game.id ? 'is-dragging' : ''} onClick={() => openDetail(game)}><td><span className="drag-handle" aria-label="拖拽排序">⋮⋮</span><b className="sort-number">{index + 1}</b></td><td><span className="game-name-cell"><span className={`game-thumb thumb-${index % 4}`} /><strong>{game.name}</strong></span></td><td>{game.gameId}</td><td>{game.categoryLabel}</td><td><Status>{game.status}</Status></td><td><span className={`region-cell ${normalizeRegion(game.region).mode === 'all' ? '' : 'is-limited'}`}>{regionText(game)}</span></td><td>{game.players}</td><td><span className="heat-bar"><i style={{ width: `${game.heat}%` }} /></span><small>{game.heat || '—'}</small></td><td><button className={`toggle-switch ${game.popular ? 'is-on' : ''}`} onClick={(event) => { event.stopPropagation(); togglePopular(game.id) }} aria-pressed={game.popular} aria-label="大厅热门推荐"><i /></button></td><td><button className="row-action" onClick={(event) => { event.stopPropagation(); openDetail(game) }}>编辑</button></td></tr>)}</tbody></table></div></section> : <section className="catalog-cards">{items.map((game, index) => <article draggable key={game.id} onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={`game-admin-card ${dragging === game.id ? 'is-dragging' : ''}`}><span className={`game-cover cover-${index % 4}`}><b>{index + 1}</b><i>⋮⋮</i></span><div><div className="game-card-top"><Status>{game.status}</Status><small>热度 {game.heat || '—'}</small></div><h3>{game.name}</h3><p>{game.categoryLabel}</p><span>{game.players} 在线 · {game.popular ? '已推荐' : '未推荐'}</span></div><button className="row-action" onClick={() => openDetail(game)}>编辑</button></article>)}</section>}
+    {view === 'table' ? <section className="admin-card table-card"><div className="table-top"><div><strong>游戏目录</strong><span>按 {environment === 'production' ? '生产' : '测试'} 环境排序</span></div><div className="table-actions"><button className="admin-btn subtle" disabled title="批量导入依赖资源服务，待联调">导入目录（待联调）</button><button className="admin-btn subtle" onClick={() => exportCsv(`游戏目录-${environment}`, headers, items.map((g, i) => [i + 1, g.name, g.gameId, `${g.categoryLabel}${promoLabel(g.promoTag) ? ` · ${promoLabel(g.promoTag)}` : ''}`, g.status, regionText(g), gateText(g), g.familyOnly ? '是' : '否', g.players, g.heat, g.popular ? '是' : '否']))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{headers.map((h) => <th key={h}>{h}</th>)}<th>操作</th></tr></thead><tbody>{items.map((game, index) => <tr key={game.id} draggable onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={dragging === game.id ? 'is-dragging' : ''} onClick={() => openDetail(game)}><td><span className="drag-handle" aria-label="拖拽排序">⋮⋮</span><b className="sort-number">{index + 1}</b></td><td><span className="game-name-cell"><span className={`game-thumb thumb-${index % 4}`} /><strong>{game.name}</strong></span></td><td>{game.gameId}</td><td>{game.categoryLabel}{promoLabel(game.promoTag) && <em className={`promo-tag is-${game.promoTag}`}>{promoLabel(game.promoTag)}</em>}</td><td><Status>{game.status}</Status></td><td><span className={`region-cell ${normalizeRegion(game.region).mode === 'all' ? '' : 'is-limited'}`}>{regionText(game)}</span></td><td>{gateText(game)}</td><td>{game.familyOnly ? '是' : '否'}</td><td>{game.players}</td><td><span className="heat-bar"><i style={{ width: `${game.heat}%` }} /></span><small>{game.heat || '—'}</small></td><td><button className={`toggle-switch ${game.popular ? 'is-on' : ''}`} onClick={(event) => { event.stopPropagation(); togglePopular(game.id) }} aria-pressed={game.popular} aria-label="大厅热门推荐"><i /></button></td><td><button className="row-action" onClick={(event) => { event.stopPropagation(); openDetail(game) }}>编辑</button></td></tr>)}</tbody></table></div></section> : <section className="catalog-cards">{items.map((game, index) => <article draggable key={game.id} onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={`game-admin-card ${dragging === game.id ? 'is-dragging' : ''}`}><span className={`game-cover cover-${index % 4}`}><b>{index + 1}</b><i>⋮⋮</i></span><div><div className="game-card-top"><Status>{game.status}</Status><small>热度 {game.heat || '—'}</small></div><h3>{game.name}</h3><p>{game.categoryLabel}{promoLabel(game.promoTag) && <em className={`promo-tag is-${game.promoTag}`}>{promoLabel(game.promoTag)}</em>}</p><span>{game.players} 在线 · {gateText(game)} · {game.familyOnly ? '家族专属' : '非家族专属'} · {game.popular ? '已推荐' : '未推荐'}</span></div><button className="row-action" onClick={() => openDetail(game)}>编辑</button></article>)}</section>}
     {editing && <GameEditModal key={editing.id} record={editing} store={store} update={update} journal={journal} environment={environment} navigate={navigate} onClose={() => setEditingId(null)} />}
   </>
 }
@@ -1507,7 +1529,7 @@ function AdminApp() {
     return <GenericPage key={pageKey} page={activePage} {...common} intent={intent} />
   }
   return <div className="admin-shell">
-    <aside className={`admin-sidebar ${mobileNav ? 'is-open' : ''}`}><div className="admin-brand"><span className="admin-brand-mark">J</span><span><strong>Joyloop</strong><small>运营后台原型</small></span><button className="mobile-close icon-button" onClick={() => setMobileNav(false)}><Icon name="close" /></button></div><div className="env-chip"><span className="env-dot" />{environment === 'production' ? '生产环境' : '测试环境'} <small>v0.6.0</small></div><nav>{navGroups.map((group) => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(([id, label, icon]) => <button key={id} className={activePage === id ? 'is-active' : ''} onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span><PhaseTag moduleId={id} />{id === 'todo' && <b>{store.todo.filter((t) => t.status !== '已解决').length}</b>}{id === 'publish' && store.publish.some((p) => p.status === '待审核') && <b>{store.publish.filter((p) => p.status === '待审核').length}</b>}</button>)}</div>)}</nav><a className="back-to-lobby" href="./index.html"><Icon name="chevronLeft" />返回大厅原型首页</a></aside>
+    <aside className={`admin-sidebar ${mobileNav ? 'is-open' : ''}`}><div className="admin-brand"><span className="admin-brand-mark">J</span><span><strong>Joyloop</strong><small>运营后台原型</small></span><button className="mobile-close icon-button" onClick={() => setMobileNav(false)}><Icon name="close" /></button></div><div className="env-chip"><span className="env-dot" />{environment === 'production' ? '生产环境' : '测试环境'} <small>v{appVersion}</small></div><nav>{navGroups.map((group) => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(([id, label, icon]) => <button key={id} className={activePage === id ? 'is-active' : ''} onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span><PhaseTag moduleId={id} />{id === 'todo' && <b>{store.todo.filter((t) => t.status !== '已解决').length}</b>}{id === 'publish' && store.publish.some((p) => p.status === '待审核') && <b>{store.publish.filter((p) => p.status === '待审核').length}</b>}</button>)}</div>)}</nav><a className="back-to-lobby" href="./index.html"><Icon name="chevronLeft" />返回大厅原型首页</a></aside>
     <div className="admin-main"><header className="admin-header"><button className="mobile-menu icon-button" onClick={() => setMobileNav(true)}><Icon name="flag" /></button><div className="crumb"><span>Joyloop 后台</span><Icon name="chevronRight" /><strong>{meta[0]}</strong></div><div className="header-actions"><label className="environment-select"><span>环境（当前只影响游戏目录）</span><select value={environment} onChange={(event) => setEnvironment(event.target.value)}><option value="test">测试环境</option><option value="production">生产环境</option></select></label><div className="global-search"><Icon name="eye" /><input value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && runGlobalSearch()} placeholder="搜索玩家 / 订单号 / 流水号，回车跳转" /></div><button className="header-icon" title="待处理事项" onClick={() => navigate('todo')}><Icon name="bell" />{store.todo.some((t) => t.status !== '已解决') && <i />}</button><button className="header-icon" title="权限与账号" onClick={() => navigate('adminUsers')}><Icon name="gear" /></button><span className="admin-avatar">OP</span><span className="operator-name">运营管理员</span></div></header><div className="admin-tabs"><button className="tab active">{meta[0]} {activePage !== 'dashboard' && <span onClick={() => navigate('dashboard')} title="关闭并返回概览"><Icon name="close" /></span>}</button>{activePage !== 'dashboard' && <button className="tab" onClick={() => navigate('dashboard')}>运营概览</button>}</div><main className="admin-content"><div className="page-title"><div><span className="eyebrow">{activePage === 'dashboard' ? 'OPERATIONS OVERVIEW' : 'JOYLOOP ADMIN CONSOLE'}</span><h1>{meta[0]}<PhaseTag moduleId={activePage} size="lg" /></h1><p>{meta[1]}</p>{phaseOf(activePage) > 1 && <p className="phase-note">{PHASES[phaseOf(activePage)].label}功能 · {PHASES[phaseOf(activePage)].name}：本页在原型里已经可以操作，但排期在{PHASES[phaseOf(activePage)].label}，一期不交付。{PHASES[phaseOf(activePage)].summary}</p>}</div></div>{renderContent()}</main></div>
     <RecordDrawer key={openRecord?.id || 'none'} descriptor={openRecord} onClose={() => setDrawerSource(null)} />
     {showAdjust && <Modal eyebrow="钱包流水" title="人工调整流水（追加一条处理中流水）" onClose={() => setShowAdjust(false)} footer={<><button className="admin-btn subtle" onClick={() => setShowAdjust(false)}>取消</button><button className="admin-btn primary" disabled={!adjustValid} onClick={submitAdjust}>提交调整</button></>}><div className="form-grid"><label>玩家<select value={adjustForm.player} onChange={(event) => setAdjustForm((f) => ({ ...f, player: event.target.value }))}>{store.players.map((p) => <option key={p.id} value={p.name}>{p.name} · {p.playerId}</option>)}</select></label><label>币种<select value={adjustForm.currency} onChange={(event) => setAdjustForm((f) => ({ ...f, currency: event.target.value }))}><option value="coins">金币</option><option value="gems">宝石</option></select></label><label>金额（不能为 0，可为负数）<input type="number" value={adjustForm.amount} onChange={(event) => setAdjustForm((f) => ({ ...f, amount: Number(event.target.value) || 0 }))} /></label><label className="full">原因（必填）<textarea value={adjustForm.reason} onChange={(event) => setAdjustForm((f) => ({ ...f, reason: event.target.value }))} placeholder="填写调整原因，将写入操作日志并生成财务复核待办；财务确认入账后流水才变为成功" /></label></div></Modal>}

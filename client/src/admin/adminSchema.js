@@ -285,6 +285,9 @@ export function createInitialStore() {
     winRangeMin: liteContent.gameDetails?.[g.id]?.winRangeMin ?? '', winRangeMax: liteContent.gameDetails?.[g.id]?.winRangeMax ?? '', maxMultiplier: liteContent.gameDetails?.[g.id]?.maxMultiplier || '',
     // Standard slot parameters the current front-end does not read yet; kept empty rather than filled with invented values.
     minBet: '', paylines: '', volatility: '',
+    // 门槛与大厅示例直接读取游戏目录，后台草稿和玩家侧演示使用同一份种子定义。
+    wealthLevel: g.wealthLevel ?? 0, charmLevel: g.charmLevel ?? 0, minBalance: g.minBalance ?? 0, playLevel: g.playLevel ?? 0,
+    genders: Array.isArray(g.genders) ? [...g.genders] : ['male', 'female'], familyOnly: g.familyOnly ?? false, promoTag: g.promoTag ?? 'none',
   }))
   const config = {
     games: { test: gameRecords(), production: gameRecords() },
