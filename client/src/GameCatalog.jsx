@@ -3,13 +3,16 @@ import { Icon } from './icons.jsx'
 import { gameCategories, games, recentGames } from './data.js'
 import useGameDetails from './useGameDetails.jsx'
 import { GameArtwork, SectionHeader } from './ui.jsx'
-import { filterGames, openInCountry } from './demoModel.js'
+import { filterGames, gameGate, openInCountry } from './demoModel.js'
+import { gameGateText } from './gameGateText.js'
 import { useLocale } from './useLocale.js'
 import { useH5 } from './h5/useH5.js'
 import { useCategoryLabel } from './useCategoryLabel.js'
 
 function GameCard({ game, openModal }) {
-  const { t } = useLocale()
+  const { t, format } = useLocale()
+  const player = useH5()
+  const gate = gameGate(game, player)
   const categoryLabel = useCategoryLabel()
   const showGameDetails = useGameDetails(openModal)
   const badgeLabels = {
@@ -22,13 +25,14 @@ function GameCard({ game, openModal }) {
   }
   return (
     <button
-      className={`game-card card game-status-${game.status}`}
+      className={`game-card card game-status-${game.status}${gate.ok ? '' : ' is-gate-locked'}`}
       type="button"
       onClick={() => showGameDetails(game)}
     >
       <span className="game-cover">
         <GameArtwork game={game} />
         <span className="badge-row">
+          {game.promoTag && game.promoTag !== 'none' && <span className="pill game-promo-tag">{t(`games.promoTag.${game.promoTag}`)}</span>}
           {game.badges.map((badge) => (
             <span className="pill" key={badge}>
               {badge === 'HEAT'
@@ -37,9 +41,10 @@ function GameCard({ game, openModal }) {
             </span>
           ))}
         </span>
-        {game.status !== 'ready' && (
+        {(game.status !== 'ready' || !gate.ok) && (
           <span className="game-state">
-            {t(
+            {!gate.ok && <Icon name="lock" />}
+            {t(game.status === 'ready' ? 'games.gateLocked' :
               game.status === 'maintenance'
                 ? 'games.statusMaintenance'
                 : game.status === 'upcoming'
@@ -57,16 +62,18 @@ function GameCard({ game, openModal }) {
             <Icon name="users" /> {game.players}
           </span>
         </span>
+        {!gate.ok && <small className="game-gate-reason">{gameGateText(gate.reasons[0], t, format)}</small>}
       </span>
     </button>
   )
 }
 
 export function RecentGames({ openModal, recentVisibility = true }) {
-  const { t } = useLocale()
+  const { t, format } = useLocale()
   const categoryLabel = useCategoryLabel()
   const showGameDetails = useGameDetails(openModal)
-  const { country } = useH5()
+  const player = useH5()
+  const { country } = player
   // Same rule as the main catalogue: a game outside the player's region does not
   // appear here either, recently played or not.
   const visibleRecent = recentGames.filter((game) => openInCountry(game, country))
@@ -106,9 +113,11 @@ export function RecentGames({ openModal, recentVisibility = true }) {
         aria-keyshortcuts="ArrowLeft ArrowRight"
         aria-describedby="recent-games-hint"
       >
-        {visibleRecent.map((game) => (
+        {visibleRecent.map((game) => {
+          const gate = gameGate(game, player)
+          return (
           <button
-            className="recent-card card"
+            className={`recent-card card${gate.ok ? '' : ' is-gate-locked'}`}
             type="button"
             key={game.id}
             onClick={() => showGameDetails(game)}
@@ -118,10 +127,12 @@ export function RecentGames({ openModal, recentVisibility = true }) {
               <strong>{game.name}</strong>
               <small>{categoryLabel(game)}</small>
               <span>{t(game.recent)}</span>
+              {!gate.ok && <small className="game-gate-reason">{gameGateText(gate.reasons[0], t, format)}</small>}
             </span>
-            <Icon name="chevronRight" />
+            <Icon name={gate.ok ? 'chevronRight' : 'lock'} />
           </button>
-        ))}
+          )
+        })}
       </div>
     </section>
   )

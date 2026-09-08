@@ -4,8 +4,8 @@ import { readEntryState } from './model.js'
 import { requestHost } from './hostBridge.js'
 import { createDisplayModeDispatcher } from './displayMode.js'
 import { normalizeHostContext } from './hostContext.js'
-import { profile, balances } from '../data.js'
-import { openInCountry } from '../demoModel.js'
+import { profile, balances, games } from '../data.js'
+import { gameGate, openInCountry } from '../demoModel.js'
 
 export default function H5Provider({ children }) {
   const [displayMode] = useState(() =>
@@ -15,14 +15,18 @@ export default function H5Provider({ children }) {
   )
   useEffect(() => () => displayMode.cancelPending(), [displayMode])
   const [hostContext, setHostContext] = useState(() =>
-    normalizeHostContext(window.JoyloopHost?.context, {
+    normalizeHostContext(window.JoyloopHost?.context, window.JoyloopHost ? {} : {
       account: profile,
       wallet: balances,
     }),
   )
+  const latestContext = useRef(hostContext)
   useEffect(() => {
-    const updateContext = (event) =>
-      setHostContext((previous) => normalizeHostContext(event.detail, previous))
+    const updateContext = (event) => {
+      const next = normalizeHostContext(event.detail, latestContext.current)
+      latestContext.current = next
+      setHostContext(next)
+    }
     window.addEventListener('joyloop:context', updateContext)
     return () => window.removeEventListener('joyloop:context', updateContext)
   }, [])
@@ -55,18 +59,23 @@ export default function H5Provider({ children }) {
   }
 
   const openGame = (selected) => {
-    // Last-line check: whatever UI got the player here (catalogue, winner feed,
-    // recent-games rail), a game outside their region must not actually launch.
-    if (activeGame.current || selected.status !== 'ready' || !openInCountry(selected, hostContext.country ?? null)) return
+    const configured = games.find((item) => item.id === selected?.id)
+    const player = latestContext.current
+    // UI callbacks may outlive their context or omit a check. Recheck the current
+    // player against the catalogue record so stale dialogs and caller overrides
+    // cannot bypass either region restrictions or entry requirements.
+    if (!configured || activeGame.current || configured.status !== 'ready' ||
+      !openInCountry(configured, player.country ?? null) || !gameGate(configured, player).ok) return false
     activeGame.current = true
     launchTrigger.current = document.activeElement
     returnMode.current = entry.mode
     displayMode.request({
       mode: 'full',
       reason: 'game',
-      gameId: selected.id,
+      gameId: configured.id,
     })
-    setGame(selected)
+    setGame(configured)
+    return true
   }
 
   const closeGame = useCallback(() => {
@@ -93,8 +102,7 @@ export default function H5Provider({ children }) {
         closeGame,
         account: hostContext.account,
         wallet: hostContext.wallet,
-        // ISO 3166-1 alpha-2 from the host; null means the lobby applies no
-        // geographic filtering rather than guessing where the player is.
+        // Unknown countries cannot access games with a region whitelist.
         country: hostContext.country ?? null,
       }}
     >

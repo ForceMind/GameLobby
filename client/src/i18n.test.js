@@ -16,6 +16,8 @@ const sourceFiles = [
   'navigation.js',
   'ui.jsx',
   'GameCatalog.jsx',
+  'GameDetails.jsx',
+  'gameGateText.js',
   'pages/LobbyPage.jsx',
   'pages/GamesPage.jsx',
   'pages/EventsPage.jsx',

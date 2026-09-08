@@ -14,6 +14,10 @@ window.JoyloopHost = {
       name: 'Player',
       avatar: 'https://cdn.example/avatar.png',
       level: 11,
+      gender: 'male',
+      wealthLevel: 3,
+      charmLevel: 2,
+      familyId: 'family-nova',
     },
     wallet: {
       coins: 68000,
@@ -29,6 +33,9 @@ window.JoyloopHost = {
 
 - `account.id/name/avatar`：非空字符串，最长 240 字符；`avatar` 可省略。
 - `account.level`：1–999 的整数。
+- `account.gender`：只接受 `male` / `female`。
+- `account.wealthLevel/charmLevel`：非负整数，0 是合法值。
+- `account.familyId`：非空字符串，最长 240 字符；无家族时初始不传。
 - `wallet.coins/gems`：非负安全整数。
 
 页面会清理其他字段，不接收或传递 token。页面跳转后每个新文档都必须重新注入 `JoyloopHost`；余额或身份变化可发送：
@@ -44,7 +51,11 @@ window.dispatchEvent(
 )
 ```
 
-页面会把事件中的有效字段与当前公共上下文合并。App 负责登录、注销、身份切换和最终账本；H5 不提供独立退出登录。
+页面会把同一账号事件中的有效字段与当前公共上下文合并；省略字段保留原值。准入相关字段（level、gender、wealthLevel、charmLevel、familyId、coins）显式传入 null 或非法值时清除旧资格，其中 coins 使用安全的 0。离开家族应发送 `account: { familyId: null }`，省略字段不能表达退出。合法 account.id 改变（包括从未知身份首次绑定）时清空旧账号字段和钱包回退值，宿主应随新身份重新提供准入数据。App 负责登录、注销、身份切换和最终账本；H5 不提供独立退出登录。
+
+只有完全未注入 `window.JoyloopHost` 的独立预览才启用演示账号与活动预览余额。真实宿主对象存在时，缺失字段按未知处理，缺失余额按安全 0 处理；接口失败不回退演示数据。启用的进入门槛遇到缺失字段会拒绝启动，未设置门槛的游戏不受影响。游戏说明弹窗会随上下文更新，最终启动函数也会重新校验最新数据。当前项目为静态前端原型，这些检查不代替正式服务端准入校验。
+
+`account.id: null` 不表示注销；宿主注销应销毁或重新加载当前 H5，并重新注入上下文。国家更新沿用有效两位国家代码的既有契约，`country: null` 不清除已知国家；本期未增加地区撤销协议。
 
 ## 2. 请求格式与状态
 
