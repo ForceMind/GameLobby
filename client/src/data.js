@@ -57,8 +57,19 @@ export const gameCategories = [
   { id: 'realtime', label: 'games.tagLive' },
 ]
 
+const defaultGameEntryGate = {
+  wealthLevel: 0,
+  charmLevel: 0,
+  minBalance: 0,
+  playLevel: 0,
+  genders: ['male', 'female'],
+  familyOnly: false,
+  promoTag: 'none',
+}
+
 export const games = [
   {
+    ...defaultGameEntryGate,
     id: 'golden-pharaoh',
     name: 'Golden Pharaoh',
     category: 'slots realtime',
@@ -70,8 +81,11 @@ export const games = [
     badges: ['JACKPOT', 'HEAT'],
     status: 'ready',
     cover: 'golden-pharaoh-v2.png',
+    wealthLevel: 5,
+    promoTag: 'hot',
   },
   {
+    ...defaultGameEntryGate,
     id: 'ocean-777',
     // 白名单：仅这些国家/地区的玩家能看到并进入（与后台「可用地区」对应）
     region: { mode: 'custom', countries: ['CN', 'HK', 'JP', 'KR', 'MY', 'SG', 'TH', 'TW', 'VN'] },
@@ -87,6 +101,7 @@ export const games = [
     cover: 'ocean-777-v2.png',
   },
   {
+    ...defaultGameEntryGate,
     id: 'fruit-party',
     name: 'Fruit Party',
     category: 'slots',
@@ -100,6 +115,7 @@ export const games = [
     cover: 'fruit-party-v2.png',
   },
   {
+    ...defaultGameEntryGate,
     id: 'wild-west-deluxe',
     name: 'Wild West Deluxe',
     category: 'slots',
@@ -113,6 +129,7 @@ export const games = [
     cover: 'wild-west-deluxe-v2.png',
   },
   {
+    ...defaultGameEntryGate,
     id: 'fish-hunter',
     name: 'Fish Hunter',
     category: 'casual realtime',
@@ -124,8 +141,11 @@ export const games = [
     badges: ['LIVE', 'HEAT'],
     status: 'ready',
     cover: 'fish-hunter-v2.png',
+    familyOnly: true,
+    promoTag: 'club',
   },
   {
+    ...defaultGameEntryGate,
     id: 'bubble-pop',
     name: 'Bubble Pop',
     category: 'casual',
@@ -139,6 +159,7 @@ export const games = [
     cover: 'bubble-pop-v2.png',
   },
   {
+    ...defaultGameEntryGate,
     id: 'dice-merge',
     name: 'Dice Merge',
     category: 'casual',
@@ -152,6 +173,7 @@ export const games = [
     cover: 'dice-merge-v2.png',
   },
   {
+    ...defaultGameEntryGate,
     id: 'mini-golf-rush',
     name: 'Mini Golf Rush',
     category: 'casual',
@@ -463,6 +485,10 @@ export const profile = {
   id: 'JL-2048',
   level: 11,
   avatar: 'NP',
+  gender: 'male',
+  wealthLevel: 3,
+  charmLevel: 2,
+  familyId: 'family-nova',
 }
 
 // Compatibility aliases for components migrated from the first prototype.

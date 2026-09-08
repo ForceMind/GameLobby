@@ -90,7 +90,7 @@ async function request(path, body) {
 }
 
 export function createEngagementService() {
-  const useServer = import.meta.env?.VITE_ENGAGEMENT_SOURCE === 'server' || typeof window.JoyloopHost?.request === 'function'
+  const useServer = import.meta.env?.VITE_ENGAGEMENT_SOURCE === 'server' || Boolean(window.JoyloopHost)
   if (useServer) return {
     source: 'server',
     async preferences() {

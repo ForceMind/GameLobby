@@ -23,6 +23,82 @@ export function openInCountry(game, country) {
   return regionAllows(game.region, country)
 }
 
+const GENDERS = ['male', 'female']
+
+function positiveThreshold(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : null
+}
+
+function nonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0 ? value : null
+}
+
+function validPlayLevel(value) {
+  return Number.isInteger(value) && value >= 1 && value <= 999 ? value : null
+}
+
+function validBalance(value) {
+  return Number.isSafeInteger(value) && value >= 0 ? value : null
+}
+
+function validGender(value) {
+  return GENDERS.includes(value) ? value : null
+}
+
+function validFamilyId(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function gatedGenders(value) {
+  if (!Array.isArray(value)) return []
+  const selected = new Set(value.filter((gender) => GENDERS.includes(gender)))
+  return selected.size === GENDERS.length ? [] : [...selected]
+}
+
+/**
+ * Checks player-facing entry requirements. Configuration that is unset or zero
+ * imposes no restriction; absent player data remains closed for active rules.
+ */
+export function gameGate(game = {}, player = {}) {
+  const gameRecord = game && typeof game === 'object' ? game : {}
+  const account = player && player.account !== null && typeof player.account === 'object'
+    ? player.account
+    : {}
+  const wallet = player && player.wallet !== null && typeof player.wallet === 'object'
+    ? player.wallet
+    : {}
+  const reasons = []
+  const numericRules = [
+    ['wealthLevel', positiveThreshold(gameRecord.wealthLevel), nonNegativeInteger(account.wealthLevel)],
+    ['charmLevel', positiveThreshold(gameRecord.charmLevel), nonNegativeInteger(account.charmLevel)],
+    ['minBalance', positiveThreshold(gameRecord.minBalance), validBalance(wallet.coins)],
+    ['playLevel', positiveThreshold(gameRecord.playLevel), validPlayLevel(account.level)],
+  ]
+
+  for (const [key, need, have] of numericRules) {
+    if (need !== null && (have === null || have < need)) {
+      reasons.push({ key, need, have })
+    }
+  }
+
+  const genders = gatedGenders(gameRecord.genders)
+  if (genders.length > 0) {
+    const have = validGender(account.gender)
+    if (have === null || !genders.includes(have)) {
+      reasons.push({ key: 'genders', need: gameRecord.genders, have })
+    }
+  }
+
+  if (gameRecord.familyOnly === true) {
+    const have = validFamilyId(account.familyId)
+    if (have === null) reasons.push({ key: 'familyOnly', need: true, have })
+  }
+
+  return { ok: reasons.length === 0, reasons }
+}
+
 export function filterGames(
   catalog,
   category,

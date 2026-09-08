@@ -24,12 +24,36 @@ function validLevel(value) {
   return Number.isInteger(value) && value >= 1 && value <= 999 ? value : null
 }
 
+function validNonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0 ? value : null
+}
+
+function validGender(value) {
+  return value === 'male' || value === 'female' ? value : null
+}
+
 function pickString(source, fallback, key) {
   return validString(source?.[key]) ?? validString(fallback?.[key])
 }
 
 function pickBalance(source, fallback, key) {
   return validBalance(source?.[key]) ?? validBalance(fallback?.[key]) ?? 0
+}
+
+function pickGateBalance(source, fallback, key) {
+  if (hasOwn(source, key)) return validBalance(source[key]) ?? 0
+  return validBalance(fallback[key]) ?? 0
+}
+
+function hasOwn(source, key) {
+  return Object.prototype.hasOwnProperty.call(source, key)
+}
+
+// Gate-critical fields are cleared by explicitly invalid input instead of
+// reviving a previous value. Omitting a field still supports same-account events.
+function pickStrictAccountValue(source, fallback, key, validate) {
+  if (hasOwn(source, key)) return validate(source[key])
+  return validate(fallback[key])
 }
 
 // The host tells us which language the player has chosen in the native app. It is
@@ -41,27 +65,59 @@ function validLocale(value) {
 
 /**
  * Normalize a partial host context, retaining only the public H5 contract.
- * Values missing or invalid in input are taken from fallback.  Derived labels
- * are always generated here so a host cannot inject a misleading display.
+ * Non-gate display values can use fallback data. Gate-critical values use an
+ * explicit-invalid-is-cleared rule so stale eligibility cannot be retained.
  */
 export function normalizeHostContext(input = {}, fallback = {}) {
   const source = isRecord(input) ? input : {}
   const previous = isRecord(fallback) ? fallback : {}
   const sourceAccount = isRecord(source.account) ? source.account : {}
-  const previousAccount = isRecord(previous.account) ? previous.account : {}
+  const untrustedPreviousAccount = isRecord(previous.account) ? previous.account : {}
+  const sourceId = validString(sourceAccount.id)
+  const previousId = validString(untrustedPreviousAccount.id)
+  const accountChanged = sourceId !== null && sourceId !== previousId
+  const previousAccount = accountChanged ? {} : untrustedPreviousAccount
   const sourceWallet = isRecord(source.wallet) ? source.wallet : {}
-  const previousWallet = isRecord(previous.wallet) ? previous.wallet : {}
+  const previousWallet = accountChanged || !isRecord(previous.wallet) ? {} : previous.wallet
 
   const account = {}
   for (const key of ACCOUNT_FIELDS) {
     const value = pickString(sourceAccount, previousAccount, key)
     if (value !== null) account[key] = value
   }
-  const level =
-    validLevel(sourceAccount.level) ?? validLevel(previousAccount.level)
+  const level = pickStrictAccountValue(
+    sourceAccount,
+    previousAccount,
+    'level',
+    validLevel,
+  )
   if (level !== null) account.level = level
 
-  const coins = pickBalance(sourceWallet, previousWallet, 'coins')
+  const gender = pickStrictAccountValue(
+    sourceAccount,
+    previousAccount,
+    'gender',
+    validGender,
+  )
+  if (gender !== null) account.gender = gender
+  for (const key of ['wealthLevel', 'charmLevel']) {
+    const value = pickStrictAccountValue(
+      sourceAccount,
+      previousAccount,
+      key,
+      validNonNegativeInteger,
+    )
+    if (value !== null) account[key] = value
+  }
+  const familyId = pickStrictAccountValue(
+    sourceAccount,
+    previousAccount,
+    'familyId',
+    validString,
+  )
+  if (familyId !== null) account.familyId = familyId
+
+  const coins = pickGateBalance(sourceWallet, previousWallet, 'coins')
   const gems = pickBalance(sourceWallet, previousWallet, 'gems')
   const locale = validLocale(source.locale) ?? validLocale(previous.locale)
   // ISO 3166-1 alpha-2, decided by the host from its own signals; the lobby never

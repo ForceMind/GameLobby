@@ -91,6 +91,16 @@ test('服务器模式故障不回退预览，写请求沿用业务幂等键而�
   assert.equal(calls.length,before)
 })
 
+test('仅有上下文的宿主也禁用预览，故障时不能回退演示余额', async t => {
+  const previous = globalThis.window
+  globalThis.window = { JoyloopHost: { context: { account: { id: 'qa-missing' } } } }
+  t.after(() => { if (previous === undefined) delete globalThis.window; else globalThis.window = previous })
+  t.mock.method(globalThis, 'fetch', async () => { throw new Error('offline') })
+  const service = createEngagementService()
+  assert.equal(service.source, 'server')
+  await assert.rejects(service.chest(), /offline/)
+})
+
 test('开启排行只收录今日有效宝箱奖励，去重、稳定排序并限制前五', () => {
   const entry = (id, rewardCoins, openedAt = now - 1000) => ({ id, name: id, rewardCoins, openedAt })
   const rows = [entry('a', 2000), entry('a', 2000), entry('b', 6000), entry('c', 4000),

@@ -7,6 +7,7 @@ import {
   validateDemoCode,
   nextWheelAngle,
   isValidNickname,
+  gameGate,
 } from './demoModel.js'
 
 test('昵称按Unicode字符计数并覆盖空值与边界', () => {
@@ -99,4 +100,103 @@ test('游戏目录按玩家所在国家过滤：白名单之外的游戏不出�
   // 否则白名单形同虚设；没有地理限制的游戏不受影响。
   assert.deepEqual(filterGames(catalog, 'all', false, false, null).map((g) => g.id), ['global', 'explicit-all'])
   assert.equal(openInCountry(catalog[1], null), false)
+})
+
+test('游戏默认准入配置与演示门槛可供玩家侧和后台共用', () => {
+  for (const game of games) {
+    for (const key of ['wealthLevel', 'charmLevel', 'minBalance', 'playLevel', 'genders', 'familyOnly', 'promoTag']) {
+      assert.ok(Object.hasOwn(game, key))
+    }
+  }
+  assert.equal(games.find((game) => game.id === 'golden-pharaoh').wealthLevel, 5)
+  assert.equal(games.find((game) => game.id === 'golden-pharaoh').promoTag, 'hot')
+  assert.equal(games.find((game) => game.id === 'fish-hunter').familyOnly, true)
+  assert.equal(games.find((game) => game.id === 'fish-hunter').promoTag, 'club')
+})
+
+test('游戏准入逐项报告未满足的数值门槛', () => {
+  const player = {
+    account: { wealthLevel: 3, charmLevel: 2, level: 10 },
+    wallet: { coins: 900 },
+  }
+  const cases = [
+    ['wealthLevel', { wealthLevel: 4 }, 4, 3],
+    ['charmLevel', { charmLevel: 3 }, 3, 2],
+    ['minBalance', { minBalance: 1000 }, 1000, 900],
+    ['playLevel', { playLevel: 11 }, 11, 10],
+  ]
+  for (const [key, game, need, have] of cases) {
+    assert.deepEqual(gameGate(game, player), {
+      ok: false,
+      reasons: [{ key, need, have }],
+    })
+  }
+})
+
+test('游戏准入在等于门槛时通过，并同时检查性别和家族', () => {
+  const game = {
+    wealthLevel: 3,
+    charmLevel: 2,
+    minBalance: 900,
+    playLevel: 10,
+    genders: ['male'],
+    familyOnly: true,
+  }
+  const player = {
+    account: { wealthLevel: 3, charmLevel: 2, level: 10, gender: 'male', familyId: 'nova' },
+    wallet: { coins: 900 },
+  }
+  assert.deepEqual(gameGate(game, player), { ok: true, reasons: [] })
+  assert.deepEqual(gameGate({ genders: ['female'] }, player), {
+    ok: false,
+    reasons: [{ key: 'genders', need: ['female'], have: 'male' }],
+  })
+  assert.deepEqual(gameGate({ familyOnly: true }, { ...player, account: { ...player.account, familyId: '' } }), {
+    ok: false,
+    reasons: [{ key: 'familyOnly', need: true, have: null }],
+  })
+})
+
+test('游戏准入对缺失或非法玩家数据保持 fail-closed', () => {
+  const game = {
+    wealthLevel: 1,
+    charmLevel: 1,
+    minBalance: 1,
+    playLevel: 1,
+    genders: ['male'],
+    familyOnly: true,
+  }
+  assert.deepEqual(gameGate(game, { account: {}, wallet: {} }), {
+    ok: false,
+    reasons: [
+      { key: 'wealthLevel', need: 1, have: null },
+      { key: 'charmLevel', need: 1, have: null },
+      { key: 'minBalance', need: 1, have: null },
+      { key: 'playLevel', need: 1, have: null },
+      { key: 'genders', need: ['male'], have: null },
+      { key: 'familyOnly', need: true, have: null },
+    ],
+  })
+  assert.deepEqual(gameGate({ wealthLevel: 1 }, { account: { wealthLevel: 1.5 } }), {
+    ok: false,
+    reasons: [{ key: 'wealthLevel', need: 1, have: null }],
+  })
+  assert.deepEqual(gameGate({ minBalance: 1 }, { wallet: { coins: Number.MAX_SAFE_INTEGER + 1 } }), {
+    ok: false,
+    reasons: [{ key: 'minBalance', need: 1, have: null }],
+  })
+})
+
+test('未配置的门槛不限制玩家', () => {
+  const unrestricted = {
+    wealthLevel: 0,
+    charmLevel: null,
+    minBalance: undefined,
+    playLevel: '',
+    genders: [],
+    familyOnly: false,
+  }
+  assert.deepEqual(gameGate(unrestricted, {}), { ok: true, reasons: [] })
+  assert.deepEqual(gameGate({ genders: ['male', 'female'] }, {}), { ok: true, reasons: [] })
+  assert.deepEqual(gameGate(null, { account: null, wallet: null }), { ok: true, reasons: [] })
 })
