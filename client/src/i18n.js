@@ -75,14 +75,30 @@ export function createTranslator(locale) {
 
 // URL parameter wins, then the host app's language, then what the player chose
 // last, then the browser's own preference, then the default.
+//
+// Traditional Chinese is the one exception in that last, implicit step: it is
+// a real, fully-translated option a player can still pick by hand (or a host/
+// URL/saved choice still honors), but a browser's language list often carries
+// it as a secondary entry alongside Simplified rather than a deliberate pick.
+// Auto-selecting it would presume a script/region the visitor never chose, so
+// an unprompted browser-language match on Traditional Chinese falls through to
+// English instead of guessing.
 export function resolveLocale(search = '', savedLocale = null, hostLocale = null, navigatorLanguages = []) {
   const requested = new URLSearchParams(search).get('lang')
-  const candidates = [requested, hostLocale, savedLocale, ...navigatorLanguages]
-  for (const candidate of candidates) {
+  for (const candidate of [requested, hostLocale, savedLocale]) {
     const match = normalizeLocale(candidate)
     if (match) return match
   }
-  return DEFAULT_LOCALE
+  let sawUnpromptedTraditionalChinese = false
+  for (const candidate of navigatorLanguages) {
+    const match = normalizeLocale(candidate)
+    if (match === 'zh-Hant') {
+      sawUnpromptedTraditionalChinese = true
+      continue
+    }
+    if (match) return match
+  }
+  return sawUnpromptedTraditionalChinese ? FALLBACK_LOCALE : DEFAULT_LOCALE
 }
 
 // Coverage of the player-facing catalogue, for the admin translation module and

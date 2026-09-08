@@ -199,6 +199,16 @@ test('语言与展示配置的跨页链接保留筛选和锚点', () => {
   assert.equal(resolveLocale('', null, null, ['pt-PT', 'fr']), 'pt-BR')
   assert.equal(resolveLocale('', null, null, ['xx']), 'zh-Hans')
   assert.equal(resolveLocale('', 'unknown'), 'zh-Hans')
+  // 浏览器语言列表里的繁体中文不会被自动选中（可能只是列表里的次要项，不是
+  // 玩家主动选的），落到英文；但显式来源（URL、宿主、玩家自己保存过的选择）
+  // 仍然照旧支持繁体中文
+  assert.equal(resolveLocale('', null, null, ['zh-TW']), 'en')
+  // a later, less ambiguous preference in the same list still wins
+  assert.equal(resolveLocale('', null, null, ['zh-HK', 'fr']), 'fr')
+  assert.equal(resolveLocale('', null, null, ['zh-Hant', 'zh-CN']), 'zh-Hans')
+  assert.equal(resolveLocale('?lang=zh-TW', null, null, ['en']), 'zh-Hant')
+  assert.equal(resolveLocale('', null, 'zh-Hant', ['en']), 'zh-Hant')
+  assert.equal(resolveLocale('', 'zh-Hant', null, ['en']), 'zh-Hant')
   assert.equal(
     localizedHref('games.html?category=slots#game-catalog', 'en'),
     'games.html?category=slots&lang=en#game-catalog',

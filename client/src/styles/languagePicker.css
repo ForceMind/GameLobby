@@ -2,7 +2,12 @@
 .language-picker-trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 12px; color: var(--ink); background: #fff; cursor: pointer; font: inherit; font-size: .82rem; font-weight: 650; text-align: left; }
 .language-picker-trigger:hover { border-color: #aebdd5; background: var(--surface-soft); }
 .language-picker-trigger svg { flex: 0 0 auto; color: var(--muted); font-size: .7rem; transform: rotate(90deg); }
-.language-picker-menu { position: absolute; z-index: 10; right: 0; left: 0; display: grid; gap: 3px; margin-top: 6px; padding: 6px; border: 1px solid var(--line-strong); border-radius: 13px; background: #fff; box-shadow: var(--shadow-md); }
+.language-picker-menu { position: absolute; z-index: 10; right: 0; left: 0; display: grid; gap: 3px; margin-top: 6px; padding: 6px; border: 1px solid var(--line-strong); border-radius: 13px; background: #fff; box-shadow: var(--shadow-md); max-height: min(50dvh, 420px); overflow-y: auto; overscroll-behavior: contain; }
+/* The floating prototype switcher sits near the bottom edge of the screen, so
+   its 24-language menu has no room to open downward — anchor it above the
+   trigger instead. The max-height/scroll above still guards the case where
+   even "above" runs out of room (a very short window). */
+.prototype-language-float .language-picker-menu { top: auto; bottom: calc(100% + 6px); margin-top: 0; }
 .language-picker-menu button { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding: 0 10px; border: 0; border-radius: 9px; color: var(--ink-soft); background: transparent; cursor: pointer; font: inherit; font-size: .76rem; text-align: left; }
 .language-picker-menu button:hover, .language-picker-menu button.is-selected { color: var(--primary); background: var(--primary-soft); }
 .language-picker-check { font-weight: 850; }

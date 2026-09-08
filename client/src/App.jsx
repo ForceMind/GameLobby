@@ -157,11 +157,91 @@ function PrototypeLanguageSwitcher({ source, mode }) {
   )
 }
 
+const PHONE_RATIO_STORAGE_KEY = 'joyloop-phone-ratio'
+const phoneRatioOptions = ['auto', '18:9', '21:9']
+
+function readStoredPhoneRatio() {
+  try {
+    const stored = window.localStorage.getItem(PHONE_RATIO_STORAGE_KEY)
+    return phoneRatioOptions.includes(stored) ? stored : 'auto'
+  } catch {
+    return 'auto'
+  }
+}
+
+// Desktop-preview-only control: switches the simulated phone in h5.css
+// between a content-fitted height ("auto", driven by --phone-auto-height
+// below) and the two real-phone ratios players actually see. Hidden by CSS
+// on a real phone and in half mode — there's no frame ratio to switch there.
+function PhoneFrameSwitcher({ mode }) {
+  const { t } = useLocale()
+  const [ratio, setRatio] = useState(readStoredPhoneRatio)
+  useEffect(() => {
+    document.documentElement.dataset.phoneRatio = ratio
+    try {
+      window.localStorage.setItem(PHONE_RATIO_STORAGE_KEY, ratio)
+    } catch {
+      // Private browsing or a full storage quota — the choice just won't
+      // survive a reload, which is fine for a review-only control.
+    }
+  }, [ratio])
+  if (mode !== 'full') return null
+  return (
+    <aside className="phone-ratio-float" aria-label={t('preview.phoneFrame')}>
+      <span>{t('preview.phoneFrame')}</span>
+      <nav>
+        {phoneRatioOptions.map((option) => (
+          <button
+            key={option}
+            type="button"
+            className={option === ratio ? 'is-active' : ''}
+            aria-pressed={option === ratio}
+            onClick={() => setRatio(option)}
+          >
+            {option === 'auto' ? t('preview.phoneFrameAuto') : option}
+          </button>
+        ))}
+      </nav>
+    </aside>
+  )
+}
+
+// Measures how tall this page's content actually wants to be — header +
+// content + bottom nav — and writes it to --phone-auto-height (read by the
+// "auto" ratio rule in h5.css) so the desktop phone frame fits the page
+// instead of leaving empty space below it or clipping it. Re-measures
+// whenever the content's natural size changes (tab switches, expanding
+// content, a page navigation) or the window is resized.
+function usePhoneFrameAutoHeight(contentRef) {
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content) return undefined
+    const surface = content.closest('.app-surface')
+    const update = () => {
+      const chrome =
+        (surface?.querySelector('.app-header')?.offsetHeight ?? 0) +
+        (surface?.querySelector('.bottom-nav')?.offsetHeight ?? 0)
+      const available = window.innerHeight - 64
+      const desired = Math.min(content.scrollHeight + chrome, available)
+      document.documentElement.style.setProperty('--phone-auto-height', `${Math.max(480, Math.round(desired))}px`)
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(content)
+    window.addEventListener('resize', update)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  })
+}
+
 export default function App() {
   const { t, locale, href } = useLocale()
   const { mode, game, closeGame, closeLobby, account, country } = useH5()
   const { page, url: routeUrl, action: navigationAction } = useNavigation()
   const mainRef = useRef(null)
+  usePhoneFrameAutoHeight(mainRef)
   const scrollPositions = useRef(new Map())
   const [modal, setModal] = useState(null)
   const [toastMessage, setToastMessage] = useState(null)
@@ -334,6 +414,7 @@ export default function App() {
         </div>
       </div>
       {!game && !modal && <PrototypeLanguageSwitcher source={engagement.source} mode={mode} />}
+      {!game && !modal && <PhoneFrameSwitcher mode={mode} />}
       {game && <GameSession key={game.id} game={game} onClose={closeGame} onRoundComplete={engagement.completeRound} />}
     </div></EngagementContext.Provider>
   )

@@ -2583,11 +2583,70 @@ section[id] {
   background: #fff;
 }
 
-@container lobby (max-width: 640px) {
+/* Real @media, not @container: this float sits as a sibling of .h5-lobby
+   (see PrototypeLanguageSwitcher in App.jsx), so it has no lobby container
+   ancestor to query against — it must read the real viewport instead. */
+@media (max-width: 640px) {
   .prototype-language-float {
     right: 10px;
     bottom: calc(74px + env(safe-area-inset-bottom));
   }
+}
+
+/* Only meaningful once the desktop phone frame itself is showing (same
+   condition as the frame in h5.css) — hidden everywhere else, including on
+   a real phone, where there is no frame ratio to switch. */
+.phone-ratio-float {
+  display: none;
+}
+@media (min-width: 880px) and (pointer: fine) and (hover: hover) {
+  .phone-ratio-float {
+    position: fixed;
+    z-index: 25;
+    left: 18px;
+    bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 11px;
+    border: 1px solid rgba(203, 214, 231, 0.92);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 12px 28px rgba(31, 52, 88, 0.14);
+    backdrop-filter: blur(12px);
+  }
+}
+.phone-ratio-float > span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.phone-ratio-float nav {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--surface-soft);
+}
+.phone-ratio-float nav button {
+  display: inline-grid;
+  min-width: 38px;
+  min-height: 27px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.phone-ratio-float nav button:hover,
+.phone-ratio-float nav button.is-active {
+  color: var(--primary);
+  background: #fff;
 }
 
 .toast {

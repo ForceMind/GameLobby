@@ -22,6 +22,16 @@ body,
   isolation: isolate;
   box-shadow: 0 -18px 70px #09132645;
 }
+/* A real phone never shows a scrollbar track — mobile browsers auto-hide it.
+   Desktop Chrome/Firefox draw one on every overflow:auto/scroll element by
+   default, which reads as "this is a website in a box", not a phone. Every
+   scroll container in here stays scrollable, just without the visible chrome. */
+.h5-lobby * {
+  scrollbar-width: none;
+}
+.h5-lobby *::-webkit-scrollbar {
+  display: none;
+}
 .h5-lobby.is-half {
   width: min(100vw, 640px);
   height: 56vh;
@@ -44,13 +54,28 @@ body,
   .h5-lobby.is-full {
     align-self: center;
     width: min(430px, 92vw);
-    height: min(900px, calc(100dvh - 64px));
+    /* Default (and the "auto" ratio mode): PhoneFrameSwitcher in App.jsx
+       measures this page's actual content height and writes it here, so the
+       frame fits the content instead of leaving dead space or clipping it.
+       Before that effect runs, or with JS disabled, it falls back to a plain
+       tall-phone size. */
+    height: var(--phone-auto-height, min(900px, calc(100dvh - 64px)));
+    max-height: calc(100dvh - 64px);
     border-radius: 44px;
     box-shadow:
       0 0 0 10px #1b1f27,
       0 0 0 12px #383d48,
       0 30px 70px -15px rgba(9, 13, 25, 0.55),
       0 10px 28px rgba(9, 13, 25, 0.35);
+  }
+  /* Fixed real-phone ratios, picked from the same PhoneFrameSwitcher panel. */
+  html[data-phone-ratio='18:9'] .h5-lobby.is-full {
+    height: auto;
+    aspect-ratio: 9 / 18;
+  }
+  html[data-phone-ratio='21:9'] .h5-lobby.is-full {
+    height: auto;
+    aspect-ratio: 9 / 21;
   }
 }
 .h5-lobby .app-root {
