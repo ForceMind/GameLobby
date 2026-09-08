@@ -33,3 +33,12 @@
 - 质量检查：最终 `npm run lint && npm test && npm run build && npm run check:dist` 全部退出 0；97 / 97 项测试通过（基线 81，新增 16）。最终构建入口 `start-v0.3.2-aff142a9edf57080.html`，八个入口/资源版本/404/no-store 均验证；开发 QA 入口不进入产物。`git diff --check` 通过。
 - 本地提交：`667ba46`（规则与可信宿主输入）、`bf11049`（后台治理与紧急状态保护）；玩家界面、版本和本记录随第三批 `feat: explain locked games and recheck every launch` 提交。
 - 验收状态：已完成。三个提交均保留在本地；没有 push 或部署。未跟踪的 `HANDOFF-游戏准入门槛.md` 保持原状。
+
+## 后续授权：Pages 发布与仓库同步
+
+- 用户后续要求“部署提交更新 pages，更新文档”，覆盖前述不推送、不部署的本轮限制。
+- 沿用项目现有 Wrangler 直接上传方式，发布当前分支 `lobby-admin-lite-v1`，不修改 main 生产部署。
+- 已发布 v0.3.2 / `26815bd`，唯一部署 `https://72e250f9.joyloop.pages.dev`；分支地址 `https://lobby-admin-lite-v1.joyloop.pages.dev`。
+- 已验证部署包18文件、线上版本、财富锁定/家族放行、后台门槛列和产品文档；发布文档包含源码提交、包哈希、上一部署与回退边界。
+- HTTP 复验：17 个可访问文件哈希一致，no-store、JS/CSS MIME 与缺失脚本404通过。
+- 后续 Markdown 发布记录不修改已部署静态代码；仓库同步以本轮最终提交回读为准。

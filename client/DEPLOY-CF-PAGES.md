@@ -2,6 +2,29 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。
 
+## 最近部署：2026-09-08 · v0.3.2
+
+- 发布范围：现有 `joyloop` 项目的 `lobby-admin-lite-v1` 分支预览，未改动 `main` 生产部署。
+- 源码提交：`26815bd8d118add3cd861f441dd9b07c9385881a`，包含游戏进入门槛、运营标签、宿主缺字段拦截和紧急运行状态保护。
+- 分支地址：https://lobby-admin-lite-v1.joyloop.pages.dev
+- 本次唯一地址：https://72e250f9.joyloop.pages.dev
+- 新入口：https://lobby-admin-lite-v1.joyloop.pages.dev/start-v0.3.2-aff142a9edf57080.html
+- 上一部署：https://3eaaf1c2.joyloop.pages.dev ，对应 `09a180d`，保留作回退参考。
+- 发布工具：Wrangler 4.129.1；已确认本项目没有 Git 自动构建，GitHub 同步与 Pages 上传分别执行。
+- 校验包：`artifacts/joyloop-cf-pages-2026-09-08-26815bd.zip`，SHA-256 为 `8a2ffb252c0a40b4d8a5643c82807bf7045e43a8b9833da8cde77c07b576fd8b`。
+- 包含 18 个文件。manifest 的 `dirty: true` 来自保留的未跟踪交接文件，全部受版本管理的源码已提交；交接文件未进入 ZIP 或部署目录。
+
+本次部署复用已通过 lint、97 项测试、build 的产物，并再次执行 `check:dist` 和 ZIP 文件级校验。线上浏览器已核对 v0.3.2、财富门槛禁用开始、家族游戏进入、后台两列与示例值、文档第一期已实现状态。部署后的文档提交仅更新仓库 Markdown 发布记录，不改变本次静态产物的源码提交。
+
+线上 HTTP 校验：除由 Pages 解析的 `_headers` 外，17 个文件的 SHA-256 与 manifest 一致；页面、脚本、样式均带 `Cache-Control: no-store`，JS/CSS MIME 正确；不存在的脚本返回 404。明细保存在本地 `artifacts/pages-v0.3.2-online-verification.json`。Pages 会将 `.html` 重定向到无扩展名地址，校验已跟随重定向。
+
+```bash
+cd client
+npx --yes wrangler pages deploy dist --project-name=joyloop --branch=lobby-admin-lite-v1 --commit-hash=26815bd8d118add3cd861f441dd9b07c9385881a --commit-dirty=true --commit-message="v0.3.2: enforce game entry gates and preserve emergency controls"
+```
+
+上面的命令记录本次发布，重发其他版本时必须重新核对源码、dist 和提交号，不应沿用旧哈希给新产物做标记。回退时使用旧版本产物重新部署到同一分支，保留生产分支边界。
+
 ## 实际部署方式：本机 wrangler 命令行
 
 **这是本项目实际在用的部署方式**，不是下文的 Git 集成（未配置）。Cloudflare Pages 项目名为 `joyloop`，账号为 `wxx110007@gmail.com`（本机已通过 `wrangler login` 存有 OAuth Token，见 `~/Library/Preferences/.wrangler/config/default.toml`）。每个分支部署后可通过分支别名 `https://<分支名>.joyloop.pages.dev` 访问，`main` 对应生产环境。
@@ -17,8 +40,6 @@ npx wrangler pages deploy dist --project-name=joyloop --branch=<分支名> --com
 - 部署完成后终端会打印两个地址：`https://<随机 ID>.joyloop.pages.dev`（这次部署的唯一地址）和 `Deployment alias URL: https://<分支名>.joyloop.pages.dev`（该分支当前生效的预览地址，同一分支重复部署会覆盖别名指向的内容）。
 - 排查"部署了但预览没变"时，先跑 `npx wrangler whoami` 确认还在登录状态，再用 `npx wrangler pages deployment list --project-name=joyloop` 看最近部署记录（含对应的 git commit、时间、部署地址），不要假设走的是 Git 自动构建。
 - `npx wrangler` 首次调用会现下载 wrangler 包（无全局安装），需要网络可达 registry。
-
-## v0.3.1 中奖列表、直播入口与白屏修正包
 
 ## v0.3.1 中奖列表、直播入口与白屏修正包
 

@@ -4,6 +4,12 @@
 
 最终质量检查：`npm run lint && npm test && npm run build && npm run check:dist` 全部通过，97 / 97 项测试（原 81，新增 16）。独立只读审查已通过。
 
+### 后续 Pages 发布验收 · 2026-09-08
+
+用户后续授权部署及仓库同步。v0.3.2 / `26815bd` 已发布至 `lobby-admin-lite-v1.joyloop.pages.dev`，唯一部署为 `72e250f9.joyloop.pages.dev`，未切换 main 生产环境。线上实际点击验证财富锁定弹窗的开始按钮禁用，Fish Hunter 可进入；后台进入门槛/家族专属两列、财富5示例及文档“已实现 · v0.3.2”均已回读。详见 [部署记录](DEPLOY-CF-PAGES.md)。
+
+17 个线上可访问文件与包内 SHA-256 一致，`no-store` 与脚本/样式 MIME 校验通过，缺失脚本返回404；本地证据为 `artifacts/pages-v0.3.2-online-verification.json`。只更新仓库 Markdown 后沿用原有代码测试结论，不重复构建新随机入口。
+
 ## 规则与审核
 
 - 四个数值门槛、性别、家族归属分别失败、全部满足、阈值相等、未配置不限及玩家缺字段都有行为测试。新增运营标签不参与准入。
