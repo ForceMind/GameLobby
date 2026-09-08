@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { Icon } from '../icons.jsx'
 import GameIllustration from '../GameIllustration.jsx'
 import { useLocale } from '../useLocale.js'
@@ -125,7 +124,7 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
     setLiveRoomState(result?.status === 'failed' ? 'failed' : 'opened')
   }
 
-  return createPortal(
+  return (
     <section
       className={`game-session game-theme-${game.id}`}
       role="dialog"
@@ -144,26 +143,28 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
             aria-label={t('nav.backToLobby')}
           >
             <Icon name="chevronLeft" />
-            Lobby
+            {t('nav.backToLobby')}
           </button>
-          <div className="game-loading-content">
-            <div className={`game-loading-art game-art-${game.id}`}>
-              <GameIllustration id={game.id} />
+          <div className="game-session-content">
+            <div className="game-loading-content">
+              <div className={`game-loading-art game-art-${game.id}`}>
+                <GameIllustration id={game.id} />
+              </div>
+              <span className="game-kicker">JOYLOOP GAMES</span>
+              <h1>{game.name}</h1>
+              <p>{t('play.loading')}</p>
+              <div
+                className="game-loading-progress"
+                role="progressbar"
+                aria-label={t('play.loadingProgress')}
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow={progress}
+              >
+                <span style={{ width: `${progress}%` }} />
+              </div>
+              <strong className="game-loading-percent">{progress}%</strong>
             </div>
-            <span className="game-kicker">JOYLOOP GAMES</span>
-            <h1>{game.name}</h1>
-            <p>{t('play.loading')}</p>
-            <div
-              className="game-loading-progress"
-              role="progressbar"
-              aria-label={t('play.loadingProgress')}
-              aria-valuemin="0"
-              aria-valuemax="100"
-              aria-valuenow={progress}
-            >
-              <span style={{ width: `${progress}%` }} />
-            </div>
-            <strong className="game-loading-percent">{progress}%</strong>
           </div>
         </>
       ) : (
@@ -177,94 +178,95 @@ export default function GameSession({ game, onClose, onRoundComplete = () => {} 
           >
             <Icon name="close" />
           </button>
-          <div className="game-play-heading">
-            <span className="game-kicker">JOYLOOP GAMES</span>
-            <h1>{game.name}</h1>
-            <button
-              className="game-live-room-action"
-              type="button"
-              onClick={findLiveRoom}
-              disabled={!liveRoom || liveRoomState === 'opening'}
-              aria-describedby="game-live-room-status"
-            >
-              <span className="live-dot" aria-hidden="true" />
-              {t(liveRoomState === 'opening' ? 'play.roomOpening' : 'play.roomFind')}
-              {!liveRoom && <small>{t('play.noLiveRoom')}</small>}
-            </button>
-            <span className="sr-only" id="game-live-room-status" role="status" aria-live="polite">
-              {liveRoomState === 'failed' ? t('play.liveRoomFailed') : liveRoomState === 'opened' ? t('play.liveRoomOpened') : ''}
-            </span>
-          </div>
-          <div className="game-scoreboard">
-            <span>
-              {t('play.score')}
-              <strong>{score.toLocaleString('en-US')}</strong>
-            </span>
-            {slotGame && (
-              <span>
-                {t('play.rounds')}
-                <strong>{rounds}</strong>
+          <div className="game-session-content">
+            <div className="game-play-heading">
+              <span className="game-kicker">JOYLOOP GAMES</span>
+              <h1>{game.name}</h1>
+              <button
+                className="game-live-room-action"
+                type="button"
+                onClick={findLiveRoom}
+                disabled={!liveRoom || liveRoomState === 'opening'}
+                aria-describedby="game-live-room-status"
+              >
+                <span className="live-dot" aria-hidden="true" />
+                {t(liveRoomState === 'opening' ? 'play.roomOpening' : 'play.roomFind')}
+                {!liveRoom && <small>{t('play.noLiveRoom')}</small>}
+              </button>
+              <span className="sr-only" id="game-live-room-status" role="status" aria-live="polite">
+                {liveRoomState === 'failed' ? t('play.liveRoomFailed') : liveRoomState === 'opened' ? t('play.liveRoomOpened') : ''}
               </span>
-            )}
-          </div>
-          {slotGame ? (
-            <div
-              className={`game-reels ${spinning ? 'is-spinning' : ''}`}
-              aria-label={t('play.reelsLabel')}
-            >
-              {reels.map((symbol, index) => (
-                <div className="game-reel" key={index}>
-                  <Icon name={symbol} />
-                </div>
-              ))}
             </div>
-          ) : (
-            <div className="game-bubble-board" aria-label={t('play.boardLabel')}>
-              {Array.from({ length: bubbleCount }, (_, index) => (
-                <button
-                  className={`play-bubble bubble-${index % 4} ${clearedBubbles.includes(index) ? 'is-cleared' : ''}`}
-                  key={index}
-                  type="button"
-                  disabled={clearedBubbles.includes(index)}
-                  aria-label={t('play.bubbleLabel', { number: index + 1 })}
-                  onClick={() => popBubble(index)}
-                >
-                  <span />
-                </button>
-              ))}
+            <div className="game-scoreboard">
+              <span>
+                {t('play.score')}
+                <strong>{score.toLocaleString('en-US')}</strong>
+              </span>
+              {slotGame && (
+                <span>
+                  {t('play.rounds')}
+                  <strong>{rounds}</strong>
+                </span>
+              )}
             </div>
-          )}
-          <div className="game-play-actions">
             {slotGame ? (
-              <button
-                className="game-play-button"
-                type="button"
-                disabled={spinning}
-                onClick={spin}
+              <div
+                className={`game-reels ${spinning ? 'is-spinning' : ''}`}
+                aria-label={t('play.reelsLabel')}
               >
-                <Icon name="play" />
-                {t(spinning ? 'play.spinning' : 'play.spin')}
-              </button>
+                {reels.map((symbol, index) => (
+                  <div className="game-reel" key={index}>
+                    <Icon name={symbol} />
+                  </div>
+                ))}
+              </div>
             ) : (
-              <button
-                className="game-play-button"
-                type="button"
-                onClick={() => {
-                  setClearedBubbles([])
-                  setScore(0)
-                }}
-              >
-                <Icon name="refresh" />
-                {t('play.playAgain')}
-              </button>
+              <div className="game-bubble-board" aria-label={t('play.boardLabel')}>
+                {Array.from({ length: bubbleCount }, (_, index) => (
+                  <button
+                    className={`play-bubble bubble-${index % 4} ${clearedBubbles.includes(index) ? 'is-cleared' : ''}`}
+                    key={index}
+                    type="button"
+                    disabled={clearedBubbles.includes(index)}
+                    aria-label={t('play.bubbleLabel', { number: index + 1 })}
+                    onClick={() => popBubble(index)}
+                  >
+                    <span />
+                  </button>
+                ))}
+              </div>
             )}
-            <p role="status" aria-live="polite">
-              {t(slotGame ? 'play.slotHint' : 'play.casualHint')}
-            </p>
+            <div className="game-play-actions">
+              {slotGame ? (
+                <button
+                  className="game-play-button"
+                  type="button"
+                  disabled={spinning}
+                  onClick={spin}
+                >
+                  <Icon name="play" />
+                  {t(spinning ? 'play.spinning' : 'play.spin')}
+                </button>
+              ) : (
+                <button
+                  className="game-play-button"
+                  type="button"
+                  onClick={() => {
+                    setClearedBubbles([])
+                    setScore(0)
+                  }}
+                >
+                  <Icon name="refresh" />
+                  {t('play.playAgain')}
+                </button>
+              )}
+              <p role="status" aria-live="polite">
+                {t(slotGame ? 'play.slotHint' : 'play.casualHint')}
+              </p>
+            </div>
           </div>
         </>
       )}
-    </section>,
-    document.body,
+    </section>
   )
 }

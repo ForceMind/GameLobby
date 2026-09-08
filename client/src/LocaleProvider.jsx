@@ -5,7 +5,7 @@ import {
   localeMeta,
   localizedHref,
   normalizeLocale,
-  resolveLocale,
+  resolvePageLocale,
   setMissingTranslationHandler,
   supportedLocales,
 } from './i18n.js'
@@ -63,10 +63,22 @@ if (import.meta.env?.DEV) {
 export default function LocaleProvider({ children }) {
   const { page } = useNavigation()
   const [savedLocale, updateLocale] = useState(() =>
-    resolveLocale(window.location.search, readStoredLocale(), readHostLocale(), browserLanguages()),
+    resolvePageLocale(
+      page,
+      window.location.search,
+      readStoredLocale(),
+      readHostLocale(),
+      browserLanguages(),
+    ),
   )
   const [hostLocale, setHostLocale] = useState(readHostLocale)
-  const locale = resolveLocale(window.location.search, savedLocale, hostLocale, browserLanguages())
+  const locale = resolvePageLocale(
+    page,
+    window.location.search,
+    savedLocale,
+    hostLocale,
+    browserLanguages(),
+  )
   const t = useMemo(() => createTranslator(locale), [locale])
   const format = useMemo(() => createFormatters(locale), [locale])
 

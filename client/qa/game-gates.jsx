@@ -24,9 +24,11 @@ export function GateControls() {
   const [context, setContext] = useState('{"account":{"wealthLevel":5},"country":"CN"}')
   const [result, setResult] = useState('idle')
   const [launchRequests, setLaunchRequests] = useState([])
+  const [displayRequests, setDisplayRequests] = useState([])
   useEffect(() => {
     const capture = (event) => {
       if (event.detail.payload?.reason === 'game') setLaunchRequests((requests) => [...requests, event.detail.payload.gameId])
+      if (event.detail.action === 'setDisplayMode') setDisplayRequests((requests) => [...requests, { mode: event.detail.payload.mode, reason: event.detail.payload.reason }])
     }
     window.addEventListener('joyloop:request', capture)
     return () => window.removeEventListener('joyloop:request', capture)
@@ -41,7 +43,7 @@ export function GateControls() {
     <button onClick={() => direct('fish-hunter')}>Direct Fish launch</button>
     <button onClick={() => { dispatch({ account: { familyId: null } }); direct('fish-hunter') }}>Remove family and launch immediately</button>
     <button onClick={() => { player.closeGame(); setResult('closed') }}>Close session</button>
-    <pre data-testid="gate-probe" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify({ result, account: player.account, coins: player.wallet.coins, country: player.country, game: player.game?.id ?? null, launchRequests, gate: gameGate(games[0], player) }, null, 2)}</pre>
+    <pre data-testid="gate-probe" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify({ result, account: player.account, coins: player.wallet.coins, country: player.country, game: player.game?.id ?? null, entryMode: player.mode, launchRequests, displayRequests, gate: gameGate(games[0], player) }, null, 2)}</pre>
   </aside>
 }
 

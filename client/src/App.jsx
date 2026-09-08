@@ -169,11 +169,9 @@ function readStoredPhoneRatio() {
   }
 }
 
-// Desktop-preview-only control: switches the simulated phone in h5.css
-// between a content-fitted height ("auto", driven by --phone-auto-height
-// below) and the two real-phone ratios players actually see. Hidden by CSS
-// on a real phone and in half mode — there's no frame ratio to switch there.
-function PhoneFrameSwitcher({ mode }) {
+// Keep the chosen ratio mounted while dialogs and games temporarily hide the
+// control, including when storage is unavailable.
+function PhoneFrameSwitcher({ mode, hidden }) {
   const { t } = useLocale()
   const [ratio, setRatio] = useState(readStoredPhoneRatio)
   useEffect(() => {
@@ -185,7 +183,7 @@ function PhoneFrameSwitcher({ mode }) {
       // survive a reload, which is fine for a review-only control.
     }
   }, [ratio])
-  if (mode !== 'full') return null
+  if (mode !== 'full' || hidden) return null
   return (
     <aside className="phone-ratio-float" aria-label={t('preview.phoneFrame')}>
       <span>{t('preview.phoneFrame')}</span>
@@ -386,7 +384,7 @@ export default function App() {
 
   return (
     <EngagementContext.Provider value={engagement}><div className="h5-stage">
-      <div className={`h5-lobby is-${mode}`} data-display-mode={mode}>
+      <div className={`h5-lobby is-${game ? 'full' : mode}`} data-display-mode={game ? 'full' : mode}>
         <div className="app-root">
           <div className="app-surface" inert={modal || game ? true : undefined}>
             <a className="skip-link" href="#main">
@@ -412,10 +410,10 @@ export default function App() {
           )}
           <Modal modal={modal} onClose={closeModal} />
         </div>
+        {game && <GameSession key={game.id} game={game} onClose={closeGame} onRoundComplete={engagement.completeRound} />}
       </div>
       {!game && !modal && <PrototypeLanguageSwitcher source={engagement.source} mode={mode} />}
-      {!game && !modal && <PhoneFrameSwitcher mode={mode} />}
-      {game && <GameSession key={game.id} game={game} onClose={closeGame} onRoundComplete={engagement.completeRound} />}
+      <PhoneFrameSwitcher mode={mode} hidden={Boolean(game || modal)} />
     </div></EngagementContext.Provider>
   )
 }

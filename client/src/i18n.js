@@ -101,6 +101,23 @@ export function resolveLocale(search = '', savedLocale = null, hostLocale = null
   return sawUnpromptedTraditionalChinese ? FALLBACK_LOCALE : DEFAULT_LOCALE
 }
 
+// The developer-facing welcome page needs a stable Chinese default regardless
+// of language preferences inherited from a previous player session, its host,
+// or the browser. An explicit, supported URL choice remains useful for review.
+export function resolvePageLocale(
+  page,
+  search = '',
+  savedLocale = null,
+  hostLocale = null,
+  navigatorLanguages = [],
+) {
+  if (page === 'welcome') {
+    const requested = new URLSearchParams(search).get('lang')
+    return normalizeLocale(requested) ?? DEFAULT_LOCALE
+  }
+  return resolveLocale(search, savedLocale, hostLocale, navigatorLanguages)
+}
+
 // Coverage of the player-facing catalogue, for the admin translation module and
 // for the build guard. Counted against the English catalogue, which is complete.
 export function translationCoverage() {

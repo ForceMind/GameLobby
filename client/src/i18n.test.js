@@ -7,6 +7,7 @@ import {
   englishMessages,
   localizedHref,
   resolveLocale,
+  resolvePageLocale,
 } from './i18n.js'
 import * as data from './data.js'
 
@@ -236,6 +237,16 @@ test('语言与展示配置的跨页链接保留筛选和锚点', () => {
     localizedHref('https://example.com', 'en'),
     'https://example.com',
   )
+})
+
+test('说明首页默认中文，玩家页继续沿用语言优先级', () => {
+  // 说明首页不能继承此前玩家会话、宿主或浏览器的英文偏好。
+  assert.equal(resolvePageLocale('welcome', '', 'en', 'en', ['en-US']), 'zh-Hans')
+  assert.equal(resolvePageLocale('welcome', '?lang=unknown', 'en', 'en', ['en-US']), 'zh-Hans')
+  // 审阅者仍可用显式 URL 切换首页的语言。
+  assert.equal(resolvePageLocale('welcome', '?lang=en', 'zh-Hans', 'zh-Hans', ['zh-CN']), 'en')
+  // 玩家入口继续遵循 URL、宿主、本地存储、浏览器的既有顺序。
+  assert.equal(resolvePageLocale('lobby', '?lang=unknown', 'en', 'ja', ['fr']), 'ja')
 })
 
 // ---- 多语言目录守卫 --------------------------------------------------------
