@@ -4,6 +4,8 @@
 - Markdown 内的模块链接直接切换页签；下载当前模块保留为辅助入口。
 - 本地浏览器实测：七个模块切换、阅读入口链接跳转、375px 窄屏无页面横向溢出。
 - `npm run verify` 通过：lint、99 项测试、构建和产物校验。
+- Pages 预览已发布：`https://lobby-admin-lite-v1.joyloop.pages.dev/docs.html#ui-spec`；部署 `e5a07981`，源码提交 `2c63152a72cf7270c246326b578e9919e1586d3c`。
+- 线上浏览器确认 v0.3.5 活动模块正文及切换生效；18 个 HTTP 文件哈希一致、均为 no-store，缺失脚本返回 404。
 
 # v0.3.4 后台编辑流程与游戏大厅 UI 规范
 
