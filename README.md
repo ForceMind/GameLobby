@@ -14,7 +14,7 @@ npm run package:pages
 
 ## 阅读路径
 
-- 游戏大厅 UI 规范与分模块功能说明：[docs/ui/README.md](docs/ui/README.md)；文档页提供相应 Markdown 下载。
+- 游戏大厅 UI 规范与分模块功能说明：[docs/ui/README.md](docs/ui/README.md)；文档页的「游戏大厅 UI规范」提供模块页签，可直接阅读正文、表格和验收清单，也可下载当前模块 Markdown。
 
 - 产品与运营文档：`client/docs.html`（也可从原型首页进入）
 - 页面结构、运行与维护：[client/README.md](client/README.md)
