@@ -2,15 +2,19 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。
 
-## 待部署：2026-09-09 · v0.3.6
+## 最近部署：2026-09-09 · v0.3.6
 
-- 仓库提交 `a1837123ef8ed3775b7818ca60d7c62ad43626cf` 已推送并回读一致。
-- 目标为既有 `joyloop / lobby-admin-lite-v1` 分支预览。
-- ZIP：`artifacts/joyloop-cf-pages-2026-09-09-a183712.zip`；19文件，SHA-256 `b98e91cb72ab9a03de79afb8659407dc8ea6b131e9a229d6bd5b059c924ec3c8`。
-- 新入口：`start-v0.3.6-e30875f30b9c8712.html`；117项测试及产物校验通过。
-- **尚未上传**：上传命令被自动审批拒绝，要求用户明确授权该具体外部目的地。线上版本保持原状。获准后使用此完整产物部署，再进行线上资源与浏览器回读。
-- 部署前最新记录为 `e5a07981`（源码 `2c63152`），是此前的v0.3.5分支预览；下方v0.3.4及更早记录为历史记录。
-
+- 部署源码：`a1837123ef8ed3775b7818ca60d7c62ad43626cf`，已推送至 `origin/lobby-admin-lite-v1` 并回读一致。
+- 项目/分支：`joyloop / lobby-admin-lite-v1`，Preview 环境；未修改 main 生产环境。用户已明确授权该目的地。
+- 唯一部署：https://1907d137.joyloop.pages.dev
+- 后台：https://lobby-admin-lite-v1.joyloop.pages.dev/admin.html
+- 新入口：https://lobby-admin-lite-v1.joyloop.pages.dev/start-v0.3.6-e30875f30b9c8712.html
+- ZIP：`artifacts/joyloop-cf-pages-2026-09-09-a183712.zip`；19文件，SHA-256 `b98e91cb72ab9a03de79afb8659407dc8ea6b131e9a229d6bd5b059c924ec3c8`。manifest列出注册表24种语言，dirty来自保留的未跟踪交接文件，该文件不在产物中。
+- 本地验证：117项测试、lint、build、check:dist和ZIP逐文件校验通过。
+- 线上HTTP验证：18个可访问文件SHA-256与manifest全部一致，no-store与JS/CSS MIME正确，缺失脚本404。证据：`artifacts/pages-v0.3.6-online-verification.json`。
+- 线上浏览器：后台显示v0.3.6，简中/英文/日语表头无重复，编辑默认定位当前语言；错误日志为空。CSV完整导入/复核流程的行为证据见本地QA，线上未重复上传测试文件。
+- 回退参考：https://e5a07981.joyloop.pages.dev （v0.3.5，源码`2c63152`）。
+- 本次后续仓库提交仅更新部署记录，不改变已发布静态文件或部署源码标签。后台仍为会话内存原型，部署静态站点不表示接入真实文案发布服务。
 
 ## 历史部署：2026-09-09 · v0.3.4
 
