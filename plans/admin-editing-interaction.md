@@ -53,4 +53,5 @@
 - UI交付：`docs/ui/`仅7份玩家大厅规范；`docs.html#ui-spec`提供按通用→五模块顺序的下载入口。
 - 构建：`start-v0.3.4-aede0233d2155e4b.html`。
 - 后台实现提交：`3caeee2`。玩家UI规范另作提交，规范包为`artifacts/joyloop-game-lobby-ui-v0.3.4.zip`，包含7份Markdown，解压内容已逐文件核对。
-- 待完成：本地提交、GitHub同步、Pages分支部署及线上复验；main生产不变，原交接文件保留。
+- 玩家规范与文档提交：`9d46fa7`；Pages唯一部署`https://6af785d5.joyloop.pages.dev`，线上交互及18文件校验通过。
+- 实现、独立审查、文档和发布验收已完成；发布记录随本轮最终提交同步GitHub当前分支。main生产不变，原交接文件保留。

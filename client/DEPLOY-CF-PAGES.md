@@ -2,7 +2,21 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。
 
-## 最近部署：2026-09-08 · v0.3.3
+## 最近部署：2026-09-09 · v0.3.4
+
+- 源码：`9d46fa797b9359cee487c556efdb6df0bc737d11`，包含后台编辑改造提交`3caeee2`及玩家游戏大厅UI规范。
+- 项目/分支：`joyloop` / `lobby-admin-lite-v1`；main生产不改动。Wrangler版本4.130.0。
+- 唯一部署：https://6af785d5.joyloop.pages.dev
+- 新入口：https://lobby-admin-lite-v1.joyloop.pages.dev/start-v0.3.4-aede0233d2155e4b.html
+- 游戏大厅UI规范：https://lobby-admin-lite-v1.joyloop.pages.dev/docs.html#ui-spec ，仅含通用规范、五个玩家模块和阅读入口，共7份Markdown。
+- 产物：`artifacts/joyloop-cf-pages-2026-09-09-9d46fa7.zip`，19文件，SHA-256 `b3e5f0b0c87d052ffbf5619f57b6ee0b26c167ae703ef9d6cfdc5bf2475394c6`。
+- 验证：99/99测试、lint/build/check:dist通过。线上18个可访问文件哈希一致，no-store、JS/CSS MIME和缺失脚本404通过；证据为`artifacts/pages-v0.3.4-online-verification.json`。
+- 线上实际检查：游戏编辑按钮在可见操作列；签到页无直接数字编辑，编辑打开奖励/规则/预览标签弹窗；文档展示7份玩家大厅规范。
+- UI交接包：本地`artifacts/joyloop-game-lobby-ui-v0.3.4.zip`，保留7份规范的目录结构，逐文件解压核对通过。
+- manifest如实为dirty：仅保留的未跟踪交接文件未提交，它未被打包或上传。后续发布记录只改仓库Markdown，不改变部署源码或规范内容。
+- 回退参考：上一部署 https://472bcf1e.joyloop.pages.dev 。
+
+## 上一部署：2026-09-08 · v0.3.3
 
 - 源码：`4c302eb75a55626c9cf8a63d137d1e9aa796b25a`。修复说明首页默认中文、固定比例变窄、游戏脱离设备框及圆角/安全区。
 - 项目与分支：`joyloop` / `lobby-admin-lite-v1`，保持现有分支预览发布，不改main生产。
