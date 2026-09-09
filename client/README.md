@@ -102,3 +102,7 @@ Git 集成设置：Root directory=`client`，Build command=`npm run build`，Bui
 | 语言与产品文案     | `src/i18n.js`、`src/locales/`                   |
 | 静态规则与单元测试 | `src/demoModel.js`、`src/*.test.js`             |
 | 构建、检查与打包   | `scripts/`                                      |
+
+## 多语言文案管理（v0.3.6）
+
+进入后台「多语言内容」，选择语言与范围后导出 CSV；译者只改「操作」与「译文」，回传后逐条预览并确认写入会话草稿。原文变化会触发待复核。完整步骤、文件字段及冲突处理见 [翻译工作流程](../docs/translation-workflow.md)。当前保存和模拟审核均只在后台会话内有效，刷新重置，不会更新玩家端。

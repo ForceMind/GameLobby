@@ -25,6 +25,7 @@ export default function EditDialog({
   onSave,
   saveLabel = '保存草稿并提交审核',
   saveDisabled = false,
+  allowUnchangedSave = false,
   footNote,
   initialTab,
   extraActions,
@@ -143,7 +144,7 @@ export default function EditDialog({
     tabRefs.current.get(nextTab.id)?.focus()
   }
 
-  const saveIsDisabled = !dirty || errorItems.length > 0 || saveDisabled
+  const saveIsDisabled = (!dirty && !allowUnchangedSave) || errorItems.length > 0 || saveDisabled
 
   return <div className="edit-dialog-overlay" onMouseDown={(event) => event.target === event.currentTarget && requestClose()}>
     <section

@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { spawn } from 'node:child_process'
 import { releaseEntry } from './release-config.mjs'
+import { supportedLocales } from '../src/locales/registry.js'
 
 const execFile = promisify((command, args, options, callback) => {
   const child = spawn(command, args, {
@@ -203,7 +204,7 @@ async function main() {
     )
     const manifest = {
       version: packageInfo.version,
-      languages: ['zh', 'en'],
+      languages: supportedLocales,
       sourceCommit,
       dirty,
       generatedAt: new Date().toISOString(),

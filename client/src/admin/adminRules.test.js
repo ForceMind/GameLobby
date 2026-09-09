@@ -5,6 +5,7 @@ import {
   coinPackPriceUsd, nextVersionTag, nextLedgerId, diffSummary, validateNickname,
   getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations, validateGameGates, settledActivityRegion, applyActivityState,
 } from './adminRules.js'
+import { createTranslationReviews } from './translationReview.js'
 
 const prizes = (probabilities) => probabilities.map((probability, i) => ({ id: `p${i}`, kind: 'coins', amount: 100 + i, probability }))
 
@@ -289,7 +290,7 @@ test('游戏门槛：灰度发布同样保留已生效的紧急状态', () => {
   assert.equal(grayed.games.test[0].maintenanceNote, '紧急维护')
 })
 
-test('玩家侧文案：英文不可为空，各语言占位符必须与英文一致', () => {
+test('玩家侧文案：简中与英文不可为空，各语言占位符必须与英文一致', () => {
   assert.deepEqual(validateTranslations({
     'store.buy': { 'zh-Hans': '购买 {coins} 金币', en: 'Buy {coins} coins', ja: '{coins} コインを購入' },
   }), [], '占位符一致时应通过')
@@ -298,25 +299,75 @@ test('玩家侧文案：英文不可为空，各语言占位符必须与英文�
   assert.ok(missingEn.some((e) => e.includes('缺少英文')), '英文是兜底，不能为空')
 
   const badPlaceholder = validateTranslations({
-    'store.buy': { en: 'Buy {coins} coins', ja: '{wrong} コインを購入' },
+    'store.buy': { 'zh-Hans': '购买 {coins} 金币', en: 'Buy {coins} coins', ja: '{wrong} コインを購入' },
   })
   assert.equal(badPlaceholder.length, 1)
   assert.ok(badPlaceholder[0].includes('ja') && badPlaceholder[0].includes('占位符'))
 
   // 未翻译（留空）不算错误，运行时回退英文
-  assert.deepEqual(validateTranslations({ 'store.buy': { en: 'Buy {coins} coins', ja: '', de: '   ' } }), [])
+  assert.deepEqual(validateTranslations({ 'store.buy': { 'zh-Hans': '购买 {coins} 金币', en: 'Buy {coins} coins', ja: '', de: '   ' } }), [])
+
+  const missingOriginal = validateTranslations({ 'store.buy': { 'zh-Hans': '  ', en: 'Buy coins' } })
+  assert.ok(missingOriginal.some((error) => error.includes('缺少简体中文原文')))
 })
 
 test('文案差异精确到「键 · 语言」，只标出真正改动的那一格', () => {
-  const before = { translations: { 'a.b': { en: 'Hello', ja: '' }, 'a.c': { en: 'Bye', ja: 'さようなら' } } }
-  const after = { translations: { 'a.b': { en: 'Hello', ja: 'こんにちは' }, 'a.c': { en: 'Bye', ja: 'さようなら' } } }
+  const before = { translations: { 'a.b': { 'zh-Hans': '你好', en: 'Hello', ja: '' }, 'a.c': { 'zh-Hans': '再见', en: 'Bye', ja: 'さようなら' } } }
+  const after = { translations: { 'a.b': { 'zh-Hans': '你好', en: 'Hello', ja: 'こんにちは' }, 'a.c': { 'zh-Hans': '再见', en: 'Bye', ja: 'さようなら' } } }
   const rows = snapshotDiff('translations', before, after)
-  assert.equal(rows.length, 4, '两个键 × 两种语言')
+  assert.equal(rows.length, 6, '两个键 × 三种语言')
   const changed = rows.filter((r) => r.changed)
   assert.equal(changed.length, 1)
   assert.equal(changed[0].label, 'a.b · ja')
   assert.equal(changed[0].before, '—')
   assert.equal(changed[0].after, 'こんにちは')
+})
+
+test('文案审核快照会显示译文复核状态变化，并阻止待复核快照发布', () => {
+  const live = { translations: { 'a.b': { 'zh-Hans': '你好', en: 'Hello', ja: 'こんにちは' } } }
+  live.translationReviews = createTranslationReviews(live.translations)
+  const stale = { translations: { 'a.b': { ...live.translations['a.b'], 'zh-Hans': '您好' } }, translationReviews: live.translationReviews }
+  const rows = snapshotDiff('translations', live, stale)
+  const japanese = rows.find((row) => row.key === 'a.b|ja')
+  assert.match(japanese.before, /已复核$/)
+  assert.match(japanese.after, /待复核$/)
+
+  const store = { ...stale, live, liveHistory: {}, publish: [], todo: [], audit: [] }
+  const entry = { id: 'pub-stale-copy', name: '待复核文案', status: '待审核', sourceModule: 'translations', snapshot: stale }
+  const rejected = applyRelease(store, entry, 'approve', undefined, { seq: 41 })
+  assert.equal(rejected.live.translations['a.b']['zh-Hans'], '你好')
+  assert.match(rejected.audit[0].result, /ja.*需要复核/)
+})
+
+test('较早文案快照的通过、灰度、驳回和回滚保留较新的草稿及复核元数据', () => {
+  const translationSlice = (zh, en, ja) => {
+    const translations = { 'a.b': { 'zh-Hans': zh, en, ja } }
+    return { translations, translationReviews: createTranslationReviews(translations) }
+  }
+  const live = translationSlice('初始中文', 'Initial English', '初期日本語')
+  const queued = translationSlice('待审中文', 'Queued English', '審査中の日本語')
+  const newer = translationSlice('较新中文', 'Newer English', '新しい日本語')
+  const store = { ...newer, live, liveHistory: {}, publish: [], todo: [], audit: [] }
+  const entry = { id: 'pub-old-copy', name: '较早文案快照', status: '待审核', sourceModule: 'translations', snapshot: queued }
+
+  const approved = applyRelease(store, entry, 'approve', undefined, { seq: 42 })
+  assert.deepEqual(approved.live.translations, queued.translations)
+  assert.deepEqual(getSlice(approved, 'translations'), newer)
+  assert.deepEqual(approved.translationReviews, newer.translationReviews)
+  assert.equal(approved.audit[0].action, '模拟 · 通过并发布')
+
+  const grayed = applyRelease(store, entry, 'gray', undefined, { seq: 43 })
+  assert.deepEqual(grayed.live.translations, queued.translations)
+  assert.deepEqual(getSlice(grayed, 'translations'), newer)
+
+  const rejected = applyRelease(store, entry, 'reject', '已存在新草稿', { seq: 44 })
+  assert.deepEqual(getSlice(rejected, 'translations'), newer)
+
+  const rollbackEntry = { ...entry, status: '已发布' }
+  const rolledBack = applyRelease(approved, rollbackEntry, 'rollback', '恢复旧版本', { seq: 45 })
+  assert.deepEqual(rolledBack.live.translations, live.translations)
+  assert.deepEqual(getSlice(rolledBack, 'translations'), newer)
+  assert.deepEqual(rolledBack.translationReviews, newer.translationReviews)
 })
 
 test('地理范围：默认全球开放，指定模式为白名单，空白名单会被拦截', async () => {

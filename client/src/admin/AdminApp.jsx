@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { games, gameCategories } from '../data.js'
 import liteContent from '../data/liteContent.json'
@@ -8,6 +8,8 @@ import ActivityRewardDialog from './ActivityRewardDialog.jsx'
 import { CheckinLadderEditor, WheelPrizeEditor, MissionListEditor, CheckinPreview, WheelPreview, MissionsPreview } from './ActivityEditors.jsx'
 import { ChestOfferEditDialog, MonthlyPassEditDialog } from './ProductEditDialogs.jsx'
 import TranslationEditor from './TranslationEditDialog.jsx'
+import { buildTranslationFile, serializeTranslationFile, previewTranslationImport, applyTranslationImport } from './translationTransfer.js'
+import { needsTranslationReview, updateTranslationReviews, translationReviewErrors } from './translationReview.js'
 import { rankings as aggregateWinnerRankings } from '../engagement/model.js'
 import { transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel, translationLocales, translationNamespace, CONTINENT_NAMES } from './adminSchema.js'
 import { continents, countryContinent, countriesOf, countryName } from '../data/regions.js'
@@ -80,7 +82,7 @@ const configurationNotes = {
   store: ['金币礼包与月度特权卡通过宿主支付桥接完成购买；明日宝箱按次直接从钱包扣款，不生成订单记录。', '明日宝箱报价版本变更会使旧客户端报价失效（409 stale）；三类商品的变更都先进草稿，审核通过后才生效。'],
   orders: ['订单仅覆盖金币礼包与月度特权卡的宿主支付流程。', '状态链路：待支付 → 处理中 → 已支付/失败；已支付后可能进入退款处理中 → 已退款；异常订单需人工介入并写入操作日志。'],
   ledger: ['流水来源与前台一致，固定为 chest_purchase / chest_reward / game_reward / game_cost / checkin / task 六类；后台人工调整使用 manual_adjust，前台流水枚举需在联调时补充该来源。', '既有流水不可编辑；人工调整以追加一条"处理中"流水的方式写入，财务确认入账后才变为成功。'],
-  translations: ['这里管理的是玩家在大厅里看到的文字，不是后台界面。英文是所有语言的兜底，必须保持完整；某个语言缺翻译时，玩家会看到英文而不是空白或键名。', '带占位符的文案（例如 {coins}）在各语言里必须保留同样的占位符，否则保存会被拦截。改动进入草稿，经发布审核通过后才对玩家生效。'],
+  translations: ['这里维护玩家侧文案。简体中文是原文，英文是参考与兜底；其他语言缺失时使用英文。原文或英文变化后，相关已有译文必须复核。', '当前为内存原型：保存、导入和模拟审核只在本页会话中保留，刷新即重置，不会更新玩家端。请导出文件保留工作成果；玩家端仍使用随应用打包的语言文件。'],
   players: ['玩家资产、等级与最近战绩以宿主/服务端上下文为准；隐私偏好由玩家自己设置，后台只读展示默认值。', '账号状态变更（活动限制、封禁、待复核、解除）一律需要填写原因并写入操作日志。'],
 }
 
@@ -108,7 +110,11 @@ const PAGE_SIZE = 20
 function exportCsv(name, headers, rows) {
   const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
   const csv = [headers, ...rows].map((row) => row.map(escape).join(',')).join('\n')
-  const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
+  downloadCsv(name, `\uFEFF${csv}`)
+}
+
+function downloadCsv(name, csv) {
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
   link.href = url
   link.download = `${name}.csv`
@@ -240,8 +246,8 @@ function ConfigBadge({ store, moduleId, versionText, onDiscard }) {
   const pending = store.publish.find((p) => p.sourceModule === moduleId && p.status === '待审核')
   const differs = draftDiffers(store, moduleId)
   const newerDraft = pending?.snapshot && snapshotDiff(moduleId, pending.snapshot, getSlice(store, moduleId)).some((row) => row.changed)
-  const state = pending ? newerDraft ? '已有待审核版本 · 另有新草稿' : '草稿已保存 · 待审核' : differs ? '草稿已保存 · 尚未提交审核' : '与生效版本一致'
-  const detail = pending ? `「${pending.name}」等待审核，玩家仍使用生效版本。${newerDraft ? '新的草稿尚未包含在该审核任务内。' : ''}` : differs ? '页面可查看草稿效果，提交并审核通过后才生效。' : '当前没有未发布的配置变更。'
+  const state = pending ? newerDraft ? '已有待审核版本 · 另有新草稿' : '草稿已保存 · 待审核' : differs ? '草稿已保存 · 尚未提交审核' : moduleId === 'translations' ? '与会话对照版本一致' : '与生效版本一致'
+  const detail = moduleId === 'translations' ? `模拟审核仅更新后台会话内的对照版本，不更新玩家端；刷新重置。${newerDraft ? '新草稿尚未包含在待审核任务内。' : ''}` : pending ? `「${pending.name}」等待审核，玩家仍使用生效版本。${newerDraft ? '新的草稿尚未包含在该审核任务内。' : ''}` : differs ? '页面可查看草稿效果，提交并审核通过后才生效。' : '当前没有未发布的配置变更。'
   return <><div className={`config-badge ${pending ? 'is-pending' : differs ? 'is-dirty' : ''}`}><Icon name={pending ? 'clock' : differs ? 'flag' : 'shield'} /><span><strong>{versionText ? `当前生效 ${versionText} · ` : ''}{state}</strong><small>{detail}</small></span>{(differs || pending) && onDiscard && <button className="admin-btn subtle" onClick={() => setDiscarding(true)}>放弃草稿</button>}</div>
     {discarding && <Modal title="放弃已保存草稿？" eyebrow="配置操作" onClose={() => setDiscarding(false)} footer={<><button className="admin-btn subtle" onClick={() => setDiscarding(false)}>取消</button><button className="admin-btn warning" onClick={() => { onDiscard(); setDiscarding(false) }}>确认放弃</button></>}><p className="editor-preview">将恢复为当前生效配置，并作废本模块待审核任务；生效版本不受影响。</p></Modal>}
   </>
@@ -539,7 +545,7 @@ function describeGeneric(page, record, store, { update, journal }) {
   const pageTransitions = transitions[page]?.[record.status] || []
   const history = store.audit.filter((a) => a.targetModule === page && a.targetId === record.id)
   const actions = pageTransitions.map(([label, nextStatus, opts = {}]) => ({
-    label, confirm: true, tone: nextStatus && statusClass(nextStatus) === 'danger' ? 'danger' : opts.requireReason ? 'warning' : opts.decision === 'approve' ? 'primary' : 'subtle', requireReason: !!opts.requireReason,
+    label: page === 'publish' && record.sourceModule === 'translations' ? `模拟 · ${label}` : label, confirm: true, tone: nextStatus && statusClass(nextStatus) === 'danger' ? 'danger' : opts.requireReason ? 'warning' : opts.decision === 'approve' ? 'primary' : 'subtle', requireReason: !!opts.requireReason,
     run: (reason) => {
       if (page === 'publish' && opts.decision) {
         const hasSnapshot = isConfigModule(record.sourceModule) && !!record.snapshot
@@ -583,7 +589,7 @@ function GenericPage({ page, onOpen, store, update, journal, intent, describe, n
     const { label0, history, actions } = describeGeneric(page, record, store, { update, journal })
     const fields = cols.filter(([key]) => key !== 'status').map(([key, label]) => ({ key, label, value: record[key], readOnly: true }))
     if (page === 'audit') fields.push({ key: 'targetModule', label: '对象模块', value: moduleLabels[record.targetModule] || pageMeta[record.targetModule]?.[0] || record.targetModule || '—', readOnly: true }, { key: 'before', label: '变更前', value: record.before || '—', readOnly: true }, { key: 'after', label: '变更后', value: record.after || '—', readOnly: true })
-    if (page === 'publish') fields.push({ key: 'sourceModule', label: '来源模块', value: moduleLabel(record.sourceModule) || (record.sourceModule ? pageMeta[record.sourceModule]?.[0] : '') || '—', readOnly: true }, { key: 'snapshot', label: '配置快照', value: record.snapshot ? '有 · 审核通过后覆盖生效版本' : '无 · 仅变更任务状态', readOnly: true }, { key: 'note', label: '发布说明', value: record.note || '—', readOnly: true })
+    if (page === 'publish') fields.push({ key: 'sourceModule', label: '来源模块', value: moduleLabel(record.sourceModule) || (record.sourceModule ? pageMeta[record.sourceModule]?.[0] : '') || '—', readOnly: true }, { key: 'snapshot', label: '配置快照', value: record.snapshot ? record.sourceModule === 'translations' ? '有 · 仅更新会话对照版本，不更新玩家端' : '有 · 审核通过后覆盖生效版本' : '无 · 仅变更任务状态', readOnly: true }, { key: 'note', label: '发布说明', value: record.note || '—', readOnly: true })
     const diff = page === 'publish' && record.snapshot && isConfigModule(record.sourceModule) ? snapshotDiff(record.sourceModule, getSlice(store.live, record.sourceModule), record.snapshot) : page === 'publish' ? [] : null
     const sourcePage = page === 'publish' ? moduleToPage(record.sourceModule) : null
     const sourceIntent = String(record.sourceModule).startsWith('activityRegion:') ? { focusId: activityRegionId(record.sourceModule) } : null
@@ -609,7 +615,7 @@ function GenericPage({ page, onOpen, store, update, journal, intent, describe, n
   return <>
     {configurationNotes[page] && <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes[page][0]}</span><small>{configurationNotes[page][1]}</small></div></div>}
     <div className="admin-toolbar"><div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => { setQuery(event.target.value); setPageIndex(0) }} placeholder={`搜索${meta[0]}...`} /></div><select value={filter} onChange={(event) => { setFilter(event.target.value); setPageIndex(0) }}><option>全部状态</option>{statusOptions.map((option) => <option key={option}>{option}</option>)}</select>{action && <button className="admin-btn primary" onClick={() => { setFormValues({}); setShowForm(true) }}><Icon name={action.icon} />{action.label}</button>}</div>
-    <section className="admin-card table-card"><div className="table-top"><div><strong>{meta[0]}列表</strong><span>共 {filteredRows.length} 条</span></div><div className="table-actions"><button className="admin-btn subtle" onClick={() => exportCsv(meta[0], labels, filteredRows.map((row) => cols.map(([key]) => row[key])))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{labels.map((label) => <th key={label}>{label}</th>)}<th>操作</th></tr></thead><tbody>{visibleRows.map((row) => <tr key={row.id} onClick={() => openRow(row)}>{cols.map(([key]) => <td key={key}>{statusValues.includes(row[key]) ? <Status>{row[key]}</Status> : <span>{row[key]}</span>}</td>)}<td><button className="row-action" onClick={(event) => { event.stopPropagation(); openRow(row) }}>查看详情</button></td></tr>)}</tbody></table>{!filteredRows.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配数据</strong><p>请调整搜索关键词或筛选条件。</p></div>}</div><Pager page={pageIndex} total={filteredRows.length} onChange={setPageIndex} /></section>
+    <section className="admin-card table-card"><div className="table-top"><div><strong>{meta[0]}列表</strong><span>共 {filteredRows.length} 条</span></div><div className="table-actions"><button className="admin-btn subtle" onClick={() => exportCsv(meta[0], labels, filteredRows.map((row) => cols.map(([key]) => row[key])))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{labels.map((label) => <th key={label}>{label}</th>)}<th>操作</th></tr></thead><tbody>{visibleRows.map((row) => <tr key={row.id} onClick={() => openRow(row)}>{cols.map(([key]) => <td key={key}>{statusValues.includes(row[key]) ? <Status>{page === 'publish' && row.sourceModule === 'translations' && key === 'status' ? `模拟 · ${row[key]}` : row[key]}</Status> : <span>{row[key]}</span>}</td>)}<td><button className="row-action" onClick={(event) => { event.stopPropagation(); openRow(row) }}>查看详情</button></td></tr>)}</tbody></table>{!filteredRows.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配数据</strong><p>请调整搜索关键词或筛选条件。</p></div>}</div><Pager page={pageIndex} total={filteredRows.length} onChange={setPageIndex} /></section>
     {showForm && action && <EditDialog eyebrow="新建记录" title={action.title} onClose={() => setShowForm(false)} dirty={Object.values(formValues).some((value) => String(value).trim())} onSave={submitCreate} saveDisabled={!formComplete} saveLabel="保存记录" footNote={['activities','checkin','wheel'].includes(page)?'先建立活动记录；奖励配置仍在对应编辑窗口维护，不会自动创建新的奖励模块。':'保存记录并写入操作日志。'} tabs={[
       {id:'basic',label:'基本信息',content:<div className="form-grid">{action.fields.slice(0,2).map((field)=><label key={field}>{field}{field==='活动类型'?<select value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))}><option value="">请选择类型</option>{Object.keys(activityTypeMeta).map((type)=><option key={type}>{type}</option>)}</select>:<input value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))} placeholder={`请输入${field}（必填）`}/>}</label>)}</div>},
       {id:'configuration',label:page==='adminUsers'?'角色与范围':'配置内容',content:<div className="form-grid">{action.fields.slice(2).map((field)=><label key={field}>{field}{field==='活动类型'?<select value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))}><option value="">请选择类型</option>{Object.keys(activityTypeMeta).map((type)=><option key={type}>{type}</option>)}</select>:<input value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))} placeholder={`请输入${field}（必填）`}/>}</label>)}</div>},
@@ -757,10 +763,10 @@ function GameVersionCenterPage({ onOpen, store, update, journal }) {
 function ReleaseCenterPage({ onOpen, store, update, journal, navigate }) {
   const pending = store.publish.filter((p) => p.status === '待审核').length
   const testing = store.test.filter((t) => t.status === '测试中').length
-  const graying = store.publish.filter((p) => p.status === '灰度 20%' || p.status === '进行中').length
-  const published = store.publish.filter((p) => p.status === '已发布').length
+  const graying = store.publish.filter((p) => p.sourceModule !== 'translations' && (p.status === '灰度 20%' || p.status === '进行中')).length
+  const published = store.publish.filter((p) => p.sourceModule !== 'translations' && p.status === '已发布').length
   return <>
-    <div className="release-metrics"><div><span>待审核</span><strong>{pending}</strong><small>需要人工判定</small></div><div><span>测试中</span><strong>{testing}</strong><small>需要 QA 验证</small></div><div><span>灰度发布</span><strong>{graying}</strong><small>当前进行中</small></div><div><span>生产发布</span><strong>{published}</strong><small>累计已发布</small></div></div>
+    <div className="release-metrics"><div><span>待审核</span><strong>{pending}</strong><small>需要人工判定</small></div><div><span>测试中</span><strong>{testing}</strong><small>需要 QA 验证</small></div><div><span>灰度发布</span><strong>{graying}</strong><small>不含文案模拟审核</small></div><div><span>生产发布</span><strong>{published}</strong><small>不含文案模拟审核</small></div></div>
     <section className="admin-card release-guide"><div className="card-heading"><div><h2>发布任务流程</h2><p>带快照的任务：通过 = 覆盖生效版本；驳回 = 丢弃来源草稿；回滚 = 恢复上一生效版本。</p></div><span className="release-safety"><Icon name="shield" />生产发布需审批</span></div><div className="release-guide-steps"><div className="is-done"><b>1</b><span>创建任务</span><small>模块保存草稿</small></div><i /><div className="is-done"><b>2</b><span>自动检查</span><small>通过时再次校验快照</small></div><i /><div className="is-active"><b>3</b><span>审核判定</span><small>通过 / 灰度 / 驳回</small></div><i /><div><b>4</b><span>已发布</span><small>可暂停或回滚</small></div></div></section>
     <GenericPage page="publish" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} />
     <section className="admin-card release-history"><div className="card-heading"><div><h2>版本健康度 <em className="sample-tag">示例数据</em></h2><p>发布后的实时质量观察，监控接口待联调</p></div><button className="admin-link" disabled title="监控平台待联调">查看监控（待联调）</button></div><div className="health-grid"><div><span>启动成功率</span><strong>99.6%</strong><em>↑ 0.8%</em></div><div><span>资源加载失败</span><strong>0.12%</strong><em>↓ 0.04%</em></div><div><span>累计回滚</span><strong>{store.publish.filter((p) => p.status === '已回滚').length}</strong><em>来自发布审核记录</em></div></div></section>
@@ -902,145 +908,166 @@ function MissionsPage(props) { return <RewardConfigPage {...props} moduleId="mis
 const SOURCE_LOCALE = 'zh-Hans'
 const FALLBACK = 'en'
 
-function TranslationsPage({ store, update, journal, intent }) {
+function TranslationsPage({ store, journal, intent }) {
   const entries = store.translations
+  const reviews = store.translationReviews
   const liveEntries = store.live.translations
   const keys = useMemo(() => Object.keys(entries).sort(), [entries])
   const [namespace, setNamespace] = useState('all')
   const [locale, setLocale] = useState('zh-Hant')
-  const [onlyMissing, setOnlyMissing] = useState(false)
+  const [statusFilter, setStatusFilter] = useState('all')
   const [onlyChanged, setOnlyChanged] = useState(false)
   const [query, setQuery] = useState(intent?.query || '')
   const [page, setPage] = useState(0)
   const [editing, setEditing] = useState(intent?.query && entries[intent.query] ? intent.query : null)
-
+  const [importPreview, setImportPreview] = useState(null)
+  const [importPage, setImportPage] = useState(0)
+  const [reading, setReading] = useState(false)
+  const [feedback, setFeedback] = useState(null)
+  const [confirmReviewed, setConfirmReviewed] = useState(false)
+  const readSequence = useRef(0)
+  useEffect(() => () => { readSequence.current += 1 }, [])
+  const needsReview = (key, code = locale) => needsTranslationReview(entries[key], reviews?.[key], code)
   const namespaces = useMemo(() => [...new Set(keys.map(translationNamespace))].sort(), [keys])
   const coverage = useMemo(() => translationLocales.map(({ code, nativeName }) => {
     const done = keys.filter((key) => String(entries[key][code] ?? '').trim()).length
-    return { code, nativeName, done, total: keys.length, percent: keys.length ? Math.round((done / keys.length) * 100) : 0 }
-  }), [entries, keys])
-
-  const isChanged = (key) => JSON.stringify(entries[key]) !== JSON.stringify(liveEntries[key])
+    const pending = keys.filter((key) => needsTranslationReview(entries[key], reviews?.[key], code)).length
+    return { code, nativeName, done, pending, total: keys.length, percent: keys.length ? Math.round((done / keys.length) * 100) : 0 }
+  }), [entries, reviews, keys])
+  const isChanged = (key) => JSON.stringify(entries[key]) !== JSON.stringify(liveEntries[key]) || JSON.stringify(reviews?.[key]) !== JSON.stringify(store.live.translationReviews?.[key])
   const filtered = keys.filter((key) => {
     if (namespace !== 'all' && translationNamespace(key) !== namespace) return false
-    if (onlyMissing && String(entries[key][locale] ?? '').trim()) return false
+    if (statusFilter === 'missing' && String(entries[key][locale] ?? '').trim()) return false
+    if (statusFilter === 'review' && !needsReview(key)) return false
     if (onlyChanged && !isChanged(key)) return false
-    if (query && !`${key} ${entries[key][SOURCE_LOCALE] ?? ''} ${entries[key][FALLBACK] ?? ''}`.toLowerCase().includes(query.toLowerCase())) return false
+    if (query && !`${key} ${entries[key][SOURCE_LOCALE] ?? ''} ${entries[key][FALLBACK] ?? ''} ${entries[key][locale] ?? ''}`.toLowerCase().includes(query.toLowerCase())) return false
     return true
   })
-  const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const pageIndex = Math.min(page, Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1))
+  const visible = filtered.slice(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE)
   const differs = draftDiffers(store, 'translations')
   const errors = validateTranslations(entries)
+  const reviewErrors = translationReviewErrors(entries, reviews)
   const activeMeta = translationLocales.find((l) => l.code === locale)
-
-  const saveEntry = (key) => (next) => {
-    const before = entries[key]
-    update('translations', (current) => ({ ...current, [key]: next }))
-    const changed = translationLocales.filter(({ code }) => (next[code] ?? '') !== (before[code] ?? '')).map(({ code }) => code)
-    journal.logAudit({ action: '编辑玩家侧文案（草稿）', target: key, targetModule: 'translations', targetId: key,
-      before: changed.map((c) => `${c}=${before[c] || '空'}`).join('；'), after: changed.map((c) => `${c}=${next[c] || '空'}`).join('；') })
+  const displayLocales = [...new Set([SOURCE_LOCALE, FALLBACK, locale])].map((code) => translationLocales.find((l) => l.code === code))
+  const selectLocale = (value) => { setLocale(value); setPage(0); setFeedback(null) }
+  const saveEntry = (key) => (next, confirmed = []) => {
+    journal.transform((current) => {
+      const nextEntries = { ...current.translations, [key]: next }
+      return { ...current, translations: nextEntries, translationReviews: updateTranslationReviews(current.translationReviews, current.translations, nextEntries, { [key]: confirmed }) }
+    })
+    const changed = translationLocales.filter(({ code }) => (next[code] ?? '') !== (entries[key][code] ?? '')).map(({ code }) => code)
+    journal.logAudit({ action: '编辑或复核文案（会话草稿）', target: key, targetModule: 'translations', targetId: key,
+      before: changed.map((c) => `${c}=${entries[key][c] || '空'}`).join('；'), after: `${changed.map((c) => `${c}=${next[c] || '空'}`).join('；')}${confirmed.length ? `；确认复核：${confirmed.join('、')}` : ''}` })
+    setFeedback({ message: '已保存到会话草稿。可继续翻译或导出保留成果；刷新页面会重置。' })
   }
   const saveDraft = () => {
-    const done = coverage.filter((c) => c.done > 0).length
-    journal.logAudit({ action: '保存多语言内容草稿', target: '玩家侧文案', targetModule: 'translations', targetId: 'all',
-      before: `${keys.length} 键`, after: `${keys.length} 键 · ${done}/${translationLocales.length} 种语言有翻译` })
-    journal.queuePublish({ name: '玩家侧文案更新', type: '内容版本', scope: '生产环境', sourceModule: 'translations', sourceId: 'all', snapshot: getSlice(store, 'translations'), todoSource: '内容与语言' })
+    if (errors.length || reviewErrors.length) return
+    journal.logAudit({ action: '提交文案模拟审核', target: '玩家侧文案', targetModule: 'translations', targetId: 'all', after: `${keys.length} 条文案，含复核状态` })
+    journal.queuePublish({ name: '玩家侧文案更新（模拟）', type: '内容版本', scope: '原型会话', sourceModule: 'translations', sourceId: 'all', snapshot: getSlice(store, 'translations'), todoSource: '内容与语言' })
+    setFeedback({ message: '已提交模拟审核，可前往「发布审核」查看具体差异。此操作不会发布到玩家端。' })
   }
-  const exportCurrent = () => exportCsv(`玩家侧文案-${locale}`, ['键', '命名空间', '简体中文', '英文', activeMeta?.nativeName ?? locale],
-    filtered.map((key) => [key, translationNamespace(key), entries[key][SOURCE_LOCALE] ?? '', entries[key][FALLBACK] ?? '', entries[key][locale] ?? '']))
-
-  const parseCsvLine = (line) => line.match(/("(?:[^"]|"")*"|[^,]*)/g)?.filter((_, i) => i % 2 === 0)
-    .map((cell) => cell.replace(/^"|"$/g, '').replace(/""/g, '"')) ?? []
-
-  // 先解析并给出预览（会覆盖多少条 / 跳过多少条未知键 / 文件语言是否与当前选中语言一致），
-  // 运营确认后才真正写入草稿——避免像"选错语言导入"这种一步到位、难以发现的误操作。
-  const [importPreview, setImportPreview] = useState(null)
-  const prepareImport = (file) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const text = String(reader.result ?? '').replace(/^\ufeff/, '')
-      const lines = text.split(/\r?\n/).filter(Boolean)
-      const headerCells = lines[0] ? parseCsvLine(lines[0]) : []
-      const fileLocaleLabel = headerCells[headerCells.length - 1] ?? ''
-      const detected = translationLocales.find((l) => l.nativeName === fileLocaleLabel || l.code === fileLocaleLabel)
-      let applied = 0, unchanged = 0, unknown = 0
-      const next = { ...entries }
-      lines.slice(1).forEach((line) => {
-        const cells = parseCsvLine(line)
-        const key = cells[0]
-        const value = cells[cells.length - 1] ?? ''
-        if (!key || !Object.hasOwn(next, key)) { unknown += 1; return }
-        if ((next[key][locale] ?? '') === value) { unchanged += 1; return }
-        next[key] = { ...next[key], [locale]: value }
-        applied += 1
-      })
-      setImportPreview({ fileName: file.name, fileLocaleLabel, detectedCode: detected?.code, mismatch: !!detected && detected.code !== locale, applied, unchanged, unknown, next, confirmMismatch: false })
+  const exportCurrent = () => {
+    const file = buildTranslationFile(entries, filtered, locale)
+    downloadCsv(`玩家侧文案-${locale}-${filtered.length}条`, serializeTranslationFile(file))
+    setFeedback({ message: `已发起导出 ${activeMeta.nativeName}（${locale}）共 ${filtered.length} 条，包含所有匹配页。只改文件中的「操作」与「译文」，其余列保留。` })
+  }
+  const prepareImport = async (file) => {
+    const sequence = ++readSequence.current
+    const targetLocale = locale
+    setFeedback(null)
+    if (file.size > 4 * 1024 * 1024) { setFeedback({ error: true, message: '文件超过 4 MB，请按命名空间分批导入。' }); return }
+    setReading(true)
+    try {
+      const text = await file.text()
+      if (sequence !== readSequence.current) return
+      const preview = previewTranslationImport(text, entries, targetLocale)
+      setImportPreview({ ...preview, fileName: file.name, targetLocale })
+      setConfirmReviewed(false)
+      setImportPage(0)
+    } catch {
+      if (sequence === readSequence.current) setFeedback({ error: true, message: '无法读取文件，请重新选择 UTF-8 CSV 文件。' })
+    } finally {
+      if (sequence === readSequence.current) setReading(false)
     }
-    reader.readAsText(file)
   }
+  const reviewedRows = importPreview?.rows.filter((row) => ['changed', 'unchanged'].includes(row.status) && String(row.after ?? '').trim()) ?? []
+  const pendingConfirmations = reviewedRows.filter((row) => needsReview(row.key, importPreview.targetLocale))
   const commitImport = () => {
-    if (!importPreview) return
-    update('translations', () => importPreview.next)
-    journal.logAudit({ action: '导入翻译', target: `${activeMeta?.nativeName ?? locale}（${locale}）`, targetModule: 'translations', targetId: locale,
-      after: `更新 ${importPreview.applied} 条`, result: importPreview.unknown ? `成功 · 跳过 ${importPreview.unknown} 条未知键` : '成功' })
+    if (!importPreview || importPreview.errors.length || importPreview.targetLocale !== locale || (pendingConfirmations.length && !confirmReviewed)) return
+    const result = applyTranslationImport(entries, importPreview, importPreview.targetLocale)
+    if (result.errors.length) {
+      setImportPreview({ ...importPreview, errors: result.errors })
+      return
+    }
+    const confirmed = Object.fromEntries(reviewedRows.map((row) => [row.key, [importPreview.targetLocale]]))
+    journal.transform((current) => {
+      const checked = applyTranslationImport(current.translations, importPreview, importPreview.targetLocale)
+      if (checked.errors.length) return current
+      return { ...current, translations: checked.entries, translationReviews: updateTranslationReviews(current.translationReviews, current.translations, checked.entries, confirmed) }
+    })
+    journal.logAudit({ action: '导入翻译（会话草稿）', target: `${activeMeta.nativeName}（${locale}）`, targetModule: 'translations', targetId: locale,
+      after: `更新 ${importPreview.counts.changed} 条；复核 ${pendingConfirmations.length} 条；跳过 ${importPreview.counts.skipped} 条` })
+    setFeedback({ message: `导入完成：更新 ${importPreview.counts.changed} 条、复核 ${pendingConfirmations.length} 条、跳过 ${importPreview.counts.skipped} 条。仅写入会话草稿，可导出保留成果。` })
     setImportPreview(null)
   }
 
   return <>
-    <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes.translations[0]}</span><small>{configurationNotes.translations[1]}</small></div></div>
+    <div className="admin-config-note"><Icon name="shield" /><div><strong>文案管理 · 原型会话</strong><span>{configurationNotes.translations[0]}</span><small>{configurationNotes.translations[1]}</small></div></div>
+    <details className="admin-card translation-guide"><summary>翻译工作流程与文件填写说明</summary>
+      <ol><li>选择目标语言与文案范围：全部、未翻译或待复核；可按命名空间与关键词缩小范围。</li><li>导出当前筛选结果，交给译者。只改「操作」与「译文」：操作填「填写」；留空译文会跳过。需要删除已有译文时，将操作改成「清空」并留空译文。</li><li>导回同一语言，查看每条新旧文案及校验结果。键、语言、版本冲突或占位符错误会阻止整批导入；请修正文件或重新导出。</li><li>导入仅更新会话草稿。完成待复核文案后提交模拟审核；当前不连接玩家端发布，刷新前请导出保留工作成果。</li></ol>
+      <p>简体中文用于维护原文；英文同时承担兜底，不能为空。原文或英文改变会让相关已有译文进入待复核。新版文件带基准快照，旧五列 CSV 请重新导出并迁移译文。</p>
+    </details>
     <ConfigBadge store={store} moduleId="translations" onDiscard={() => journal.discardDraft('translations')} />
-    <section className="admin-card"><div className="card-heading"><div><h2>翻译覆盖率</h2><p>共 {keys.length} 条玩家侧文案 · {translationLocales.length} 种语言。英文必须保持 100%，它是所有语言的兜底。</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.slice(0, 4).join('；')}{errors.length > 4 ? ` 等 ${errors.length} 项` : ''}</span></div></div>}
-      <div className="coverage-grid">{coverage.map((row) => <button className={`coverage-cell ${row.code === locale ? 'is-active' : ''}`} key={row.code} onClick={() => { setLocale(row.code); setPage(0) }}>
-        <span className="coverage-name">{row.nativeName}<small>{row.code}</small></span>
+    {feedback && <div className={`admin-config-note${feedback.error ? ' danger' : ''}`} role={feedback.error ? 'alert' : 'status'}><Icon name={feedback.error ? 'bolt' : 'shield'} /><div><span>{feedback.message}</span></div></div>}
+    <section className="admin-card"><div className="card-heading"><div><h2>翻译覆盖率</h2><p>共 {keys.length} 条文案 · {translationLocales.length} 种语言。百分比表示已填写；待复核单独计数。</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0 || reviewErrors.length > 0} onClick={saveDraft}>提交模拟审核</button>}</div>
+      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>文案校验未通过</strong><span>{errors.slice(0, 4).join('；')}{errors.length > 4 ? ` 等 ${errors.length} 项` : ''}</span></div></div>}
+      {reviewErrors.length > 0 && <p className="editor-hint">还有 {reviewErrors.length} 条译文待复核，完成后才能提交模拟审核。选择带待复核数量的语言，再筛选「待复核」。</p>}
+      <div className="coverage-grid">{coverage.map((row) => <button className={`coverage-cell ${row.code === locale ? 'is-active' : ''}`} key={row.code} onClick={() => selectLocale(row.code)}>
+        <span className="coverage-name">{row.nativeName}<small>{row.code}{row.pending ? ` · ${row.pending} 条待复核` : ''}</small></span>
         <span className="coverage-bar"><i style={{ width: `${row.percent}%` }} className={row.percent === 100 ? 'is-full' : row.percent === 0 ? 'is-none' : ''} /></span>
         <span className="coverage-value">{row.percent}%<small>{row.done}/{row.total}</small></span>
       </button>)}</div>
     </section>
     <div className="admin-toolbar">
-      <div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="搜索键名或中英文文案..." /></div>
-      <select value={namespace} onChange={(event) => { setNamespace(event.target.value); setPage(0) }}><option value="all">全部命名空间</option>{namespaces.map((ns) => <option key={ns} value={ns}>{ns}（{keys.filter((k) => translationNamespace(k) === ns).length}）</option>)}</select>
-      <select value={locale} onChange={(event) => { setLocale(event.target.value); setPage(0) }}>{translationLocales.map(({ code, nativeName }) => <option key={code} value={code}>{nativeName}</option>)}</select>
-      <button className={`admin-btn ${onlyMissing ? 'primary' : 'subtle'}`} onClick={() => { setOnlyMissing((v) => !v); setPage(0) }}><Icon name="filter" />只看未翻译</button>
-      <button className={`admin-btn ${onlyChanged ? 'primary' : 'subtle'}`} onClick={() => { setOnlyChanged((v) => !v); setPage(0) }}><Icon name="clock" />只看已改动</button>
+      <div className="admin-search"><Icon name="eye" /><input aria-label="搜索文案" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="搜索键名、原文或译文..." /></div>
+      <select aria-label="文案范围" value={namespace} onChange={(event) => { setNamespace(event.target.value); setPage(0) }}><option value="all">全部命名空间</option>{namespaces.map((ns) => <option key={ns} value={ns}>{ns}（{keys.filter((k) => translationNamespace(k) === ns).length}）</option>)}</select>
+      <select aria-label="当前编辑语言" value={locale} onChange={(event) => selectLocale(event.target.value)}>{translationLocales.map(({ code, nativeName }) => <option key={code} value={code}>{nativeName}（{code}）{code === SOURCE_LOCALE ? ' · 原文' : ''}</option>)}</select>
+      <select aria-label="翻译状态" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(0) }}><option value="all">全部文案</option><option value="missing">未翻译</option><option value="review">待复核</option></select>
+      <button className={`admin-btn ${onlyChanged ? 'primary' : 'subtle'}`} aria-pressed={onlyChanged} onClick={() => { setOnlyChanged((v) => !v); setPage(0) }}><Icon name="clock" />只看已改动</button>
     </div>
-    <section className="admin-card table-card">
-      <div className="table-top"><div><strong>文案列表</strong><span>共 {filtered.length} 条 · 当前对照语言：{activeMeta?.nativeName}</span></div>
+    <section className="admin-card table-card translation-card">
+      <div className="table-top"><div><strong>{locale === SOURCE_LOCALE ? '原文维护' : '译文维护'}</strong><span>当前编辑：{activeMeta.nativeName}（{locale}） · 筛选共 {filtered.length} 条</span></div>
         <div className="table-actions">
-          <label className="admin-btn subtle import-label">导入 {activeMeta?.nativeName} CSV<input type="file" accept=".csv,text/csv" onChange={(event) => { const f = event.target.files?.[0]; if (f) prepareImport(f); event.target.value = '' }} /></label>
-          <button className="admin-btn subtle" onClick={exportCurrent}>导出 CSV</button>
+          <label className={`admin-btn subtle import-label${reading ? ' is-reading' : ''}`}>{reading ? '读取中…' : `导入 ${activeMeta.nativeName} CSV`}<input aria-label={`导入 ${activeMeta.nativeName} CSV`} disabled={reading} type="file" accept=".csv,text/csv" onChange={(event) => { const f = event.target.files?.[0]; if (f) prepareImport(f); event.target.value = '' }} /></label>
+          <button className="admin-btn subtle" disabled={!filtered.length} onClick={exportCurrent}>导出当前筛选（{filtered.length} 条）</button>
         </div>
       </div>
-      <div className="table-wrap"><table><thead><tr><th>键</th><th>简体中文</th><th>英文</th><th>{activeMeta?.nativeName}</th><th>覆盖</th><th>操作</th></tr></thead><tbody>
+      <div className="table-wrap"><table className="translation-table"><thead><tr><th>文案键</th>{displayLocales.map((meta) => <th key={meta.code}>{meta.nativeName}<small>{meta.code === SOURCE_LOCALE ? '原文' : meta.code === FALLBACK ? '参考 / 兜底' : '译文'}{meta.code === locale ? ' · 当前编辑' : ''}</small></th>)}<th>当前语言状态</th><th>操作</th></tr></thead><tbody>
         {visible.map((key) => {
           const entry = entries[key]
-          const done = translationLocales.filter(({ code }) => String(entry[code] ?? '').trim()).length
           return <tr key={key} className={isChanged(key) ? 'is-changed-row' : ''}>
             <td><code className="translation-key">{key}</code>{isChanged(key) && <em className="sample-tag is-dirty">已改动</em>}</td>
-            <td>{entry[SOURCE_LOCALE]}</td>
-            <td>{entry[FALLBACK]}</td>
-            <td dir={activeMeta?.dir}>{String(entry[locale] ?? '').trim() || <em className="sample-tag">未翻译</em>}</td>
-            <td>{done}/{translationLocales.length}</td>
-            <td><button className="row-action" onClick={(event) => { event.stopPropagation(); setEditing(key) }}>编辑全部语言</button></td>
+            {displayLocales.map((meta) => <td key={meta.code} dir={meta.dir}>{String(entry[meta.code] ?? '').trim() ? entry[meta.code] : <em className="sample-tag">未填写</em>}</td>)}
+            <td>{!String(entry[locale] ?? '').trim() ? '未翻译' : needsReview(key) ? <em className="sample-tag is-dirty">待复核</em> : locale === SOURCE_LOCALE ? '原文' : '已复核'}</td>
+            <td><button className="row-action" onClick={() => setEditing(key)}>{needsReview(key) ? '编辑 / 复核' : locale === SOURCE_LOCALE ? '编辑原文' : '编辑译文'}</button></td>
           </tr>
         })}
-      </tbody></table>{!filtered.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配的文案</strong><p>调整命名空间、搜索词或取消「只看未翻译」。</p></div>}</div>
-      <Pager page={page} total={filtered.length} onChange={setPage} />
+      </tbody></table>{!filtered.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配的文案</strong><p>调整搜索与筛选条件。</p></div>}</div>
+      <Pager page={pageIndex} total={filtered.length} onChange={setPage} />
     </section>
-    {editing && <TranslationEditor key={editing} entryKey={editing} entry={entries[editing]} onSave={saveEntry(editing)} onClose={() => setEditing(null)} />}
-    {importPreview && <Modal eyebrow="导入确认" title={`导入 ${importPreview.fileName}`} onClose={() => setImportPreview(null)}
-      footer={<><button className="admin-btn subtle" onClick={() => setImportPreview(null)}>取消</button><button className="admin-btn primary" disabled={importPreview.mismatch && !importPreview.confirmMismatch} onClick={commitImport}>确认导入</button></>}>
-      <div className="import-preview">
-        {importPreview.mismatch ? <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>文件语言与当前选中语言不一致</strong><span>文件表头写的是「{importPreview.fileLocaleLabel}」，当前选中的导入目标是「{activeMeta?.nativeName}」。继续会把文件里的内容写入「{activeMeta?.nativeName}」，这通常不是你想要的。</span></div></div>
-          : importPreview.fileLocaleLabel && <div className="admin-config-note"><Icon name="shield" /><div><strong>文件语言与目标一致</strong><span>表头「{importPreview.fileLocaleLabel}」与当前选中的「{activeMeta?.nativeName}」匹配。</span></div></div>}
-        <div className="import-summary">
-          <div><strong>{importPreview.applied}</strong><span>条将更新</span></div>
-          <div><strong>{importPreview.unchanged}</strong><span>条内容相同，不受影响</span></div>
-          <div><strong>{importPreview.unknown}</strong><span>条键不存在，将跳过</span></div>
-        </div>
-        {importPreview.mismatch && <label className="import-confirm-check"><input type="checkbox" checked={importPreview.confirmMismatch} onChange={(event) => setImportPreview((p) => ({ ...p, confirmMismatch: event.target.checked }))} />我确认这份文件确实要导入到「{activeMeta?.nativeName}」</label>}
-      </div>
-    </Modal>}
+    {editing && <TranslationEditor key={editing} entryKey={editing} entry={entries[editing]} review={reviews?.[editing]} locale={locale} onSave={saveEntry(editing)} onClose={() => setEditing(null)} />}
+    {importPreview && <EditDialog eyebrow="翻译文件回传" title={`导入 ${importPreview.fileName}`} subtitle={`目标语言：${importPreview.targetLocale} · 确认前不会写入草稿`} dirty={false} allowUnchangedSave onClose={() => setImportPreview(null)} onSave={commitImport} saveLabel="确认导入会话草稿"
+      saveDisabled={importPreview.errors.length > 0 || importPreview.targetLocale !== locale || (!importPreview.counts.changed && !pendingConfirmations.length) || (pendingConfirmations.length > 0 && !confirmReviewed)}
+      footNote="任一错误都会阻止整批导入；空白默认跳过。确认时再次核对原文与已有译文。"
+      tabs={[{ id: 'preview', label: '逐条预览', content: <div className="import-preview">
+        {importPreview.targetLocale !== locale && <p role="alert">当前语言已切换，请取消并在正确语言下重新导入。</p>}
+        <div className="import-summary"><div><strong>{importPreview.counts.changed}</strong><span>条将更新</span></div><div><strong>{importPreview.counts.unchanged}</strong><span>条内容相同</span></div><div><strong>{importPreview.counts.skipped}</strong><span>条跳过</span></div></div>
+        {importPreview.errors.length > 0 && <div className="translation-import-errors" role="alert"><strong>校验未通过，整批不会导入（共 {importPreview.errors.length} 项，最多显示前 20 项）</strong><ul>{importPreview.errors.slice(0, 20).map((error, index) => <li key={index}>{error}</li>)}</ul></div>}
+        {pendingConfirmations.length > 0 && <label className="import-confirm-check"><input type="checkbox" checked={confirmReviewed} onChange={(event) => setConfirmReviewed(event.target.checked)} />我已核对当前原文与参考文案，确认文件中的 {pendingConfirmations.length} 条待复核译文适用（含内容未改变的译文）。</label>}
+        <div className="table-wrap"><table className="translation-table import-diff"><thead><tr><th>文件记录 / 键</th><th>原有内容</th><th>回传内容</th><th>处理结果</th></tr></thead><tbody>{importPreview.rows.slice(importPage * PAGE_SIZE, (importPage + 1) * PAGE_SIZE).map((row, index) => <tr key={index}><td>{row.rowNumber}<br /><code>{row.key}</code></td><td>{row.before || '空'}</td><td>{row.after || '空'}</td><td>{row.message}</td></tr>)}</tbody></table></div>
+        <Pager page={importPage} total={importPreview.rows.length} onChange={setImportPage} />
+      </div> }]} />}
   </>
 }
 
@@ -1377,7 +1404,7 @@ function AdminApp() {
     if (activePage === 'wheel') return <WheelPage {...common} />
     if (activePage === 'missions') return <MissionsPage store={store} update={update} journal={journal} />
     if (activePage === 'activities') return <ActivitiesPage key={pageKey} {...common} intent={intent} />
-    if (activePage === 'translations') return <TranslationsPage key={pageKey} store={store} update={update} journal={journal} intent={intent} />
+    if (activePage === 'translations') return <TranslationsPage key={pageKey} store={store} journal={journal} intent={intent} />
     if (activePage === 'store') return <ProductsPage {...common} />
     if (activePage === 'orders') return <GenericPage key={pageKey} page="orders" describe={describeOrder} {...common} intent={intent} />
     if (activePage === 'players') return <PlayersCenterPage key={pageKey} {...common} navigate={navigate} intent={intent} />

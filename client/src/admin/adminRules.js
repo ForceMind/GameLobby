@@ -1,5 +1,6 @@
 // Pure rules for the admin console prototype: validation, draft/live snapshots and release decisions.
 // No React and no data imports, so `node --test` can exercise it directly.
+import { needsTranslationReview, translationReviewErrors } from './translationReview.js'
 import { isValidNickname } from '../demoModel.js'
 
 export const WHEEL_SLOTS = 8
@@ -147,7 +148,7 @@ export function diffSummary(before, after, fields) {
 // ---- draft/live snapshots -------------------------------------------------
 // moduleId: wheel | checkin | missions | coinPacks | monthlyPass | chestOffer | games:test | games:production
 export const moduleKeys = {
-  translations: ['translations'],
+  translations: ['translations', 'translationReviews'],
   wheel: ['wheelPrizes', 'wheelFreeSpins', 'wheelVersion'],
   checkin: ['checkinDays'],
   missions: ['missions'],
@@ -231,7 +232,9 @@ export function validateTranslations(entries) {
   const errors = []
   const placeholders = (text) => [...String(text ?? '').matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
   Object.entries(entries).forEach(([key, byLocale]) => {
+    const original = byLocale['zh-Hans']
     const source = byLocale.en
+    if (!String(original ?? '').trim()) errors.push(`「${key}」缺少简体中文原文，不能为空`)
     if (!String(source ?? '').trim()) errors.push(`「${key}」缺少英文，英文是所有语言的兜底，不能为空`)
     Object.entries(byLocale).forEach(([locale, text]) => {
       if (locale === 'en' || !String(text ?? '').trim()) return
@@ -266,7 +269,7 @@ export function validateGameGates(game) {
 }
 
 export function validateSnapshot(moduleId, slice) {
-  if (moduleId === 'translations') return validateTranslations(slice.translations)
+  if (moduleId === 'translations') return [...validateTranslations(slice.translations), ...translationReviewErrors(slice.translations, slice.translationReviews)]
   if (moduleId === 'wheel') return validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins })
   if (moduleId === 'checkin') return validateCheckin(slice.checkinDays)
   if (moduleId === 'missions') return validateMissions(slice.missions)
@@ -321,11 +324,16 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
   const seq = meta.seq ?? 0
   const audit = (patch) => ({
     id: `audit-${seq}-${entry.id}-${decision}`, logId: `#${seq.toString(16).slice(-4).padStart(4, '0')}`, actor: meta.actor || '运营管理员', time,
-    targetModule: 'publish', targetId: entry.id, target: entry.name, action: spec.action, before: entry.status, after: spec.status,
+    targetModule: 'publish', targetId: entry.id, target: entry.name, action: entry.sourceModule === 'translations' ? `模拟 · ${spec.action}` : spec.action, before: entry.status, after: spec.status,
     result: reason ? `成功 · 原因：${reason}` : '成功', ...patch,
   })
   const moduleId = entry.sourceModule
   const hasSnapshot = isConfigModule(moduleId) && !!entry.snapshot
+  const isTranslations = moduleId === 'translations'
+  // A review may arrive after an editor has continued working on a newer draft.
+  // The historical snapshot still becomes the live baseline, while that newer
+  // draft and its independent review metadata must remain available for follow-up.
+  const hasNewerTranslationDraft = isTranslations && JSON.stringify(getSlice(store, moduleId)) !== JSON.stringify(entry.snapshot)
   let next = store
   if ((decision === 'approve' || decision === 'gray') && hasSnapshot) {
     const errors = validateSnapshot(moduleId, entry.snapshot)
@@ -334,17 +342,18 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
       const previous = getSlice(store.live, moduleId)
       const applied = String(moduleId).startsWith('games:') ? mergeGameSnapshotWithLive(previous, entry.snapshot) : entry.snapshot
       next = { ...next, live: setSlice(store.live, moduleId, applied), liveHistory: { ...store.liveHistory, [moduleId]: [previous, ...(store.liveHistory[moduleId] || [])].slice(0, 10) } }
-      next = setSlice(next, moduleId, applied)
+      if (!hasNewerTranslationDraft) next = setSlice(next, moduleId, applied)
     }
   }
-  if (decision === 'reject' && hasSnapshot) next = resetDraftToLive(next, moduleId)
+  if (decision === 'reject' && hasSnapshot && !hasNewerTranslationDraft) next = resetDraftToLive(next, moduleId)
   if (decision === 'rollback' && hasSnapshot) {
     const history = store.liveHistory[moduleId] || []
     if (!history.length) return { ...store, audit: [audit({ after: entry.status, result: '失败 · 没有可回滚的历史版本' }), ...store.audit] }
     const [previous, ...rest] = history
     const restored = String(moduleId).startsWith('games:') ? mergeGameSnapshotWithLive(getSlice(next.live, moduleId), previous) : previous
     next = { ...next, live: setSlice(next.live, moduleId, restored), liveHistory: { ...next.liveHistory, [moduleId]: rest } }
-    next = setSlice(next, moduleId, restored)
+    const hasNewerDraftThanLive = isTranslations && JSON.stringify(getSlice(store, moduleId)) !== JSON.stringify(getSlice(store.live, moduleId))
+    if (!hasNewerDraftThanLive) next = setSlice(next, moduleId, restored)
   }
   next = { ...next, publish: next.publish.map((p) => (p.id === entry.id ? { ...p, status: spec.status, time } : p)) }
   if (['approve', 'reject', 'rollback'].includes(decision)) next = { ...next, todo: next.todo.map((t) => (t.publishId === entry.id ? { ...t, status: '已解决', time } : t)) }
@@ -395,7 +404,7 @@ function snapshotRows(moduleId, slice) {
   }
   if (moduleId === 'translations') {
     return Object.entries(slice.translations).flatMap(([key, byLocale]) =>
-      Object.entries(byLocale).map(([locale, text]) => [`${key}|${locale}`, `${key} · ${locale}`, cell(text)]))
+      Object.entries(byLocale).map(([locale, text]) => [`${key}|${locale}`, `${key} · ${locale}`, cell(text) + (slice.translationReviews && locale !== 'zh-Hans' && String(text ?? '').trim() ? needsTranslationReview(byLocale, slice.translationReviews[key], locale) ? ' · 待复核' : ' · 已复核' : '')]))
   }
   if (String(moduleId).startsWith('activityRegion:')) return [['region', '投放地区', regionCell(slice.region)]]
   if (String(moduleId).startsWith('games:')) {

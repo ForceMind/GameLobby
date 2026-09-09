@@ -212,3 +212,31 @@ tr.is-changed-row{background:#fffaf0}
 .directory-edit-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--admin-border);font-size:12px}
 .directory-edit-row strong{flex:1}.directory-edit-row input[type=checkbox]{width:16px;height:16px}
 .catalog-toolbar>.admin-btn{margin-left:auto}
+
+/* Translation work: language roles, review state and lossless file preview. */
+.translation-guide{padding:14px 18px;font-size:12px;line-height:1.8}
+.translation-guide summary{cursor:pointer;font-weight:600}
+.translation-guide ol{padding-left:20px;margin:10px 0}
+.translation-guide p{color:var(--admin-muted);margin:8px 0 0}
+.translation-table{table-layout:fixed;min-width:720px;width:100%}
+.translation-table th small{display:block;font-weight:400;color:var(--admin-muted);margin-top:3px}
+.translation-table td{white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:top}
+.translation-table .translation-key{white-space:normal;overflow-wrap:anywhere}
+.translation-table th:first-child{width:19%}
+.translation-table th:nth-last-child(2){width:12%}
+.translation-table th:last-child{width:12%}
+.translation-table.import-diff th{width:25%}
+.translation-import-errors{border:1px solid #e0a0a0;background:#fff6f5;border-radius:8px;padding:12px;font-size:12px;color:#9d3028}
+.translation-import-errors ul{max-height:160px;overflow:auto;padding-left:20px}
+.translation-reference{display:grid;gap:8px;margin-bottom:16px}
+.translation-reference>div{padding:10px 12px;background:#f4f7fc;border-radius:8px;font-size:12px}
+.translation-reference p{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 0}
+.translation-edit-row{display:grid;gap:7px;margin-bottom:10px}
+.translation-review-check{display:flex;align-items:flex-start;gap:7px;color:#945815;font-size:12px;margin-left:160px}
+.import-label.is-reading{opacity:.6}
+@media(max-width:640px){.translation-row{grid-template-columns:1fr}.translation-review-check{margin-left:0}.translation-reference>div{padding:10px}.translation-guide{padding:12px}.translation-table{min-width:700px}}
+@media(max-width:640px){
+  .translation-card .table-top{height:auto;flex-direction:column;align-items:stretch;padding:12px;gap:10px}
+  .translation-card .table-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .translation-card .table-actions>.admin-btn{flex:1;min-width:130px;white-space:normal;height:auto;min-height:34px;line-height:1.5}
+}

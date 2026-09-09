@@ -5,6 +5,7 @@ import liteContent from '../data/liteContent.json'
 import engagementPreview from '../data/engagementPreview.json' with { type: 'json' }
 import { prizeLabel } from './adminRules.js'
 import messages from '../locales/index.js'
+import { createTranslationReviews } from './translationReview.js'
 import { wheelConfig } from '../data/publishedConfig.js'
 import { locales as localeRegistry, FALLBACK_LOCALE } from '../locales/registry.js'
 
@@ -318,6 +319,7 @@ export function createInitialStore() {
   ]
   const todo = zip(rawRows.todo, 'todo').map((t, i) => ({ ...t, publishId: i === 1 ? publish[2].id : '', link: todoLinks[i] || null, claimedBy: t.status === '处理中' ? t.owner : '', resolution: '' }))
   config.translations = buildTranslations()
+  config.translationReviews = createTranslationReviews(config.translations)
   // 每条活动独立存一份投放地区，各自走草稿审核、互不影响——即使两条记录是同一
   // 活动类型（同一 moduleId）。放进 config 而不是单独拼进返回对象，是为了让
   // store.live.activities 也自动带上这份地区（config 同时被 clone 进 store 顶层
