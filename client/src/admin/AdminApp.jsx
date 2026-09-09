@@ -3,15 +3,20 @@ import { Icon } from '../icons.jsx'
 import { games, gameCategories } from '../data.js'
 import liteContent from '../data/liteContent.json'
 import { appVersion } from '../version.js'
+import EditDialog from './EditDialog.jsx'
+import ActivityRewardDialog from './ActivityRewardDialog.jsx'
+import { CheckinLadderEditor, WheelPrizeEditor, MissionListEditor, CheckinPreview, WheelPreview, MissionsPreview } from './ActivityEditors.jsx'
+import { ChestOfferEditDialog, MonthlyPassEditDialog } from './ProductEditDialogs.jsx'
+import TranslationEditor from './TranslationEditDialog.jsx'
 import { rankings as aggregateWinnerRankings } from '../engagement/model.js'
-import { missionEventOptions, transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel, translationLocales, translationNamespace, CONTINENT_NAMES } from './adminSchema.js'
+import { transitions, columns, createInitialStore, ledgerSourceLabel, ledgerStatusLabel, translationLocales, translationNamespace, CONTINENT_NAMES } from './adminSchema.js'
 import { continents, countryContinent, countriesOf, countryName } from '../data/regions.js'
 import { PHASES, phaseOf } from '../data/phases.js'
 import {
-  formatReward, coinPackPriceUsd, wheelBalanced, prizeLabel, validateWheel, validateCheckin, validateMissions, validateCoinPack,
+  coinPackPriceUsd, wheelBalanced, validateCoinPack,
   validateMonthlyPass, validateChestOffer, validateTranslations, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels, moduleLabel,
   getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, validateSnapshot, WHEEL_SLOTS,
-  normalizeRegion, regionByContinent, regionSummary, validateRegion, validateGameGates, REGION_ALL, REGION_CUSTOM, activityTypeMeta, settledActivityRegion,
+  normalizeRegion, regionByContinent, regionSummary, validateRegion, validateGameGates, REGION_ALL, REGION_CUSTOM, activityTypeMeta, settledActivityRegion, applyActivityState, validateActivityInfo,
 } from './adminRules.js'
 
 const navGroups = [
@@ -50,8 +55,8 @@ const pageMeta = {
 const actionConfig = {
   publish: { label: '新建发布任务', title: '创建发布任务', icon: 'play', fields: ['发布对象', '对象版本', '目标环境', '发布范围'] },
   versions: { label: '发起生产发布', title: '发起生产发布', icon: 'bolt' },
-  activities: { label: '创建活动', title: '创建活动配置草稿', icon: 'gift', fields: ['活动名称', '活动类型', '适用人群', '奖励预算'] },
-  checkin: { label: '创建签到活动', title: '创建签到活动', icon: 'calendar', fields: ['活动名称', '签到周期', '每日奖励', '最终大奖'] },
+  activities: { label: '创建活动', title: '创建活动配置草稿', icon: 'gift', fields: ['活动名称', '活动类型', '活动周期', '适用人群', '奖励预算'] },
+  checkin: { label: '创建签到活动', title: '创建签到活动', icon: 'calendar', fields: ['活动名称', '签到周期', '奖励预算', '负责人'] },
   wheel: { label: '新建转盘', title: '创建幸运转盘', icon: 'refresh', fields: ['转盘名称', '免费次数', '奖项数量', '概率版本'] },
   adminUsers: { label: '新增账号', title: '新增后台账号', icon: 'user', fields: ['姓名', '账号邮箱', '角色', '权限范围'] },
 }
@@ -130,7 +135,7 @@ function Pager({ page, total, onChange }) {
 }
 
 function FieldEditor({ field, value, onChange }) {
-  if (field.readOnly) return <strong>{Array.isArray(value) ? (value.join(' / ') || '—') : (value === '' || value === null || value === undefined ? '—' : String(value))}</strong>
+  if (field.readOnly) return <strong>{displayFieldValue(field, value)}</strong>
   if (field.type === 'toggle') return <button type="button" disabled={field.disabled} className={`toggle-switch ${value ? 'is-on' : ''}`} onClick={() => onChange(!value)} aria-pressed={!!value} aria-label={field.label}><i /></button>
   if (field.type === 'select') return <select className="ladder-input" value={value} onChange={(event) => onChange(event.target.value)}>{field.options.map((option) => (Array.isArray(option) ? <option key={option[0]} value={option[0]}>{option[1]}</option> : <option key={option} value={option}>{option}</option>))}</select>
   if (field.type === 'textarea') return <textarea className="ladder-input" value={value ?? ''} onChange={(event) => onChange(event.target.value)} placeholder={field.placeholder} />
@@ -138,6 +143,46 @@ function FieldEditor({ field, value, onChange }) {
   if (field.type === 'checks') return <div className="check-group">{field.options.map(([optionValue, optionLabel]) => <label key={optionValue}><input type="checkbox" checked={(value || []).includes(optionValue)} onChange={(event) => onChange(event.target.checked ? [...(value || []), optionValue] : (value || []).filter((v) => v !== optionValue))} />{optionLabel}</label>)}</div>
   if (field.type === 'number') return <input className="ladder-input" type="number" min={field.min} max={field.max} step={field.step} disabled={field.disabled} value={value ?? 0} onChange={(event) => onChange(event.target.value === '' ? '' : Number(event.target.value))} />
   return <input className="ladder-input" value={value ?? ''} disabled={field.disabled} placeholder={field.placeholder} onChange={(event) => onChange(event.target.value)} />
+}
+
+function displayFieldValue(field, value) {
+  if (value === '' || value === null || value === undefined) return '—'
+  if (typeof value === 'boolean') return value ? '是' : '否'
+  if (field.type === 'region') return regionSummary(value, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code)
+  const labelOf = (entry) => field.options?.find((option) => Array.isArray(option) && option[0] === entry)?.[1] ?? entry
+  return Array.isArray(value) ? value.map(labelOf).join(' / ') || '无' : String(labelOf(value))
+}
+
+function PreviewVersionSwitch({ value, onChange, hasDraft }) {
+  const active = hasDraft ? value : 'live'
+  return <div className="preview-switch" aria-label="预览版本">
+    <button type="button" className={active === 'live' ? 'is-active' : ''} aria-pressed={active === 'live'} onClick={() => onChange('live')}>生效预览</button>
+    <button type="button" className={active === 'draft' ? 'is-active' : ''} aria-pressed={active === 'draft'} disabled={!hasDraft} onClick={() => onChange('draft')}>草稿预览</button>
+    <span className="preview-dirty">{active === 'draft' ? '草稿效果 · 尚未发布' : '当前生效版本 · 只读'}</span>
+  </div>
+}
+
+function publishNote(store, moduleId) {
+  const pending = store.publish.find((entry) => entry.sourceModule === moduleId && entry.status === '待审核')
+  return pending ? `保存会替换待审核任务「${pending.name}」，包含本模块已保存的草稿；审核通过后才生效。` : '保存后生成草稿并提交审核，当前生效版本不变。'
+}
+
+function ChangePreview({ before, after, fields }) {
+  const changed = fields.filter((field) => JSON.stringify(before[field.key]) !== JSON.stringify(after[field.key]))
+  return <div className="editor-preview"><h3>本次修改</h3>{changed.length ? <div className="diff-table">{changed.map((field) => <div className="diff-row is-changed" key={field.key}><span className="diff-label">{field.label}</span><span className="diff-before">{displayFieldValue(field, before[field.key])}</span><span className="diff-arrow">→</span><span className="diff-after">{displayFieldValue(field, after[field.key])}</span></div>)}</div> : <p>尚未修改任何字段。</p>}</div>
+}
+
+function DescriptorEditModal({ descriptor, onClose, onSaved }) {
+  const [initial] = useState(() => structuredClone(Object.fromEntries(descriptor.fields.map((f) => [f.key, f.value]))))
+  const [draft, setDraft] = useState(() => structuredClone(initial))
+  const editable = descriptor.fields.filter((field) => !field.readOnly && !field.disabled)
+  const dirty = editable.some((field) => JSON.stringify(draft[field.key]) !== JSON.stringify(initial[field.key]))
+  const errors = descriptor.validate?.(draft) || []
+  const groups = descriptor.editSections || [{ id: 'settings', label: '资料编辑', keys: editable.map((field) => field.key) }]
+  const hint = typeof descriptor.hint === 'function' ? descriptor.hint(draft) : descriptor.hint
+  const tabs = groups.map((group, index) => ({ ...group, errors: index === 0 ? errors : [], content: <div className="form-grid">{descriptor.fields.filter((field) => group.keys.includes(field.key)).map((field) => <label key={field.key} className={field.type === 'checks' ? 'full' : ''}>{field.label}<FieldEditor field={field} value={draft[field.key]} onChange={(value) => setDraft((current) => ({ ...current, [field.key]: value }))} /></label>)}</div> }))
+  tabs.push({ id: 'changes', label: '变更预览', content: <><ChangePreview before={initial} after={draft} fields={editable} />{hint && <p className="editor-hint">{hint}</p>}</> })
+  return <EditDialog title={`编辑 · ${descriptor.title}`} eyebrow={descriptor.eyebrow} tabs={tabs} dirty={dirty} onClose={onClose} onSave={() => { if (!dirty || errors.length) return; descriptor.onSave(draft); onSaved() }} saveLabel={descriptor.saveLabel || '保存'} footNote={descriptor.saveLabel?.includes('审核') ? '保存为草稿并提交审核，当前生效版本不变。' : '本项保存后立即生效并记录操作日志。'} />
 }
 
 // Large snapshots (a whole game catalogue) would drown the reviewer, so unchanged rows collapse by default.
@@ -156,47 +201,50 @@ function DiffSection({ diff }) {
 }
 
 function RecordDrawer({ descriptor, onClose }) {
-  const [draft, setDraft] = useState(() => (descriptor ? Object.fromEntries(descriptor.fields.map((f) => [f.key, f.value])) : {}))
+  const [editing, setEditing] = useState(false)
   const [reasonFor, setReasonFor] = useState(null)
   const [reasonText, setReasonText] = useState('')
+  const [actionError, setActionError] = useState('')
   if (!descriptor) return null
-  const setField = (key, value) => setDraft((current) => ({ ...current, [key]: value }))
-  const dirty = !!descriptor.onSave && descriptor.fields.some((f) => !f.readOnly && JSON.stringify(draft[f.key]) !== JSON.stringify(f.value))
-  const errors = descriptor.validate ? descriptor.validate(draft) : []
+  if (editing) return <DescriptorEditModal descriptor={descriptor} onClose={() => setEditing(false)} onSaved={onClose} />
   const runAction = (action) => {
-    if (action.requireReason && reasonFor !== action.label) { setReasonFor(action.label); setReasonText(''); return }
-    action.run(action.requireReason ? reasonText : undefined)
+    if ((action.requireReason || action.confirm) && reasonFor !== action.label) { setReasonFor(action.label); setReasonText(''); setActionError(''); return }
+    const result = action.run(action.requireReason ? reasonText : undefined)
+    if (result?.error) { setActionError(result.error); return }
+    setActionError('')
     setReasonFor(null)
     if (!action.keepOpen) onClose()
   }
-  const hint = typeof descriptor.hint === 'function' ? descriptor.hint(draft) : descriptor.hint
+  const hint = typeof descriptor.hint === 'function' ? descriptor.hint(Object.fromEntries(descriptor.fields.map((field) => [field.key, field.value]))) : descriptor.hint
   return <div className="drawer-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <aside className="admin-drawer">
       <div className="drawer-head"><div><span className="eyebrow">{descriptor.eyebrow}</span><h2>{descriptor.title}</h2></div><button className="icon-button" onClick={onClose}><Icon name="close" /></button></div>
       <div className="drawer-body">
         {descriptor.status && <div className="drawer-field"><span>状态</span><Status>{descriptor.status}</Status></div>}
-        {descriptor.fields.map((field) => <div className="drawer-field" key={field.key}><span>{field.label}</span><FieldEditor field={field} value={field.readOnly ? field.value : draft[field.key]} onChange={(value) => setField(field.key, value)} /></div>)}
+        {descriptor.fields.map((field) => <div className="drawer-field" key={field.key}><span>{field.label}</span><FieldEditor field={{ ...field, readOnly: true }} value={field.value} /></div>)}
         {hint && <div className="admin-config-note"><Icon name="shield" /><div><strong>说明</strong><span>{hint}</span></div></div>}
-        {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
         {descriptor.diff && <DiffSection diff={descriptor.diff} />}
         {descriptor.lifecycle && <div className="drawer-section"><h3>状态流转</h3><div className="state-line">{descriptor.lifecycle.steps.map((step, index) => <span key={step} style={{ display: 'contents' }}>{index > 0 && <i />}<span className={`state-node ${step === descriptor.status ? 'active' : descriptor.lifecycle.steps.indexOf(descriptor.status) > index ? 'done' : ''}`}>{step}</span></span>)}</div>{descriptor.lifecycle.branch && <p className="branch-note"><Icon name="bolt" />{descriptor.lifecycle.branch}</p>}</div>}
         {descriptor.actions && descriptor.actions.length > 0 && <div className="drawer-section"><h3>操作</h3><div className="drawer-actions">{descriptor.actions.map((action) => <button key={action.label} className={`admin-btn ${action.tone === 'warning' ? 'warning' : action.tone === 'danger' ? 'danger' : action.tone === 'primary' ? 'primary' : 'subtle'}`} onClick={() => runAction(action)}>{action.label}</button>)}</div>
-          {reasonFor && <div className="reason-box"><textarea placeholder={descriptor.actions.find((a) => a.label === reasonFor)?.reasonLabel || `「${reasonFor}」需要填写原因，用于操作日志留痕`} value={reasonText} onChange={(event) => setReasonText(event.target.value)} /><div><button className="admin-btn subtle" onClick={() => setReasonFor(null)}>取消</button><button className="admin-btn primary" disabled={!reasonText.trim()} onClick={() => runAction(descriptor.actions.find((a) => a.label === reasonFor))}>确认{reasonFor}</button></div></div>}
+          {reasonFor && <div className="reason-box"><p>确认对「{descriptor.title}」执行「{reasonFor}」？</p>{actionError&&<p role="alert">{actionError}</p>}{descriptor.actions.find((action)=>action.label===reasonFor)?.requireReason && <textarea placeholder={descriptor.actions.find((a) => a.label === reasonFor)?.reasonLabel || `「${reasonFor}」需要填写原因，用于操作日志留痕`} value={reasonText} onChange={(event) => setReasonText(event.target.value)} />}<div><button className="admin-btn subtle" onClick={() => setReasonFor(null)}>取消</button><button className="admin-btn primary" disabled={descriptor.actions.find((action)=>action.label===reasonFor)?.requireReason && !reasonText.trim()} onClick={() => runAction(descriptor.actions.find((a) => a.label === reasonFor))}>确认{reasonFor}</button></div></div>}
         </div>}
         <div className="drawer-section"><h3>最近操作</h3>{descriptor.history && descriptor.history.length ? descriptor.history.slice(0, 8).map((entry) => <p className="audit-item" key={entry.id}><Icon name="clock" /><span>{entry.actor} · {entry.action}<small>{entry.time} · {entry.result}{entry.before || entry.after ? <span className="diff-pair">{entry.before || '—'} → {entry.after || '—'}</span> : null}</small></span></p>) : <p className="audit-item"><Icon name="eye" /><span>暂无操作记录</span></p>}</div>
       </div>
-      <div className="drawer-foot">{descriptor.onSave ? <><button className="admin-btn subtle" onClick={onClose}>取消</button><button className="admin-btn primary" disabled={!dirty || errors.length > 0} onClick={() => { descriptor.onSave(draft); onClose() }}>{descriptor.saveLabel || '保存草稿'}</button></> : <button className="admin-btn primary" onClick={onClose}>完成</button>}</div>
+      <div className="drawer-foot"><button className="admin-btn subtle" onClick={onClose}>关闭</button>{descriptor.onSave && <button className="admin-btn primary" onClick={() => setEditing(true)}>{descriptor.editLabel || '编辑'}</button>}</div>
     </aside>
   </div>
 }
 
 function ConfigBadge({ store, moduleId, versionText, onDiscard }) {
+  const [discarding, setDiscarding] = useState(false)
   const pending = store.publish.find((p) => p.sourceModule === moduleId && p.status === '待审核')
   const differs = draftDiffers(store, moduleId)
-  const tone = pending ? 'is-pending' : differs ? 'is-dirty' : ''
-  const state = pending ? '待审核' : differs ? '草稿有未保存变更' : '与生效版本一致'
-  const detail = pending ? `已提交「${pending.name}」等待审核；审核通过后才覆盖生效版本，前台在此之前仍使用当前生效版本。` : differs ? '编辑只修改草稿，前台以生效版本为准；点击保存后进入发布审核。' : '所有已保存的变更都已发布。'
-  return <div className={`config-badge ${tone}`}><Icon name={pending ? 'clock' : differs ? 'flag' : 'shield'} /><span><strong>{versionText ? `当前生效 ${versionText} · ` : ''}{state}</strong><small>{detail}</small></span>{(differs || pending) && onDiscard && <button className="admin-btn subtle" onClick={onDiscard}>放弃草稿</button>}</div>
+  const newerDraft = pending?.snapshot && snapshotDiff(moduleId, pending.snapshot, getSlice(store, moduleId)).some((row) => row.changed)
+  const state = pending ? newerDraft ? '已有待审核版本 · 另有新草稿' : '草稿已保存 · 待审核' : differs ? '草稿已保存 · 尚未提交审核' : '与生效版本一致'
+  const detail = pending ? `「${pending.name}」等待审核，玩家仍使用生效版本。${newerDraft ? '新的草稿尚未包含在该审核任务内。' : ''}` : differs ? '页面可查看草稿效果，提交并审核通过后才生效。' : '当前没有未发布的配置变更。'
+  return <><div className={`config-badge ${pending ? 'is-pending' : differs ? 'is-dirty' : ''}`}><Icon name={pending ? 'clock' : differs ? 'flag' : 'shield'} /><span><strong>{versionText ? `当前生效 ${versionText} · ` : ''}{state}</strong><small>{detail}</small></span>{(differs || pending) && onDiscard && <button className="admin-btn subtle" onClick={() => setDiscarding(true)}>放弃草稿</button>}</div>
+    {discarding && <Modal title="放弃已保存草稿？" eyebrow="配置操作" onClose={() => setDiscarding(false)} footer={<><button className="admin-btn subtle" onClick={() => setDiscarding(false)}>取消</button><button className="admin-btn warning" onClick={() => { onDiscard(); setDiscarding(false) }}>确认放弃</button></>}><p className="editor-preview">将恢复为当前生效配置，并作废本模块待审核任务；生效版本不受影响。</p></Modal>}
+  </>
 }
 
 // ---- shared audit / publish-queue helpers, bound to the AdminApp store setter ----
@@ -293,7 +341,8 @@ function gameFormSections(draft) {
       { key: 'badges', label: '角标（英文逗号分隔）', placeholder: 'JACKPOT, 热度 96' },
       { key: 'cover', label: '封面资源', note: '资源上传接口待联调，当前仅记录文件名' },
       { key: 'region', label: '可用地区', type: 'region', full: true, note: '白名单：只有勾选的国家/地区能看到并进入这款游戏' },
-      { key: 'sortWeight', label: '排序权重', type: 'number', note: '数值越小越靠前；目录页拖拽会覆盖该顺序' },
+      { key: 'sortWeight', label: '排序权重', type: 'number', note: '数值越小越靠前；目录设置中的排序会覆盖该顺序' },
+      { key: 'launchAt', label: '预计上线时间', note: '上线计划走草稿审核；进入即将上线状态前需先发布有效时间' },
       { key: 'descriptionKey', label: '游戏简介', type: 'translationLink', full: true, note: '游戏简介是多语言文案，24 种语言都在「多语言内容」里维护，这里不能直接改' },
     ] },
     { title: '进入门槛', note: '填 0 为不限。门槛不满足时游戏仍展示但锁定，与地区限制的隐藏规则不同。演示账号已接入这些字段；真实宿主未提供某项时会挡住对应玩家，本后台无法识别所有真实宿主能力。', fields: [
@@ -303,11 +352,6 @@ function gameFormSections(draft) {
       { key: 'playLevel', label: '可玩等级门槛', type: 'number', min: 0 },
       { key: 'genders', label: '允许性别', type: 'checks', options: [['male', '男'], ['female', '女']], full: true },
       { key: 'familyOnly', label: '家族专属', type: 'toggle', note: '开启后仅有家族归属的玩家可进入' },
-    ] },
-    { title: '运行状态', tone: 'warning', note: '运行状态与维护公告是紧急操作：保存后直接改写生效版本并写入日志，不经发布审核。', fields: [
-      { key: 'status', label: '运行状态', type: 'select', options: ['正常可玩', '维护中', '即将上线', '暂不可用'] },
-      { key: 'maintenanceNote', label: '维护公告文案', placeholder: '仅在「维护中」状态下展示给玩家', disabled: draft.status !== '维护中' },
-      { key: 'launchAt', label: '预计上线时间', placeholder: '仅在「即将上线」状态下展示', disabled: draft.status !== '即将上线' },
     ] },
     { title: '大厅展示', fields: [
       { key: 'popular', label: '大厅热门推荐', type: 'toggle' },
@@ -348,120 +392,140 @@ function validateGameDraft(draft) {
 // The description shown here is content, not config: it lives in the multilingual
 // catalogue (see TranslationsPage) so 24 languages share one source. This link jumps
 // there instead of duplicating a free-text field that would only ever hold Chinese.
-function TranslationLinkField({ entryKey, translations, onJump }) {
+function TranslationLinkField({ entryKey, translations, onJump, disabled }) {
   const entry = translations?.[entryKey]
   if (!entryKey || !entry) return <p className="field-note field-note-danger">找不到对应的翻译键（{entryKey || '未设置'}），需要先在数据里补上，否则玩家会看到空白说明。</p>
   return <div className="translation-link-field">
     <p><span className="translation-link-locale">简体中文</span>{entry['zh-Hans'] || <em className="sample-tag">未填写</em>}</p>
     <p><span className="translation-link-locale">English</span>{entry.en || <em className="sample-tag">未填写</em>}</p>
-    <button type="button" className="admin-btn subtle" onClick={onJump}><Icon name="globe" />在多语言内容中编辑（24 种语言）</button>
+    <button type="button" className="admin-btn subtle" disabled={disabled} onClick={onJump}><Icon name="globe" />在多语言内容中编辑（24 种语言）</button>
   </div>
 }
 
-function GameEditModal({ record, store, update, journal, environment, navigate, onClose }) {
-  const [draft, setDraft] = useState(() => ({ ...record, badges: record.badges.join(', ') }))
-  const setField = (key, value) => setDraft((current) => ({ ...current, [key]: value }))
+function GameEditModal({ record, store, update, journal, environment, navigate, onClose, onSaved }) {
+  const [initial] = useState(() => structuredClone(record))
+  const [draft, setDraft] = useState(() => ({ ...structuredClone(initial), badges: initial.badges.join(', ') }))
+  const normalized = { ...draft, badges: String(draft.badges).split(',').map((x) => x.trim()).filter(Boolean), categoryLabel: categoryLabelFor(draft.tags), heat: Number(draft.heat), sortWeight: Number(draft.sortWeight) }
+  for (const key of ['wealthLevel', 'charmLevel', 'minBalance', 'playLevel']) if (normalized[key] === '') normalized[key] = 0
+  const dirty = gameDraftFields.some(([key]) => JSON.stringify(normalized[key]) !== JSON.stringify(initial[key]))
+  const errors = validateGameDraft(normalized)
   const sections = gameFormSections(draft)
-  const errors = validateGameDraft(draft)
-  const gateNumber = (value) => value === '' ? 0 : value
-  const normalized = { ...draft, badges: String(draft.badges).split(',').map((x) => x.trim()).filter(Boolean), categoryLabel: categoryLabelFor(draft.tags), heat: Number(draft.heat), sortWeight: Number(draft.sortWeight), wealthLevel: gateNumber(draft.wealthLevel), charmLevel: gateNumber(draft.charmLevel), minBalance: gateNumber(draft.minBalance), playLevel: gateNumber(draft.playLevel) }
-  const statusChanged = normalized.status !== record.status || normalized.maintenanceNote !== record.maintenanceNote
-  const draftChanged = gameDraftFields.some(([key]) => JSON.stringify(normalized[key]) !== JSON.stringify(record[key]))
-  const history = store.audit.filter((a) => a.targetModule === 'games' && a.targetId === record.id)
   const moduleId = `games:${environment}`
+  const nextList = store.games[environment].map((g) => g.id === record.id ? { ...g, ...Object.fromEntries(gameDraftFields.map(([key]) => [key, normalized[key]])), categoryLabel: normalized.categoryLabel } : g)
   const save = () => {
-    const nextList = store.games[environment].map((g) => (g.id === record.id ? normalized : g))
-    update('games', (byEnv) => ({ ...byEnv, [environment]: byEnv[environment].map((g) => (g.id === record.id ? normalized : g)) }))
-    if (statusChanged) {
-      journal.transform((live) => ({ ...live, live: { ...live.live, games: { ...live.live.games, [environment]: live.live.games[environment].map((g) => (g.id === record.id ? { ...g, status: normalized.status, maintenanceNote: normalized.maintenanceNote } : g)) } } }))
-      journal.logAudit({ action: '变更游戏运行状态（直接生效）', target: normalized.name, targetModule: 'games', targetId: record.id, before: `${record.status}${record.maintenanceNote ? ` · ${record.maintenanceNote}` : ''}`, after: `${normalized.status}${normalized.maintenanceNote ? ` · ${normalized.maintenanceNote}` : ''}` })
-      if (normalized.status === '维护中' && record.status !== '维护中') journal.addTodo({ title: `${normalized.name} 进入维护`, source: '游戏运营', priority: '高', link: { page: 'games', focusId: record.id, label: `打开 ${normalized.name} 游戏配置` } })
-      if (record.status === '维护中' && normalized.status !== '维护中') {
-        journal.transform((live) => ({ ...live, todo: live.todo.map((t) => (t.status !== '已解决' && t.link?.page === 'games' && t.link.focusId === record.id ? { ...t, status: '已解决', resolution: `${normalized.name} 已恢复为${normalized.status}，事项自动关闭`, time: '刚刚' } : t)) }))
-      }
-    }
-    if (draftChanged) {
-      journal.logAudit({ action: '编辑游戏配置（草稿）', target: normalized.name, targetModule: 'games', targetId: record.id, after: diffSummary(record, normalized, gameDraftFields) })
-      journal.queuePublish({ name: `${normalized.name} 配置更新`, type: '游戏配置', scope: environment === 'production' ? '生产环境' : '测试环境', sourceModule: moduleId, sourceId: record.id, snapshot: { games: nextList }, todoSource: '游戏运营' })
-    }
-    onClose()
+    if (!dirty || errors.length) return
+    update('games', (byEnv) => ({ ...byEnv, [environment]: nextList }))
+    journal.logAudit({ action: '编辑游戏配置（草稿）', target: normalized.name, targetModule: 'games', targetId: record.id, after: diffSummary(initial, normalized, gameDraftFields) })
+    journal.queuePublish({ name: `${normalized.name} 配置更新`, type: '游戏配置', scope: environment === 'production' ? '生产环境' : '测试环境', sourceModule: moduleId, sourceId: record.id, snapshot: { games: nextList }, todoSource: '游戏运营' })
+    onSaved()
   }
-  return <Modal wide eyebrow={`游戏配置 · ${environment === 'production' ? '生产环境' : '测试环境'}`} title={record.name} subtitle={`${record.gameId} · 当前生效状态 ${store.live.games[environment].find((g) => g.id === record.id)?.status || '—'}`} onClose={onClose}
-    footer={<><span className="modal-foot-note">{statusChanged && draftChanged ? '状态立即生效，其余字段进入草稿并提交审核' : statusChanged ? '运行状态变更保存后立即生效' : draftChanged ? '保存后进入草稿，需发布审核通过才生效' : '尚未修改任何字段'}</span><button className="admin-btn subtle" onClick={onClose}>取消</button><button className="admin-btn primary" disabled={errors.length > 0 || (!statusChanged && !draftChanged)} onClick={save}>保存</button></>}>
-    <div className="game-form">
-      {sections.map((section) => <fieldset key={section.title} className={section.tone === 'warning' ? 'is-warning' : ''}>
-        <legend>{section.title}</legend>
-        {section.note && <p className="fieldset-note">{section.note}</p>}
-        <div className="form-grid">{section.fields.map((field) => <label key={field.key} className={field.full || field.type === 'textarea' || field.type === 'translationLink' ? 'full' : ''}>
-          {field.label}{field.pending && <em className="sample-tag">前台未接入</em>}
-          {field.type === 'translationLink'
-            ? <TranslationLinkField entryKey={draft[field.key]} translations={store.translations} onJump={() => navigate('translations', { query: draft[field.key] })} />
-            : <FieldEditor field={field} value={draft[field.key]} onChange={(value) => setField(field.key, value)} />}
-          {field.note && <small className="field-note">{field.note}</small>}
-        </label>)}</div>
-      </fieldset>)}
-      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-      <fieldset><legend>最近操作</legend>{history.length ? history.slice(0, 6).map((entry) => <p className="audit-item" key={entry.id}><Icon name="clock" /><span>{entry.actor} · {entry.action}<small>{entry.time} · {entry.result}{entry.before || entry.after ? <span className="diff-pair">{entry.before || '—'} → {entry.after || '—'}</span> : null}</small></span></p>) : <p className="audit-item"><Icon name="eye" /><span>暂无操作记录</span></p>}</fieldset>
-    </div>
-  </Modal>
+  const matchedErrors = new Set()
+  const tabs = sections.map((section, index) => {
+    const sectionErrors = errors.filter((error) => section.fields.some((field) => error.includes(field.label.split(/[（(]/)[0])))
+    sectionErrors.forEach((error) => matchedErrors.add(error))
+    return { id: `game-${index}`, label: section.title, errors: sectionErrors, content: <div className="game-form"><p className="fieldset-note">{section.note}</p><div className="form-grid">{section.fields.map((field) => <label key={field.key} className={field.full || field.type === 'translationLink' ? 'full' : ''}>
+      {field.label}{field.pending && <em className="sample-tag">前台未接入</em>}
+      {field.type === 'translationLink' ? <TranslationLinkField entryKey={draft[field.key]} translations={store.translations} disabled={dirty} onJump={() => { onClose(); navigate('translations', { query: draft[field.key] }) }} /> : <FieldEditor field={field} value={draft[field.key]} onChange={(value) => setDraft((current) => ({ ...current, [field.key]: value }))} />}
+      {field.note && <small className="field-note">{field.note}</small>}{field.type === 'translationLink' && dirty && <small className="field-note">先保存或放弃当前修改，再前往多语言内容。</small>}
+    </label>)}</div></div> }
+  })
+  tabs[0].errors.push(...errors.filter((error) => !matchedErrors.has(error)))
+  tabs.push({ id: 'changes', label: '变更预览', content: <><p className="editor-hint">这里列出本次提交后，整个目录草稿与当前生效版本的差异。运行状态与维护公告不由本弹窗修改。</p><DiffSection diff={snapshotDiff(moduleId, getSlice(store.live, moduleId), { games: nextList })} /></> })
+  return <EditDialog title={`编辑游戏 · ${record.name}`} eyebrow={`游戏配置 · ${environment === 'production' ? '生产环境' : '测试环境'}`} subtitle={`${record.gameId} · 运行状态通过独立操作调整`} tabs={tabs} dirty={dirty} onClose={onClose} onSave={save} footNote={publishNote(store, moduleId)} />
 }
 
-function GameCatalogPage({ environment, store, update, journal, intent, navigate }) {
-  const items = store.games[environment]
-  const moduleId = `games:${environment}`
-  const [dragging, setDragging] = useState(null)
-  const [view, setView] = useState('table')
-  const moveItem = (targetId) => {
-    if (!dragging || dragging === targetId) return
-    update('games', (byEnv) => {
-      const current = byEnv[environment]
-      const from = current.findIndex((item) => item.id === dragging)
-      const to = current.findIndex((item) => item.id === targetId)
-      if (from < 0 || to < 0) return byEnv
-      const next = [...current]
-      const [moved] = next.splice(from, 1)
-      next.splice(to, 0, moved)
-      return { ...byEnv, [environment]: next }
+function GameRuntimeModal({ record, store, journal, environment, onClose }) {
+  const [initial] = useState(() => ({ status: record.status, maintenanceNote: record.maintenanceNote || '' }))
+  const [draft, setDraft] = useState(initial)
+  const dirty = JSON.stringify(initial) !== JSON.stringify(draft)
+  const errors = []
+  if (draft.status === '维护中' && !draft.maintenanceNote.trim()) errors.push('进入维护中必须填写维护公告')
+  if (draft.status === '即将上线' && !String(record.launchAt || '').trim()) errors.push('请先编辑并发布预计上线时间，再切换为即将上线')
+  const fields = [{ key: 'status', label: '运行状态' }, { key: 'maintenanceNote', label: '维护公告' }]
+  const save = () => {
+    if (!dirty || errors.length) return
+    journal.transform((current) => {
+      const apply = (list) => list.map((g) => g.id === record.id ? { ...g, ...draft } : g)
+      return { ...current, games: { ...current.games, [environment]: apply(current.games[environment]) }, live: { ...current.live, games: { ...current.live.games, [environment]: apply(current.live.games[environment]) } } }
     })
+    journal.logAudit({ action: '变更游戏运行状态（直接生效）', target: record.name, targetModule: 'games', targetId: record.id, before: `${initial.status} · ${initial.maintenanceNote}`, after: `${draft.status} · ${draft.maintenanceNote}` })
+    if (draft.status === '维护中' && initial.status !== '维护中') journal.addTodo({ title: `${record.name} 进入维护`, source: '游戏运营', priority: '高', link: { page: 'games', focusId: record.id, label: `查看 ${record.name} 游戏配置` } })
+    if (initial.status === '维护中' && draft.status !== '维护中') journal.transform((current) => ({ ...current, todo: current.todo.map((t) => t.status !== '已解决' && t.link?.page === 'games' && t.link.focusId === record.id ? { ...t, status: '已解决', resolution: `${record.name} 已切换为${draft.status}`, time: '刚刚' } : t) }))
+    onClose()
   }
-  const togglePopular = (id) => update('games', (byEnv) => ({ ...byEnv, [environment]: byEnv[environment].map((item) => (item.id === id ? { ...item, popular: !item.popular } : item)) }))
+  return <EditDialog title={`运行操作 · ${record.name}`} eyebrow="立即生效的运行控制" dirty={dirty} onClose={onClose} onSave={save} saveLabel="确认立即生效" footNote="只修改运行状态和维护公告，不发布或覆盖配置草稿。" tabs={[
+    { id: 'runtime', label: '运行状态', errors, content: <div className="form-grid"><label>运行状态<select value={draft.status} onChange={(event) => setDraft((v) => ({ ...v, status: event.target.value }))}>{['正常可玩','维护中','即将上线','暂不可用'].map((status) => <option key={status}>{status}</option>)}</select></label><label className="full">维护公告<textarea value={draft.maintenanceNote} onChange={(event) => setDraft((v) => ({ ...v, maintenanceNote: event.target.value }))} /></label><p className="full editor-hint">当前已发布的预计上线时间：{record.launchAt || '未配置'}。{store.publish.some((p) => p.sourceModule === `games:${environment}` && p.status === '待审核') ? '当前另有配置待审核，本操作不替换该任务。' : ''}</p></div> },
+    { id: 'impact', label: '操作影响', content: <><ChangePreview before={initial} after={draft} fields={fields} /><p className="editor-hint">确认后立即影响游戏可玩状态，并记录操作日志；配置审核及回滚不会覆盖此运行状态。</p></> },
+  ]} />
+}
+
+function GameDirectoryModal({ store, update, journal, environment, onClose, onSaved }) {
+  const [initial] = useState(() => structuredClone(store.games[environment]))
+  const [items, setItems] = useState(() => structuredClone(initial))
+  const [dragging, setDragging] = useState(null)
+  const dirty = JSON.stringify(items) !== JSON.stringify(initial)
+  const moduleId = `games:${environment}`
+  const move = (id, targetIndex) => setItems((current) => {
+    const index = current.findIndex((game) => game.id === id)
+    if (index < 0 || targetIndex < 0 || targetIndex >= current.length || index === targetIndex) return current
+    const next = [...current]; const [game] = next.splice(index, 1); next.splice(targetIndex, 0, game)
+    return next.map((item, i) => ({ ...item, sortWeight: (i + 1) * 10 }))
+  })
+  const save = () => {
+    if (!dirty) return
+    update('games', (byEnv) => ({ ...byEnv, [environment]: items }))
+    journal.logAudit({ action: '保存游戏目录草稿', target: moduleLabels[moduleId], targetModule: 'games', targetId: environment, before: initial.map((g) => `${g.name}${g.popular ? '★' : ''}`).join('，'), after: items.map((g) => `${g.name}${g.popular ? '★' : ''}`).join('，') })
+    journal.queuePublish({ name: `${moduleLabels[moduleId]}排序/推荐更新`, type: '游戏配置', scope: environment === 'production' ? '生产环境' : '测试环境', sourceModule: moduleId, sourceId: environment, snapshot: { games: items }, todoSource: '游戏运营' })
+    onSaved()
+  }
+  return <EditDialog title="编辑游戏目录" eyebrow={moduleLabels[moduleId]} dirty={dirty} onClose={onClose} onSave={save} footNote={publishNote(store, moduleId)} tabs={[
+    { id: 'order', label: '排序', content: <div className="editor-preview"><p>拖拽或使用上移、下移调整顺序，保存前不会改变页面目录。</p>{items.map((game, index) => <div className="directory-edit-row" key={game.id} draggable onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragging) move(dragging, index); setDragging(null) }} onDragEnd={() => setDragging(null)}><span>{index + 1}</span><strong>{game.name}</strong><button className="admin-btn subtle" disabled={index === 0} onClick={() => move(game.id, index - 1)} aria-label={`上移 ${game.name}`}>上移</button><button className="admin-btn subtle" disabled={index === items.length - 1} onClick={() => move(game.id, index + 1)} aria-label={`下移 ${game.name}`}>下移</button></div>)}</div> },
+    { id: 'popular', label: '热门推荐', content: <div className="editor-preview">{items.map((game) => <label className="directory-edit-row" key={game.id}><input type="checkbox" checked={game.popular} onChange={(event) => setItems((current) => current.map((item) => item.id === game.id ? { ...item, popular: event.target.checked } : item))} /><span>{game.name}</span></label>)}</div> },
+    { id: 'changes', label: '变更预览', content: <DiffSection diff={snapshotDiff(moduleId, getSlice(store.live, moduleId), { games: items })} /> },
+  ]} />
+}
+
+function GameCatalogPage({ environment, store, update, journal, intent, navigate, onOpen }) {
+  const moduleId = `games:${environment}`
   const differs = draftDiffers(store, moduleId)
-  const saveDraft = () => {
-    const label = moduleLabels[moduleId]
-    journal.logAudit({ action: '保存游戏目录草稿', target: label, targetModule: 'games', targetId: environment, before: store.live.games[environment].map((g) => `${g.name}${g.popular ? '★' : ''}`).join('，'), after: items.map((g) => `${g.name}${g.popular ? '★' : ''}`).join('，') })
-    journal.queuePublish({ name: `${label}排序/推荐更新`, type: '游戏配置', scope: environment === 'production' ? '生产环境' : '测试环境', sourceModule: moduleId, sourceId: environment, snapshot: { games: items }, todoSource: '游戏运营' })
-  }
-  const [editingId, setEditingId] = useState(intent?.focusId && items.some((game) => game.id === intent.focusId) ? intent.focusId : null)
-  const openDetail = (game) => setEditingId(game.id)
-  const editing = editingId ? items.find((game) => game.id === editingId) : null
+  const [preview, setPreview] = useState('live')
+  const [view, setView] = useState('table')
+  const [editingId, setEditingId] = useState(intent?.focusId || null)
+  const [runtimeId, setRuntimeId] = useState(null)
+  const [directory, setDirectory] = useState(false)
+  const items = preview === 'draft' && differs ? store.games[environment] : store.live.games[environment]
+  const edit = (game) => setEditingId(game.id)
+  const saved = () => { setEditingId(null); setDirectory(false); setPreview('draft') }
   const regionText = (game) => regionSummary(game.region, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code)
   const gateText = (game) => {
-    const parts = []
-    if (Number(game.wealthLevel) > 0) parts.push(`财富 ${game.wealthLevel}`)
-    if (Number(game.charmLevel) > 0) parts.push(`魅力 ${game.charmLevel}`)
-    if (Number(game.minBalance) > 0) parts.push(`余额 ${game.minBalance}`)
-    if (Number(game.playLevel) > 0) parts.push(`可玩 ${game.playLevel}`)
-    const genders = game.genders || ['male', 'female']
-    if (Array.isArray(genders) && genders.length === 1) parts.push(`性别 ${genders[0] === 'male' ? '男' : '女'}`)
+    const parts = [['wealthLevel','财富'],['charmLevel','魅力'],['minBalance','余额'],['playLevel','可玩']].filter(([key]) => Number(game[key]) > 0).map(([key,label]) => `${label} ${game[key]}`)
+    if (game.genders?.length === 1) parts.push(`性别 ${game.genders[0] === 'male' ? '男' : '女'}`)
+    if (game.familyOnly) parts.push('家族成员')
     return parts.join(' · ') || '无门槛'
   }
-  const promoLabel = (tag) => ({ club: 'Club', hot: 'Hot', new: 'New' })[tag]
-  const headers = ['排序', '游戏名称', '游戏 ID', '分类', '状态', '可用地区', '进入门槛', '家族专属', '在线人数', '热度', '大厅热门推荐']
+  const promoLabel = (tag) => ({ club:'Club',hot:'Hot',new:'New' })[tag]
+  const headers = ['排序','游戏名称','游戏 ID','分类','状态','可用地区','进入门槛','家族专属','在线人数','热度','大厅热门推荐']
+  const showDetails = (game) => onOpen({ id: `game-view-${game.id}`, title: game.name, eyebrow: preview === 'draft' && differs ? '游戏详情 · 草稿预览' : '游戏详情 · 生效预览', status: game.status, fields: gameFieldLabels.map(([key,label]) => ({ ...gameFormSections(game).flatMap((section) => section.fields).find((field) => field.key === key), key,label,value:game[key],readOnly:true})), history:store.audit.filter((entry)=>entry.targetModule==='games'&&entry.targetId===game.id), actions:[{label:'编辑配置',tone:'primary',run:()=>edit(game)},{label:'运行操作',tone:'warning',run:()=>setRuntimeId(game.id)}] })
+  const editing = store.games[environment].find((game) => game.id === editingId)
+  const runtime = store.live.games[environment].find((game) => game.id === runtimeId)
   return <>
     <ConfigBadge store={store} moduleId={moduleId} onDiscard={() => journal.discardDraft(moduleId)} />
-    <section className="admin-card catalog-summary"><div><span>当前环境</span><strong>{environment === 'production' ? '生产环境' : '测试环境'}</strong><small>草稿与生效版本按环境分开保存</small></div><div><span>目录游戏</span><strong>{items.length} 款</strong><small>草稿中正常可玩 {items.filter((item) => item.status === '正常可玩').length} 款</small></div><div><span>草稿状态</span><strong>{differs ? '有未发布变更' : '已同步'}</strong><small>{differs ? '保存后进入发布审核' : '与生效版本一致'}</small></div></section>
-    <div className="drag-hint">分类统计（当前草稿）：{gameCategories.filter((c) => c.id !== 'all').map((c) => `${c.label} ${items.filter((g) => g.tags.includes(c.id)).length} 款`).join(' · ')}</div>
-    <div className="catalog-toolbar"><div className="view-toggle"><button className={view === 'table' ? 'is-active' : ''} onClick={() => setView('table')}>表格视图</button><button className={view === 'cards' ? 'is-active' : ''} onClick={() => setView('cards')}>卡片视图</button></div><span className="drag-hint"><Icon name="flag" />拖拽调整排序，开关切换大厅热门推荐，点击行编辑详情</span>{differs && <button className="admin-btn primary" onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-    {view === 'table' ? <section className="admin-card table-card"><div className="table-top"><div><strong>游戏目录</strong><span>按 {environment === 'production' ? '生产' : '测试'} 环境排序</span></div><div className="table-actions"><button className="admin-btn subtle" disabled title="批量导入依赖资源服务，待联调">导入目录（待联调）</button><button className="admin-btn subtle" onClick={() => exportCsv(`游戏目录-${environment}`, headers, items.map((g, i) => [i + 1, g.name, g.gameId, `${g.categoryLabel}${promoLabel(g.promoTag) ? ` · ${promoLabel(g.promoTag)}` : ''}`, g.status, regionText(g), gateText(g), g.familyOnly ? '是' : '否', g.players, g.heat, g.popular ? '是' : '否']))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{headers.map((h) => <th key={h}>{h}</th>)}<th>操作</th></tr></thead><tbody>{items.map((game, index) => <tr key={game.id} draggable onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={dragging === game.id ? 'is-dragging' : ''} onClick={() => openDetail(game)}><td><span className="drag-handle" aria-label="拖拽排序">⋮⋮</span><b className="sort-number">{index + 1}</b></td><td><span className="game-name-cell"><span className={`game-thumb thumb-${index % 4}`} /><strong>{game.name}</strong></span></td><td>{game.gameId}</td><td>{game.categoryLabel}{promoLabel(game.promoTag) && <em className={`promo-tag is-${game.promoTag}`}>{promoLabel(game.promoTag)}</em>}</td><td><Status>{game.status}</Status></td><td><span className={`region-cell ${normalizeRegion(game.region).mode === 'all' ? '' : 'is-limited'}`}>{regionText(game)}</span></td><td>{gateText(game)}</td><td>{game.familyOnly ? '是' : '否'}</td><td>{game.players}</td><td><span className="heat-bar"><i style={{ width: `${game.heat}%` }} /></span><small>{game.heat || '—'}</small></td><td><button className={`toggle-switch ${game.popular ? 'is-on' : ''}`} onClick={(event) => { event.stopPropagation(); togglePopular(game.id) }} aria-pressed={game.popular} aria-label="大厅热门推荐"><i /></button></td><td><button className="row-action" onClick={(event) => { event.stopPropagation(); openDetail(game) }}>编辑</button></td></tr>)}</tbody></table></div></section> : <section className="catalog-cards">{items.map((game, index) => <article draggable key={game.id} onDragStart={() => setDragging(game.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => moveItem(game.id)} onDragEnd={() => setDragging(null)} className={`game-admin-card ${dragging === game.id ? 'is-dragging' : ''}`}><span className={`game-cover cover-${index % 4}`}><b>{index + 1}</b><i>⋮⋮</i></span><div><div className="game-card-top"><Status>{game.status}</Status><small>热度 {game.heat || '—'}</small></div><h3>{game.name}</h3><p>{game.categoryLabel}{promoLabel(game.promoTag) && <em className={`promo-tag is-${game.promoTag}`}>{promoLabel(game.promoTag)}</em>}</p><span>{game.players} 在线 · {gateText(game)} · {game.familyOnly ? '家族专属' : '非家族专属'} · {game.popular ? '已推荐' : '未推荐'}</span></div><button className="row-action" onClick={() => openDetail(game)}>编辑</button></article>)}</section>}
-    {editing && <GameEditModal key={editing.id} record={editing} store={store} update={update} journal={journal} environment={environment} navigate={navigate} onClose={() => setEditingId(null)} />}
+    <section className="admin-card catalog-summary"><div><span>当前环境</span><strong>{environment === 'production' ? '生产环境' : '测试环境'}</strong><small>草稿与生效版本按环境独立</small></div><div><span>目录游戏</span><strong>{items.length} 款</strong><small>当前预览正常可玩 {items.filter((game) => game.status === '正常可玩').length} 款 · 页面只读</small></div><div><span>当前预览</span><strong>{preview === 'draft' && differs ? '草稿 · 未发布' : '生效版本'}</strong><small>运行操作始终基于最新生效状态</small></div></section>
+    <PreviewVersionSwitch value={preview} onChange={setPreview} hasDraft={differs} />
+    <div className="drag-hint">分类统计：{gameCategories.filter((category) => category.id !== 'all').map((category) => `${categoryLabelFor([category.id])} ${items.filter((game) => game.tags.includes(category.id)).length} 款`).join(' · ')}</div>
+    <div className="catalog-toolbar"><div className="view-toggle"><button onClick={()=>setView('table')} className={view==='table'?'is-active':''}>表格视图</button><button onClick={()=>setView('cards')} className={view==='cards'?'is-active':''}>卡片视图</button></div><button className="admin-btn primary" onClick={()=>setDirectory(true)}>编辑目录排序与推荐</button></div>
+    {view === 'table' ? <section className="admin-card table-card"><div className="table-top"><strong>游戏目录</strong><button className="admin-btn subtle" onClick={()=>exportCsv(`游戏目录-${environment}`,headers,items.map((g,i)=>[i+1,g.name,g.gameId,`${g.categoryLabel}${promoLabel(g.promoTag) ? ` · ${promoLabel(g.promoTag)}` : ''}`,g.status,regionText(g),gateText(g),g.familyOnly?'是':'否',g.players,g.heat,g.popular?'是':'否']))}>导出 CSV</button></div><div className="table-wrap"><table className="editor-action-table"><thead><tr>{headers.map((label)=><th key={label}>{label}</th>)}<th className="fixed-actions">操作</th></tr></thead><tbody>{items.map((game,index)=><tr key={game.id} onClick={()=>showDetails(game)}><td>{index+1}</td><td><span className="game-name-cell"><span className={`game-thumb thumb-${index % 4}`} /><strong>{game.name}</strong></span></td><td>{game.gameId}</td><td>{game.categoryLabel}{promoLabel(game.promoTag)&&<em className="promo-tag">{promoLabel(game.promoTag)}</em>}</td><td><Status>{game.status}</Status></td><td>{regionText(game)}</td><td>{gateText(game)}</td><td>{game.familyOnly?'是':'否'}</td><td>{game.players}</td><td><span className="heat-bar"><i style={{width:`${game.heat}%`}} /></span><small>{game.heat || '—'}</small></td><td>{game.popular?'是':'否'}</td><td className="fixed-actions"><div className="row-action-group"><button className="admin-btn subtle" onClick={(event)=>{event.stopPropagation();showDetails(game)}}>查看</button><button className="admin-btn primary" onClick={(event)=>{event.stopPropagation();edit(game)}}>编辑</button></div></td></tr>)}</tbody></table></div></section> : <section className="catalog-cards">{items.map((game,index)=><article className="game-admin-card" key={game.id}><span className={`game-cover cover-${index%4}`}><b>{index+1}</b></span><div><Status>{game.status}</Status><h3>{game.name}</h3><p>{game.categoryLabel} · {promoLabel(game.promoTag)}</p><span>{game.players} 在线 · {gateText(game)} · {game.popular?'已推荐':'未推荐'}</span></div><div className="row-action-group"><button className="admin-btn subtle" onClick={()=>showDetails(game)}>查看</button><button className="admin-btn primary" onClick={()=>edit(game)}>编辑</button></div></article>)}</section>}
+    {editing&&<GameEditModal key={editing.id} record={editing} store={store} update={update} journal={journal} environment={environment} navigate={navigate} onClose={()=>setEditingId(null)} onSaved={saved} />}
+    {runtime&&<GameRuntimeModal key={runtime.id} record={runtime} store={store} journal={journal} environment={environment} onClose={()=>setRuntimeId(null)} />}
+    {directory&&<GameDirectoryModal store={store} update={update} journal={journal} environment={environment} onClose={()=>setDirectory(false)} onSaved={saved} />}
   </>
 }
 
 function buildCreateRecord(page, values, note) {
   const id = `${page}-new-${stamp()}`
   if (page === 'publish') return { id, name: `${values[0]} ${values[1]}`.trim(), type: '系统配置', scope: values[3] || values[2], status: '待审核', owner: '运营管理员', time: '刚刚', sourceModule: '', sourceId: '', snapshot: null, note }
-  if (page === 'activities') return { id, name: values[0], type: values[1], period: '待定', status: '草稿', participants: '—', owner: '产品组', note }
-  if (page === 'checkin') return { id, name: values[0], period: values[1], participants: '—', status: '草稿', budget: values[2], owner: '产品组', note }
+  if (page === 'activities') return { id, name: values[0], type: values[1], period: values[2], status: '草稿', participants: '—', owner: '产品组', audience: values[3], budget: values[4], region: {mode:'all',countries:[]}, note }
+  if (page === 'checkin') return { id, name: values[0], period: values[1], participants: '—', status: '草稿', budget: values[2], owner: values[3], note }
   if (page === 'wheel') return { id, name: values[0], prizeCount: `${values[2]} 个奖项`, freeSpins: values[1], status: '草稿', probabilityState: '概率未配置', version: values[3], note }
   if (page === 'adminUsers') return { id, name: values[0], email: values[1], role: values[2], status: '待激活', scope: values[3], lastLogin: '从未登录', mfa: false, note }
   return { id, name: values[0], note }
@@ -475,10 +539,20 @@ function describeGeneric(page, record, store, { update, journal }) {
   const pageTransitions = transitions[page]?.[record.status] || []
   const history = store.audit.filter((a) => a.targetModule === page && a.targetId === record.id)
   const actions = pageTransitions.map(([label, nextStatus, opts = {}]) => ({
-    label, tone: nextStatus && statusClass(nextStatus) === 'danger' ? 'danger' : opts.requireReason ? 'warning' : opts.decision === 'approve' ? 'primary' : 'subtle', requireReason: !!opts.requireReason,
+    label, confirm: true, tone: nextStatus && statusClass(nextStatus) === 'danger' ? 'danger' : opts.requireReason ? 'warning' : opts.decision === 'approve' ? 'primary' : 'subtle', requireReason: !!opts.requireReason,
     run: (reason) => {
-      if (page === 'publish' && opts.decision) { journal.transform((s) => applyRelease(s, record, opts.decision, reason, { seq: Date.now() })); return }
-      if (!opts.logOnly) update(page, (list) => list.map((r) => (r.id === record.id ? { ...r, status: nextStatus, ...(opts.metric ? { metric: opts.metric } : {}), time: '刚刚' } : r)))
+      if (page === 'publish' && opts.decision) {
+        const hasSnapshot = isConfigModule(record.sourceModule) && !!record.snapshot
+        const errors = hasSnapshot && ['approve','gray'].includes(opts.decision) ? validateSnapshot(record.sourceModule,record.snapshot) : []
+        if (hasSnapshot && opts.decision==='rollback' && !store.liveHistory[record.sourceModule]?.length) errors.push('没有可回滚的历史版本')
+        journal.transform((current)=>applyRelease(current,record,opts.decision,reason,{seq:Date.now()}))
+        return errors.length ? {error:errors.join('；')} : undefined
+      }
+      if (!opts.logOnly && page === 'activities') {
+        const result = applyActivityState(store,record.id,nextStatus)
+        if (!result.ok) { journal.logAudit({action:label,target:record.name,targetModule:'activities',targetId:record.id,result:`失败 · ${result.error}`});return {error:result.error} }
+        journal.transform((current)=>applyActivityState(current,record.id,nextStatus).store)
+      } else if (!opts.logOnly) update(page, (list) => list.map((r) => (r.id === record.id ? { ...r, status: nextStatus, ...(opts.metric ? { metric: opts.metric } : {}), time: '刚刚' } : r)))
       journal.logAudit({ action: label, target: label0, targetModule: page, targetId: record.id, before: record.status, after: opts.logOnly ? record.status : nextStatus, result: opts.resultLabel || (reason ? `成功 · 原因：${reason}` : '成功') })
       if (opts.effect === 'createVersion') {
         const [game, version] = splitBundle(record.bundle)
@@ -524,17 +598,23 @@ function GenericPage({ page, onOpen, store, update, journal, intent, describe, n
   }, [])
   const formComplete = action && action.fields.every((f) => String(formValues[f] || '').trim())
   const submitCreate = () => {
+    if (!formComplete) return
     const values = action.fields.map((f) => formValues[f].trim())
     const record = buildCreateRecord(page, values, formValues.note || '')
-    update(page, (list) => [record, ...list])
+    if (page==='activities') journal.transform((current)=>({...current,activities:[record,...current.activities],live:{...current.live,activities:[structuredClone(record),...current.live.activities]}}))
+    else update(page, (list) => [record, ...list])
     journal.logAudit({ action: action.label, target: record[cols[0][0]], targetModule: page, targetId: record.id, after: values.join(' / '), result: formValues.note ? `成功 · 备注：${formValues.note}` : '成功' })
     setShowForm(false); setFormValues({})
   }
   return <>
     {configurationNotes[page] && <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes[page][0]}</span><small>{configurationNotes[page][1]}</small></div></div>}
-    <div className="admin-toolbar"><div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => { setQuery(event.target.value); setPageIndex(0) }} placeholder={`搜索${meta[0]}...`} /></div><select value={filter} onChange={(event) => { setFilter(event.target.value); setPageIndex(0) }}><option>全部状态</option>{statusOptions.map((option) => <option key={option}>{option}</option>)}</select>{action && <button className="admin-btn primary" onClick={() => setShowForm(true)}><Icon name={action.icon} />{action.label}</button>}</div>
+    <div className="admin-toolbar"><div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => { setQuery(event.target.value); setPageIndex(0) }} placeholder={`搜索${meta[0]}...`} /></div><select value={filter} onChange={(event) => { setFilter(event.target.value); setPageIndex(0) }}><option>全部状态</option>{statusOptions.map((option) => <option key={option}>{option}</option>)}</select>{action && <button className="admin-btn primary" onClick={() => { setFormValues({}); setShowForm(true) }}><Icon name={action.icon} />{action.label}</button>}</div>
     <section className="admin-card table-card"><div className="table-top"><div><strong>{meta[0]}列表</strong><span>共 {filteredRows.length} 条</span></div><div className="table-actions"><button className="admin-btn subtle" onClick={() => exportCsv(meta[0], labels, filteredRows.map((row) => cols.map(([key]) => row[key])))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{labels.map((label) => <th key={label}>{label}</th>)}<th>操作</th></tr></thead><tbody>{visibleRows.map((row) => <tr key={row.id} onClick={() => openRow(row)}>{cols.map(([key]) => <td key={key}>{statusValues.includes(row[key]) ? <Status>{row[key]}</Status> : <span>{row[key]}</span>}</td>)}<td><button className="row-action" onClick={(event) => { event.stopPropagation(); openRow(row) }}>查看详情</button></td></tr>)}</tbody></table>{!filteredRows.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配数据</strong><p>请调整搜索关键词或筛选条件。</p></div>}</div><Pager page={pageIndex} total={filteredRows.length} onChange={setPageIndex} /></section>
-    {showForm && action && <Modal eyebrow="配置草稿" title={action.title} onClose={() => setShowForm(false)} footer={<><button className="admin-btn subtle" onClick={() => setShowForm(false)}>取消</button><button className="admin-btn primary" disabled={!formComplete} onClick={submitCreate}>保存草稿</button></>}><div className="form-grid">{action.fields.map((f) => <label key={f}>{f}<input value={formValues[f] || ''} onChange={(event) => setFormValues((v) => ({ ...v, [f]: event.target.value }))} placeholder={`请输入${f}（必填）`} /></label>)}<label className="full">备注<textarea value={formValues.note || ''} onChange={(event) => setFormValues((v) => ({ ...v, note: event.target.value }))} placeholder="填写配置说明、目标人群和发布备注，会写入操作日志" /></label></div></Modal>}
+    {showForm && action && <EditDialog eyebrow="新建记录" title={action.title} onClose={() => setShowForm(false)} dirty={Object.values(formValues).some((value) => String(value).trim())} onSave={submitCreate} saveDisabled={!formComplete} saveLabel="保存记录" footNote={['activities','checkin','wheel'].includes(page)?'先建立活动记录；奖励配置仍在对应编辑窗口维护，不会自动创建新的奖励模块。':'保存记录并写入操作日志。'} tabs={[
+      {id:'basic',label:'基本信息',content:<div className="form-grid">{action.fields.slice(0,2).map((field)=><label key={field}>{field}{field==='活动类型'?<select value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))}><option value="">请选择类型</option>{Object.keys(activityTypeMeta).map((type)=><option key={type}>{type}</option>)}</select>:<input value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))} placeholder={`请输入${field}（必填）`}/>}</label>)}</div>},
+      {id:'configuration',label:page==='adminUsers'?'角色与范围':'配置内容',content:<div className="form-grid">{action.fields.slice(2).map((field)=><label key={field}>{field}{field==='活动类型'?<select value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))}><option value="">请选择类型</option>{Object.keys(activityTypeMeta).map((type)=><option key={type}>{type}</option>)}</select>:<input value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))} placeholder={`请输入${field}（必填）`}/>}</label>)}</div>},
+      {id:'review',label:'提交预览',content:<><div className="editor-preview">{action.fields.map((field)=><p key={field}><strong>{field}：</strong>{formValues[field]||'未填写'}</p>)}</div><div className="form-grid"><label className="full">备注<textarea value={formValues.note||''} onChange={(event)=>setFormValues((current)=>({...current,note:event.target.value}))}/></label></div></>},
+    ]}/>}
   </>
 }
 
@@ -657,7 +737,11 @@ function VersionWorkflowPage({ page, onOpen, store, update, journal }) {
     <div className="environment-note"><Icon name="shield" /><span><strong>当前查看：{scopeLabel}</strong><small>{scopeNote}</small></span></div>
     <div className="admin-toolbar"><div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`搜索${pageMeta[page][0]}...`} /></div><button className="admin-btn primary" onClick={openUpload}><Icon name={action.icon || 'play'} />{action.label}</button></div>
     <section className="admin-card table-card"><div className="table-top"><div><strong>{pageMeta[page][0]}列表</strong><span>{scopeIsEnv ? `当前环境：${scopeLabel}` : '跨环境记录'} · 共 {filtered.length} 条</span></div><button className="admin-btn subtle" onClick={() => exportCsv(pageMeta[page][0], labels, filtered.map((row) => columns[page].map(([key]) => row[key])))}>导出 CSV</button></div><div className="table-wrap"><table><thead><tr>{labels.map((label) => <th key={label}>{label}</th>)}<th>操作</th></tr></thead><tbody>{filtered.map((row) => <tr key={row.id} onClick={() => openRow(row)}>{columns[page].map(([key]) => <td key={key}>{statusValues.includes(row[key]) ? <Status>{row[key]}</Status> : <span>{row[key]}</span>}</td>)}<td><button className="row-action" onClick={(event) => { event.stopPropagation(); openRow(row) }}>查看详情</button></td></tr>)}</tbody></table>{!filtered.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配数据</strong><p>请调整搜索关键词。</p></div>}</div></section>
-    {showUpload && <Modal eyebrow="版本发布流程" title={action.title} onClose={() => setShowUpload(false)} footer={<><button className="admin-btn subtle" onClick={() => setShowUpload(false)}>取消</button><button className="admin-btn primary" disabled={!formComplete} onClick={save}>{isUpload ? '开始上传并检查' : '保存发布任务'}</button></>}><div className="form-grid"><label>选择游戏<select value={form.game} onChange={(event) => setForm((f) => ({ ...f, game: event.target.value }))}>{games.map((g) => <option key={g.id} value={g.name}>{g.name}</option>)}</select></label><label>版本号（必填）<input value={form.version} onChange={(event) => setForm((f) => ({ ...f, version: event.target.value }))} placeholder="例如 v2.5.0" /></label><label>构建号（必填）<input value={form.build} onChange={(event) => setForm((f) => ({ ...f, build: event.target.value }))} placeholder="例如 build 9930" /></label>{isUpload ? <label>上传版本包（必填）<input type="file" onChange={(event) => setForm((f) => ({ ...f, fileName: event.target.files?.[0] ? `${event.target.files[0].name} · ${(event.target.files[0].size / 1048576).toFixed(1)} MB` : '' }))} /></label> : <label>发布说明<input value={form.note} onChange={(event) => setForm((f) => ({ ...f, note: event.target.value }))} placeholder="变更范围与回滚计划" /></label>}<label className="full upload-check"><span>上传后的自动检查（待联调）</span><small>文件完整性 · 入口文件 · 资源类型 · 版本号 · 路径安全，由服务端执行；原型中由操作员在记录上手动标记校验结果</small>{form.fileName && <em>{form.fileName}</em>}</label></div></Modal>}
+    {showUpload && <EditDialog eyebrow="版本发布流程" title={action.title} onClose={()=>setShowUpload(false)} dirty={Boolean(form.version||form.build||form.fileName||form.note||form.game!==games[0]?.name)} onSave={save} saveDisabled={!formComplete} saveLabel={isUpload?'记录上传并进入检查':'保存发布任务'} footNote="原型只记录版本任务，实际上传及自动检查服务尚未接入。" tabs={[
+      {id:'version',label:'版本信息',content:<div className="form-grid"><label>选择游戏<select value={form.game} onChange={(event)=>setForm((current)=>({...current,game:event.target.value}))}>{games.map((game)=><option key={game.id} value={game.name}>{game.name}</option>)}</select></label><label>版本号（必填）<input value={form.version} onChange={(event)=>setForm((current)=>({...current,version:event.target.value}))}/></label><label>构建号（必填）<input value={form.build} onChange={(event)=>setForm((current)=>({...current,build:event.target.value}))}/></label></div>},
+      {id:'delivery',label:isUpload?'文件与说明':'发布说明',content:<div className="form-grid">{isUpload&&<label className="full">上传版本包（必填）<input type="file" onChange={(event)=>setForm((current)=>({...current,fileName:event.target.files?.[0]?`${event.target.files[0].name} · ${(event.target.files[0].size/1048576).toFixed(1)} MB`:''}))}/></label>}<label className="full">发布说明<textarea value={form.note} onChange={(event)=>setForm((current)=>({...current,note:event.target.value}))}/></label></div>},
+      {id:'review',label:'检查与预览',content:<div className="editor-preview"><p>{form.game} · {form.version||'未填写版本'} · {form.build||'未填写构建号'}</p><p>{form.fileName}</p><p>文件完整性、入口文件、资源类型、版本号及路径安全应由服务端校验；原型由操作员在记录上手动标记结果。</p></div>},
+    ]}/>}
   </>
 }
 
@@ -686,6 +770,7 @@ function ReleaseCenterPage({ onOpen, store, update, journal, navigate }) {
 const roleFieldLabels = [['menuScope', '菜单范围'], ['actions', '可执行操作'], ['prodPermission', '生产权限']]
 function describeRole(record, store, { update, journal }) {
   return {
+    editSections: [{id:'menus',label:'菜单范围',keys:['role','menuScope']},{id:'actions',label:'操作权限',keys:['actions']},{id:'environment',label:'生产权限',keys:['prodPermission']}],
     id: `roles-${record.id}`, eyebrow: '角色权限详情', title: record.role,
     history: store.audit.filter((a) => a.targetModule === 'roles' && a.targetId === record.id),
     fields: [
@@ -780,264 +865,42 @@ function RegionPicker({ value, onChange, label = '可用地区' }) {
   </div>
 }
 
-// ---- shared config editors ------------------------------------------------
-// Used by both the dedicated config pages and the activity modal, so the two can never drift apart.
-const checkinStateLabel = { claimed: '已领取', missed: '漏签', today: '今日可领', locked: '未解锁' }
-const checkinStepClass = { claimed: 'done', today: 'active', missed: 'missed', locked: '' }
-
-function CheckinLadderEditor({ days, onChange }) {
-  const updateDay = (index, patch) => onChange(days.map((d, i) => (i === index ? { ...d, ...patch, reward: formatReward(patch.coins ?? d.coins, patch.gems ?? d.gems) } : d)))
-  const steps = []
-  days.forEach((d, i) => {
-    if (i > 0) steps.push(<i key={`line-${i}`} />)
-    steps.push(<div key={d.day} className={`workflow-step ${checkinStepClass[d.state]}`}><b>{i + 1}</b><span>{d.day.split(' ')[0]}{d.grand ? ' · 大奖' : ''}</span></div>)
-  })
-  return <>
-    <div className="workflow-strip">{steps}</div>
-    <div className="table-wrap"><table><thead><tr><th>天数</th><th>金币</th><th>宝石</th><th>大奖</th><th>示例玩家进度（非配置）</th></tr></thead><tbody>{days.map((d, i) => <tr key={d.day}>
-      <td>{d.day}</td>
-      <td><input className="ladder-input" type="number" min="0" value={d.coins} onChange={(event) => updateDay(i, { coins: Number(event.target.value) || 0 })} /></td>
-      <td><input className="ladder-input" type="number" min="0" value={d.gems} onChange={(event) => updateDay(i, { gems: Number(event.target.value) || 0 })} /></td>
-      <td><button className={`toggle-switch ${d.grand ? 'is-on' : ''}`} onClick={() => updateDay(i, { grand: !d.grand })} aria-pressed={!!d.grand} aria-label="大奖"><i /></button></td>
-      <td><Status>{checkinStateLabel[d.state]}</Status></td>
-    </tr>)}</tbody></table></div>
-  </>
-}
-
-function WheelPrizeEditor({ prizes, freeSpins, onChange }) {
-  const emit = (patch) => onChange({ prizes, freeSpins, ...patch })
-  const updatePrize = (id, patch) => emit({ prizes: prizes.map((p) => (p.id === id ? { ...p, ...patch, label: prizeLabel(patch.kind ?? p.kind, patch.amount ?? p.amount) } : p)) })
-  const total = prizes.reduce((sum, p) => sum + (Number(p.probability) || 0), 0)
-  return <>
-    <div className={`admin-config-note ${wheelBalanced(prizes) ? '' : 'danger'}`}><Icon name={wheelBalanced(prizes) ? 'shield' : 'bolt'} /><div><strong>概率总和：{total}%{wheelBalanced(prizes) ? '' : '（必须为 100%）'}</strong><span>前台固定 {WHEEL_SLOTS} 格，当前 {prizes.length} 格；概率必须是 0–100 的整数。</span></div></div>
-    <div className="prize-list">{prizes.map((p, index) => <div className="prize-row wide" key={p.id}>
-      <span className="prize-index">第 {index + 1} 格</span>
-      <select className="ladder-input" value={p.kind} onChange={(event) => updatePrize(p.id, { kind: event.target.value })}><option value="coins">金币</option><option value="gems">宝石</option><option value="freeSpin">免费旋转</option></select>
-      <input className="ladder-input" type="number" min="1" value={p.amount} onChange={(event) => updatePrize(p.id, { amount: Number(event.target.value) || 0 })} />
-      <input type="number" min="0" max="100" step="1" value={p.probability} onChange={(event) => updatePrize(p.id, { probability: Math.max(0, Math.min(100, Math.round(Number(event.target.value) || 0))) })} />
-      <span className="pct">概率 %</span>
-      <button className="admin-btn subtle" onClick={() => emit({ prizes: prizes.filter((x) => x.id !== p.id) })}>删除</button>
-    </div>)}</div>
-    <div className="editor-actions">
-      <button className="admin-btn subtle" disabled={prizes.length >= WHEEL_SLOTS} onClick={() => emit({ prizes: [...prizes, { id: `prize-${stamp()}`, label: '100 金币', kind: 'coins', amount: 100, probability: 0 }] })}><Icon name="gift" />新增奖项（上限 {WHEEL_SLOTS} 格）</button>
-      <label className="inline-field">每日免费次数<input className="ladder-input" type="number" min="0" step="1" value={freeSpins} onChange={(event) => emit({ freeSpins: Math.max(0, Math.round(Number(event.target.value) || 0)) })} /></label>
-    </div>
-  </>
-}
-
-function MissionListEditor({ missions, removableIds, onChange }) {
-  const updateMission = (id, patch) => onChange(missions.map((m) => (m.id === id ? { ...m, ...patch } : m)))
-  return <>
-    <div className="editor-actions"><button className="admin-btn subtle" onClick={() => onChange([{ id: `mission-${stamp()}`, name: '', event: missionEventOptions[0], target: 1, coinReward: 500, gemReward: 1, cycle: '每日', status: '生效中', expired: false }, ...missions])}><Icon name="flag" />新建任务</button></div>
-    <div className="table-wrap"><table><thead><tr><th>任务名称</th><th>目标事件</th><th>目标值</th><th>状态</th><th>金币奖励</th><th>宝石奖励</th><th>刷新周期</th><th>操作</th></tr></thead><tbody>{missions.map((m) => <tr key={m.id}>{m.expired
-      ? <><td>{m.name}</td><td>{m.event}</td><td>{m.target}</td><td><Status>{m.status}</Status></td><td>{m.coinReward}</td><td>{m.gemReward}</td><td>{m.cycle}</td><td>—</td></>
-      : <>
-        <td><input className="ladder-input" value={m.name} placeholder="任务名称（必填）" onChange={(event) => updateMission(m.id, { name: event.target.value })} /></td>
-        <td><select className="ladder-input" value={m.event} onChange={(event) => updateMission(m.id, { event: event.target.value })}>{missionEventOptions.map((o) => <option key={o}>{o}</option>)}</select></td>
-        <td><input className="ladder-input" type="number" min="1" step="1" value={m.target} onChange={(event) => updateMission(m.id, { target: Math.max(1, Math.round(Number(event.target.value) || 1)) })} /></td>
-        <td><Status>{m.status}</Status></td>
-        <td><input className="ladder-input" type="number" min="0" value={m.coinReward} onChange={(event) => updateMission(m.id, { coinReward: Math.max(0, Number(event.target.value) || 0) })} /></td>
-        <td><input className="ladder-input" type="number" min="0" value={m.gemReward} onChange={(event) => updateMission(m.id, { gemReward: Math.max(0, Number(event.target.value) || 0) })} /></td>
-        <td>每日</td>
-        <td><button className="row-action" onClick={() => updateMission(m.id, { status: m.status === '生效中' ? '已下线' : '生效中' })}>{m.status === '生效中' ? '下线' : '上线'}</button>{!removableIds.includes(m.id) && <button className="row-action" onClick={() => onChange(missions.filter((x) => x.id !== m.id))}>移除</button>}</td>
-      </>}</tr>)}</tbody></table></div>
-  </>
-}
-
-// ---- player-view previews --------------------------------------------------
-// These render the draft the way the player will actually see it. The point of
-// showing them before the editor is that an operator changing a probability or a
-// reward should see the screen it lands on, not only a row in a table.
-const WHEEL_SEGMENT_COLORS = ['#eef3ff', '#dfe8ff', '#eef3ff', '#dfe8ff', '#eef3ff', '#dfe8ff', '#eef3ff', '#dfe8ff']
-
-function PreviewFrame({ title, hint, children, note }) {
-  return <div className="preview-frame">
-    <div className="preview-head"><span className="preview-badge"><Icon name="eye" />玩家看到的样子</span><strong>{title}</strong>{hint && <small>{hint}</small>}</div>
-    <div className="preview-body">{children}</div>
-    {note && <p className="preview-note">{note}</p>}
-  </div>
-}
-
-function WheelPreview({ prizes, freeSpins }) {
-  const label = (p) => (p.kind === 'freeSpin' ? `×${p.amount}` : Number(p.amount).toLocaleString('en-US'))
-  const unit = (p) => (p.kind === 'freeSpin' ? '免费旋转' : p.kind === 'gems' ? '宝石' : '金币')
-  const slice = prizes.length ? 360 / prizes.length : 360
-  const gradient = prizes.map((p, i) => `${WHEEL_SEGMENT_COLORS[i % WHEEL_SEGMENT_COLORS.length]} ${i * slice}deg ${(i + 1) * slice}deg`).join(', ')
-  return <PreviewFrame title="幸运转盘" hint={`每日 ${freeSpins} 次免费`}
-    note="扇区顺序即玩家看到的顺序（从正上方顺时针）。概率不显示给玩家，但决定实际中奖分布。">
-    <div className="wheel-preview">
-      <div className="wheel-disc" style={{ background: `conic-gradient(${gradient})` }}>
-        {prizes.map((p, i) => <span key={p.id ?? i} className="wheel-slot" style={{ transform: `rotate(${i * slice + slice / 2}deg) translateY(-64px) rotate(${-(i * slice + slice / 2)}deg)` }}>
-          <b>{label(p)}</b><small>{unit(p)}</small>
-        </span>)}
-        <span className="wheel-hub">{freeSpins}</span>
-      </div>
-      <ol className="wheel-legend">{prizes.map((p, i) => <li key={p.id ?? i}>
-        <span className="wheel-legend-index">{i + 1}</span>
-        <span>{label(p)} {unit(p)}</span>
-        <b>{p.probability}%</b>
-      </li>)}</ol>
-    </div>
-  </PreviewFrame>
-}
-
-function CheckinPreview({ days }) {
-  const stateText = { claimed: '已领取', missed: '漏签', today: '今日可领', locked: '尚未解锁' }
-  return <PreviewFrame title="七日签到" hint={`满签 ${days.reduce((s, d) => s + Number(d.coins || 0), 0).toLocaleString('en-US')} 金币 / ${days.reduce((s, d) => s + Number(d.gems || 0), 0)} 宝石`}
-    note="玩家按自然日领取，漏签不可补。大奖日会有额外的视觉强调。">
-    <div className="checkin-preview">{days.map((d) => <div className={`checkin-cell state-${d.state}${d.grand ? ' is-grand' : ''}`} key={d.day}>
-      <strong>{d.day}{d.state === 'today' && ' · 今日'}{d.grand && ' · 大奖'}</strong>
-      <span>{Number(d.coins || 0).toLocaleString('en-US')} 金币{d.gems ? ` · ${d.gems} 宝石` : ''}</span>
-      <small>{stateText[d.state] ?? d.state}</small>
-    </div>)}</div>
-  </PreviewFrame>
-}
-
-function MissionsPreview({ missions }) {
-  const live = missions.filter((m) => m.status === '生效中')
-  return <PreviewFrame title="每日任务" hint={`${live.length} 个任务对玩家可见`}
-    note="已下线与已过期的任务不出现在玩家侧。进度由服务端按事件累计，这里显示的是达成后的样子。">
-    <div className="missions-preview">{live.length ? live.map((m) => <div className="mission-cell" key={m.id}>
-      <div><strong>{m.name || '（未命名任务）'}</strong><small>{m.event} · 目标 {m.target}</small></div>
-      <span className="mission-bar"><i style={{ width: '45%' }} /></span>
-      <b>{Number(m.coinReward || 0).toLocaleString('en-US')} 金币{m.gemReward ? ` + ${m.gemReward} 宝石` : ''}</b>
-    </div>) : <p className="audit-item"><Icon name="eye" /><span>没有生效中的任务，玩家侧的任务区块会是空的</span></p>}</div>
-  </PreviewFrame>
-}
-
-// Preview first, edit second: the operator lands on the player's view and has to
-// choose to enter the editor, so a config is always seen before it is changed.
-function PreviewEditSwitch({ mode, onChange, dirty }) {
-  return <div className="preview-switch">
-    <button className={mode === 'preview' ? 'is-active' : ''} onClick={() => onChange('preview')}><Icon name="eye" />预览</button>
-    <button className={mode === 'edit' ? 'is-active' : ''} onClick={() => onChange('edit')}><Icon name="gear" />编辑</button>
-    {dirty && <span className="preview-dirty">草稿已改动，预览显示的是改动后的样子</span>}
-  </div>
-}
-
-function CheckinPage({ onOpen, store, update, journal, navigate }) {
-  const [mode, setMode] = useState('preview')
-  const days = store.checkinDays
-  const errors = validateCheckin(days)
-  const differs = draftDiffers(store, 'checkin')
-  const sum = (list, key) => list.reduce((total, d) => total + d[key], 0)
-  const saveDraft = () => {
-    journal.logAudit({ action: '保存签到奖励草稿', target: '七日签到 · 秋日版', targetModule: 'checkin', targetId: 'ladder', before: store.live.checkinDays.map((d) => d.reward).join(' / '), after: days.map((d) => d.reward).join(' / ') })
-    journal.queuePublish({ name: '七日签到 · 秋日版奖励调整', type: '活动版本', scope: '生产环境', sourceModule: 'checkin', sourceId: 'ladder', snapshot: getSlice(store, 'checkin'), todoSource: '活动中心' })
+function RewardConfigPage({ moduleId, onOpen, store, update, journal, navigate }) {
+  const [editing, setEditing] = useState(false)
+  const [preview, setPreview] = useState('live')
+  const differs = draftDiffers(store, moduleId)
+  const config = getSlice(preview === 'draft' && differs ? store : store.live, moduleId)
+  const labels = { checkin: '签到奖励', wheel: '幸运转盘', missions: '每日任务' }
+  const save = (snapshot) => {
+    if (validateSnapshot(moduleId, snapshot).length) return
+    const before = getSlice(store, moduleId)
+    journal.transform((current) => setSlice(current, moduleId, snapshot))
+    journal.logAudit({ action: `保存${labels[moduleId]}草稿`, target: labels[moduleId], targetModule: moduleId, targetId: moduleId, after: snapshotDiff(moduleId, before, snapshot).filter((row) => row.changed).map((row) => `${row.label}: ${row.before} → ${row.after}`).join('；') })
+    journal.queuePublish({ name: `${labels[moduleId]}配置更新${moduleId === 'wheel' ? ` v${snapshot.wheelVersion}` : ''}`, type: '活动版本', scope: '生产环境', sourceModule: moduleId, sourceId: moduleId === 'wheel' ? 'main' : moduleId === 'checkin' ? 'ladder' : 'all', snapshot, todoSource: '活动中心' })
+    setEditing(false); setPreview('draft')
   }
+  const wheelRows = store.wheel.map((row,index) => index === 0 ? { ...row, prizeCount: `${store.live.wheelPrizes.length} 个奖项`, freeSpins: `${store.live.wheelFreeSpins} 次 / 日`, version: `v${store.live.wheelVersion}`, probabilityState: wheelBalanced(store.live.wheelPrizes) ? '概率已校验' : '概率未通过' } : row)
   return <>
-    <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes.checkin[0]}</span><small>{configurationNotes.checkin[1]}</small></div></div>
-    <ConfigBadge store={store} moduleId="checkin" onDiscard={() => journal.discardDraft('checkin')} />
-    <section className="admin-card"><div className="card-heading"><div><h2>本期签到奖励梯度（草稿）</h2><p>七日签到 · 秋日版 · 生效版本满签总额 {sum(store.live.checkinDays, 'coins').toLocaleString('en-US')} 金币 / {sum(store.live.checkinDays, 'gems')} 宝石；草稿 {sum(days, 'coins').toLocaleString('en-US')} 金币 / {sum(days, 'gems')} 宝石</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-      <PreviewEditSwitch mode={mode} onChange={setMode} dirty={differs} />
-      {mode === 'preview'
-        ? <CheckinPreview days={days} />
-        : <CheckinLadderEditor days={days} onChange={(next) => update('checkinDays', () => next)} />}
+    <div className="admin-config-note"><Icon name="shield" /><div><strong>配置规则</strong><span>{configurationNotes[moduleId][0]}</span><small>{configurationNotes[moduleId][1]}</small></div></div>
+    <ConfigBadge store={store} moduleId={moduleId} onDiscard={() => journal.discardDraft(moduleId)} />
+    <section className="admin-card"><div className="card-heading"><div><h2>{labels[moduleId]}</h2><p>页面仅预览。点击编辑，在弹窗内修改和检查效果。</p></div><button className="admin-btn primary" onClick={() => setEditing(true)}>编辑{labels[moduleId]}</button></div>
+      <PreviewVersionSwitch value={preview} onChange={setPreview} hasDraft={differs} />
+      {moduleId === 'checkin' && <CheckinPreview days={config.checkinDays} />}
+      {moduleId === 'wheel' && <WheelPreview prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} />}
+      {moduleId === 'missions' && <><MissionsPreview missions={config.missions} />{config.missions.filter((item) => item.status === '生效中').length !== liteContent.events.dailyMissionCount && <p className="editor-hint">当前预览的生效任务数量与基线 {liteContent.events.dailyMissionCount} 个不同，请在编辑时核对。</p>}</>}
     </section>
-    <GenericPage page="checkin" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} />
+    {moduleId !== 'missions' && <GenericPage page={moduleId} onOpen={onOpen} store={moduleId === 'wheel' ? {...store,wheel:wheelRows} : store} update={update} journal={journal} navigate={navigate} />}
+    {editing && <ActivityRewardDialog moduleId={moduleId} store={store} onSave={save} onClose={() => setEditing(false)} />}
   </>
 }
-
-function WheelPage({ onOpen, store, update, journal, navigate }) {
-  const [mode, setMode] = useState('preview')
-  const live = store.live
-  const errors = validateWheel({ prizes: store.wheelPrizes, freeSpins: store.wheelFreeSpins })
-  const differs = draftDiffers(store, 'wheel')
-  const saveDraft = () => {
-    const nextVersion = live.wheelVersion + 1
-    update('wheelVersion', () => nextVersion)
-    journal.logAudit({ action: '保存幸运转盘草稿', target: '幸运旋转狂欢季 · 主转盘', targetModule: 'wheel', targetId: 'main', before: `v${live.wheelVersion} 概率 [${live.wheelPrizes.map((p) => p.probability).join(',')}] 免费 ${live.wheelFreeSpins}`, after: `v${nextVersion} 概率 [${store.wheelPrizes.map((p) => p.probability).join(',')}] 免费 ${store.wheelFreeSpins}` })
-    journal.queuePublish({ name: `幸运旋转狂欢季 · 主转盘 v${nextVersion}`, type: '活动版本', scope: '生产环境', sourceModule: 'wheel', sourceId: 'main', snapshot: { ...getSlice(store, 'wheel'), wheelVersion: nextVersion }, todoSource: '活动中心' })
-  }
-  const wheelRows = store.wheel.map((row, index) => (index === 0 ? { ...row, prizeCount: `${live.wheelPrizes.length} 个奖项`, freeSpins: `${live.wheelFreeSpins} 次 / 日`, probabilityState: wheelBalanced(live.wheelPrizes) ? '概率已校验' : '概率未通过', version: `v${live.wheelVersion}` } : row))
-  return <>
-    <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes.wheel[0]}</span><small>{configurationNotes.wheel[1]}</small></div></div>
-    <ConfigBadge store={store} moduleId="wheel" versionText={`v${live.wheelVersion}`} onDiscard={() => journal.discardDraft('wheel')} />
-    <section className="admin-card"><div className="card-heading"><div><h2>幸运旋转狂欢季 · 主转盘（草稿）</h2><p>{store.wheelPrizes.length} / {WHEEL_SLOTS} 个奖项 · 每日 {store.wheelFreeSpins} 次免费 · 生效版本 v{live.wheelVersion}{differs ? ` → 保存后将生成 v${live.wheelVersion + 1}` : ''}</p></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-      <PreviewEditSwitch mode={mode} onChange={setMode} dirty={differs} />
-      {mode === 'preview'
-        ? <WheelPreview prizes={store.wheelPrizes} freeSpins={store.wheelFreeSpins} />
-        : <>
-          <WheelPrizeEditor prizes={store.wheelPrizes} freeSpins={store.wheelFreeSpins} onChange={({ prizes, freeSpins }) => { update('wheelPrizes', () => prizes); update('wheelFreeSpins', () => freeSpins) }} />
-          <p className="editor-hint">版本号在保存时按生效版本自动 +1，不可手工输入。</p>
-        </>}
-    </section>
-    <GenericPage page="wheel" onOpen={onOpen} store={{ ...store, wheel: wheelRows }} update={update} journal={journal} navigate={navigate} />
-  </>
-}
-
-function MissionsPage({ store, update, journal }) {
-  const [mode, setMode] = useState('preview')
-  const missions = store.missions
-  const errors = validateMissions(missions)
-  const differs = draftDiffers(store, 'missions')
-  const summary = (list) => list.filter((m) => !m.expired).map((m) => `${m.name}(${m.target}/${m.coinReward}/${m.gemReward}/${m.status})`).join('，')
-  const saveDraft = () => {
-    journal.logAudit({ action: '保存每日任务草稿', target: '每日任务列表', targetModule: 'missions', targetId: 'all', before: summary(store.live.missions), after: summary(missions) })
-    journal.queuePublish({ name: '每日任务配置更新', type: '活动版本', scope: '生产环境', sourceModule: 'missions', sourceId: 'all', snapshot: getSlice(store, 'missions'), todoSource: '活动中心' })
-  }
-  const expectedCount = liteContent.events.dailyMissionCount
-  const activeCount = missions.filter((m) => m.status === '生效中').length
-  return <>
-    <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes.missions[0]}</span><small>{configurationNotes.missions[1]}</small></div></div>
-    <ConfigBadge store={store} moduleId="missions" onDiscard={() => journal.discardDraft('missions')} />
-    {activeCount !== expectedCount && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>生效任务数与配置基线不一致</strong><span>当前草稿生效 {activeCount} 个，基线为 {expectedCount} 个（liteContent.events.dailyMissionCount）。</span></div></div>}
-    {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-    <section className="admin-card table-card"><div className="table-top"><div><strong>每日任务列表（草稿）</strong><span>共 {missions.length} 条 · 已过期任务不可编辑</span></div>{differs && <button className="admin-btn primary" disabled={errors.length > 0} onClick={saveDraft}>保存草稿并提交审核</button>}</div>
-      <PreviewEditSwitch mode={mode} onChange={setMode} dirty={differs} />
-      {mode === 'preview'
-        ? <MissionsPreview missions={missions} />
-        : <MissionListEditor missions={missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(next) => update('missions', () => next)} />}
-    </section>
-  </>
-}
+function CheckinPage(props) { return <RewardConfigPage {...props} moduleId="checkin" /> }
+function WheelPage(props) { return <RewardConfigPage {...props} moduleId="wheel" /> }
+function MissionsPage(props) { return <RewardConfigPage {...props} moduleId="missions" /> }
 
 // ---- 多语言内容 -----------------------------------------------------------
 // 管理的是玩家侧文案；后台界面本身是中文，不参与翻译。
 const SOURCE_LOCALE = 'zh-Hans'
 const FALLBACK = 'en'
-
-function placeholdersOf(text) {
-  return [...String(text ?? '').matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
-}
-
-function TranslationEditor({ entryKey, entry, onSave, onClose }) {
-  const [draft, setDraft] = useState(() => ({ ...entry }))
-  const errors = validateTranslations({ [entryKey]: draft })
-  const dirty = translationLocales.some(({ code }) => (draft[code] ?? '') !== (entry[code] ?? ''))
-  const source = draft[FALLBACK] ?? ''
-  return <Modal wide eyebrow="玩家侧文案" title={entryKey} subtitle={`共 ${translationLocales.length} 种语言 · 英文为兜底，缺翻译时玩家看到英文`} onClose={onClose}
-    footer={<><span className="modal-foot-note">{dirty ? '保存后进入草稿，需发布审核通过才对玩家生效' : '尚未修改'}</span><button className="admin-btn subtle" onClick={onClose}>取消</button><button className="admin-btn primary" disabled={!dirty || errors.length > 0} onClick={() => { onSave(draft); onClose() }}>保存</button></>}>
-    <div className="game-form">
-      <fieldset><legend>源文案</legend><p className="fieldset-note">中文与英文是这条文案的基准。英文不能为空，其他语言以它为兜底。</p>
-        <div className="translation-rows">
-          {[SOURCE_LOCALE, FALLBACK].map((code) => {
-            const meta = translationLocales.find((l) => l.code === code)
-            return <label className="translation-row is-source" key={code}>
-              <span className="translation-locale">{meta?.nativeName}<small>{code}</small></span>
-              <textarea value={draft[code] ?? ''} dir={meta?.dir} onChange={(event) => setDraft((d) => ({ ...d, [code]: event.target.value }))} />
-            </label>
-          })}
-        </div>
-      </fieldset>
-      <fieldset><legend>其他语言</legend><p className="fieldset-note">留空表示尚未翻译，玩家会看到英文。占位符必须与英文一致{source.includes('{') ? `（本条含 ${placeholdersOf(source).split(',').map((p) => `{${p}}`).join(' ')}）` : ''}。</p>
-        <div className="translation-rows">
-          {translationLocales.filter(({ code }) => code !== SOURCE_LOCALE && code !== FALLBACK).map(({ code, nativeName, dir }) => {
-            const value = draft[code] ?? ''
-            const mismatch = value.trim() && placeholdersOf(value) !== placeholdersOf(source)
-            return <label className={`translation-row ${value.trim() ? '' : 'is-empty'} ${mismatch ? 'is-bad' : ''}`} key={code}>
-              <span className="translation-locale">{nativeName}<small>{code}</small></span>
-              <textarea value={value} dir={dir} placeholder="未翻译 · 玩家看到英文" onChange={(event) => setDraft((d) => ({ ...d, [code]: event.target.value }))} />
-            </label>
-          })}
-        </div>
-      </fieldset>
-      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-    </div>
-  </Modal>
-}
 
 function TranslationsPage({ store, update, journal, intent }) {
   const entries = store.translations
@@ -1152,7 +1015,7 @@ function TranslationsPage({ store, update, journal, intent }) {
         {visible.map((key) => {
           const entry = entries[key]
           const done = translationLocales.filter(({ code }) => String(entry[code] ?? '').trim()).length
-          return <tr key={key} onClick={() => setEditing(key)} className={isChanged(key) ? 'is-changed-row' : ''}>
+          return <tr key={key} className={isChanged(key) ? 'is-changed-row' : ''}>
             <td><code className="translation-key">{key}</code>{isChanged(key) && <em className="sample-tag is-dirty">已改动</em>}</td>
             <td>{entry[SOURCE_LOCALE]}</td>
             <td>{entry[FALLBACK]}</td>
@@ -1183,76 +1046,59 @@ function TranslationsPage({ store, update, journal, intent }) {
 
 // ---- activity centre ------------------------------------------------------
 // Each activity type owns a different reward config, so the modal swaps its editor by type.
-function ActivityModal({ record, store, update, journal, onClose }) {
+function ActivityModal({ record, store, journal, onClose }) {
   const meta = activityTypeMeta[record.type]
   const moduleId = meta?.moduleId
-  const [mode, setMode] = useState('preview')
-  const [shell, setShell] = useState({ name: record.name, period: record.period, audience: record.audience || '全部玩家', budget: record.budget || '—', owner: record.owner })
-  const [config, setConfig] = useState(() => (moduleId ? getSlice(store, moduleId) : null))
-  // 投放地区不是 config 快照里的字段：它存在这条活动记录自己身上（record.region），
-  // 与同类型的其他活动记录互不共享，各自独立走草稿审核（见 activityRegion:<id> 模块）。
-  const [regionDraft, setRegionDraft] = useState(() => normalizeRegion(record.region))
-  const liveRegion = normalizeRegion(store.live.activities.find((a) => a.id === record.id)?.region)
-  const regionErrors = validateRegion(regionDraft, '投放地区')
-  const configErrors = moduleId ? validateSnapshot(moduleId, config) : []
-  const shellErrors = [...(!String(shell.name).trim() ? ['活动名称不能为空'] : []), ...(!String(shell.period).trim() ? ['活动周期不能为空'] : [])]
-  const errors = [...shellErrors, ...regionErrors, ...configErrors]
-  const shellChanged = ['name', 'period', 'audience', 'budget', 'owner'].some((key) => shell[key] !== (record[key] ?? (key === 'audience' ? '全部玩家' : key === 'budget' ? '—' : '')))
-  const regionChanged = JSON.stringify(regionDraft) !== JSON.stringify(liveRegion)
-  const configChanged = moduleId ? JSON.stringify(config) !== JSON.stringify(getSlice(store.live, moduleId)) : false
-  const history = store.audit.filter((a) => (a.targetModule === 'activities' && a.targetId === record.id) || (moduleId && a.targetModule === moduleId) || a.targetModule === `activityRegion:${record.id}`)
-  const reviewChanges = [configChanged && meta.title, regionChanged && '投放地区'].filter(Boolean)
-  const footNote = shellChanged && reviewChanges.length ? `活动信息立即保存，${reviewChanges.join('、')}进入草稿并提交审核`
-    : reviewChanges.length ? `${reviewChanges.join('、')}保存后进入草稿，需审核通过才生效`
-    : shellChanged ? '活动信息保存后立即生效' : '尚未修改任何字段'
+  const [initial] = useState(() => ({ shell: { name: record.name, period: record.period, audience: record.audience || '全部玩家', budget: record.budget || '—', owner: record.owner || '' }, region: normalizeRegion(record.region), config: moduleId ? structuredClone(getSlice(store,moduleId)) : null }))
+  const [shell, setShell] = useState(() => ({...initial.shell}))
+  const [regionDraft, setRegionDraft] = useState(() => structuredClone(initial.region))
+  const [config, setConfig] = useState(() => structuredClone(initial.config))
+  const shellChanged = JSON.stringify(shell) !== JSON.stringify(initial.shell)
+  const regionChanged = JSON.stringify(regionDraft) !== JSON.stringify(initial.region)
+  const configChanged = JSON.stringify(config) !== JSON.stringify(initial.config)
+  const dirty = shellChanged || regionChanged || configChanged
+  const regionErrors = validateRegion(regionDraft,'投放地区')
+  const configErrors = moduleId ? validateSnapshot(moduleId,config) : []
+  const shellErrors = validateActivityInfo(shell)
+  const errors = [...shellErrors,...regionErrors,...configErrors]
+  const shellFields = [['name','活动名称'],['period','活动周期'],['audience','适用人群'],['budget','奖励预算'],['owner','负责人']]
+  const regionModule = `activityRegion:${record.id}`
   const save = () => {
+    if (!dirty || errors.length) return
     if (shellChanged) {
-      update('activities', (list) => list.map((a) => (a.id === record.id ? { ...a, ...shell } : a)))
-      journal.logAudit({ action: '编辑活动信息', target: shell.name, targetModule: 'activities', targetId: record.id, after: diffSummary(record, { ...record, ...shell }, [['name', '活动名称'], ['period', '活动周期'], ['audience', '适用人群'], ['budget', '奖励预算'], ['owner', '负责人']]) })
+      journal.transform((current) => { const apply=(list)=>list.map((item)=>item.id===record.id?{...item,...shell}:item); return {...current,activities:apply(current.activities),live:{...current.live,activities:apply(current.live.activities)}} })
+      journal.logAudit({action:'编辑活动信息',target:shell.name,targetModule:'activities',targetId:record.id,after:diffSummary(initial.shell,shell,shellFields)})
     }
     if (regionChanged) {
-      update('activities', (list) => list.map((a) => (a.id === record.id ? { ...a, region: regionDraft } : a)))
-      journal.logAudit({ action: '保存活动投放地区草稿', target: shell.name, targetModule: `activityRegion:${record.id}`, targetId: record.id, before: regionSummary(liveRegion, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code), after: regionSummary(regionDraft, countryContinent, continents.map((c) => c.code), (code) => CONTINENT_NAMES[code] ?? code) })
-      journal.queuePublish({ name: `${shell.name} · 投放地区调整`, type: '活动版本', scope: '生产环境', sourceModule: `activityRegion:${record.id}`, sourceId: record.id, snapshot: { region: regionDraft }, todoSource: '活动中心' })
+      journal.transform((current)=>setSlice(current,regionModule,{region:regionDraft}))
+      journal.logAudit({action:'保存活动投放地区草稿',target:shell.name,targetModule:regionModule,targetId:record.id,after:displayFieldValue({type:'region'},regionDraft)})
+      journal.queuePublish({name:`${shell.name} · 投放地区调整`,type:'活动版本',scope:'生产环境',sourceModule:regionModule,sourceId:record.id,snapshot:{region:regionDraft},todoSource:'活动中心'})
     }
     if (configChanged && moduleId) {
-      const snapshot = moduleId === 'wheel' ? { ...config, wheelVersion: store.live.wheelVersion + 1 } : config
-      journal.transform((live) => setSlice(live, moduleId, snapshot))
-      journal.logAudit({ action: `保存${meta.title}草稿`, target: shell.name, targetModule: moduleId, targetId: record.id, before: '生效版本', after: `活动「${shell.name}」内提交` })
-      journal.queuePublish({ name: `${shell.name} · ${meta.title}调整`, type: '活动版本', scope: '生产环境', sourceModule: moduleId, sourceId: record.id, snapshot, todoSource: '活动中心' })
+      const snapshot=moduleId==='wheel'?{...config,wheelVersion:store.live.wheelVersion+1}:config
+      journal.transform((current)=>setSlice(current,moduleId,snapshot))
+      journal.logAudit({action:`保存${meta.title}草稿`,target:shell.name,targetModule:moduleId,targetId:record.id,after:`从活动「${shell.name}」提交共享奖励配置`})
+      journal.queuePublish({name:`${shell.name} · ${meta.title}调整`,type:'活动版本',scope:'生产环境',sourceModule:moduleId,sourceId:record.id,snapshot,todoSource:'活动中心'})
     }
     onClose()
   }
-  return <Modal wide eyebrow={`活动配置 · ${record.type}`} title={record.name} subtitle={`${record.status} · 参与人数 ${record.participants} · 配置模块：${meta ? moduleLabels[moduleId] : '无关联配置模块'}`} onClose={onClose}
-    footer={<><span className="modal-foot-note">{footNote}</span><button className="admin-btn subtle" onClick={onClose}>取消</button><button className="admin-btn primary" disabled={errors.length > 0 || (!shellChanged && !configChanged && !regionChanged)} onClick={save}>保存</button></>}>
-    <div className="game-form">
-      <fieldset><legend>活动信息</legend><div className="form-grid">
-        <label>活动名称<input className="ladder-input" value={shell.name} onChange={(event) => setShell((v) => ({ ...v, name: event.target.value }))} /></label>
-        <label>活动类型<input className="ladder-input" value={record.type} readOnly /><small className="field-note">类型决定奖励配置形态，创建后不可更改</small></label>
-        <label>活动周期<input className="ladder-input" value={shell.period} onChange={(event) => setShell((v) => ({ ...v, period: event.target.value }))} /></label>
-        <label>适用人群<select className="ladder-input" value={shell.audience} onChange={(event) => setShell((v) => ({ ...v, audience: event.target.value }))}>{['全部玩家', '新用户（注册 7 日内）', '活跃玩家', '付费玩家', '流失召回'].map((o) => <option key={o}>{o}</option>)}</select></label>
-        <label>奖励预算<input className="ladder-input" value={shell.budget} onChange={(event) => setShell((v) => ({ ...v, budget: event.target.value }))} /></label>
-        <label>负责人<input className="ladder-input" value={shell.owner} onChange={(event) => setShell((v) => ({ ...v, owner: event.target.value }))} /></label>
-        <label>当前状态<input className="ladder-input" value={record.status} readOnly /><small className="field-note">状态通过列表页的操作流转（提交审核 / 暂停 / 结束）；只有状态为「进行中」的这一条{record.type}类活动，它的投放地区才会真正影响玩家。</small></label>
-        <label>参与人数<input className="ladder-input" value={record.participants} readOnly /><small className="field-note">由统计服务写入，后台只读</small></label>
-        <label className="full">投放地区<RegionPicker value={regionDraft} onChange={setRegionDraft} label="投放地区" /><small className="field-note">白名单：只有勾选的国家/地区能看到并参与这条活动记录；这份地区只属于这一条记录，同类型的其他{record.type}类活动记录各自独立，互不影响。</small></label>
-      </div></fieldset>
-      {meta ? <fieldset><legend>{meta.title}</legend><p className="fieldset-note">{meta.note}该配置与「{moduleLabels[moduleId]}」子页面共用同一份草稿，两处修改等价。</p>
-        <PreviewEditSwitch mode={mode} onChange={setMode} dirty={configChanged} />
-        {mode === 'preview' ? <>
-          {record.type === '签到' && <CheckinPreview days={config.checkinDays} />}
-          {record.type === '转盘' && <WheelPreview prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} />}
-          {record.type === '任务' && <MissionsPreview missions={config.missions} />}
-        </> : <>
-          {record.type === '签到' && <CheckinLadderEditor days={config.checkinDays} onChange={(days) => setConfig((c) => ({ ...c, checkinDays: days }))} />}
-          {record.type === '转盘' && <WheelPrizeEditor prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} onChange={({ prizes, freeSpins }) => setConfig((c) => ({ ...c, wheelPrizes: prizes, wheelFreeSpins: freeSpins }))} />}
-          {record.type === '任务' && <MissionListEditor missions={config.missions} removableIds={store.live.missions.map((m) => m.id)} onChange={(missions) => setConfig((c) => ({ ...c, missions }))} />}
-        </>}
-      </fieldset> : <fieldset><legend>奖励配置</legend><p className="fieldset-note">该活动类型尚未定义奖励配置形态，仅可维护活动信息。</p></fieldset>}
-      {errors.length > 0 && <div className="admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{errors.join('；')}</span></div></div>}
-      <fieldset><legend>最近操作</legend>{history.length ? history.slice(0, 6).map((entry) => <p className="audit-item" key={entry.id}><Icon name="clock" /><span>{entry.actor} · {entry.action}<small>{entry.time} · {entry.result}</small></span></p>) : <p className="audit-item"><Icon name="eye" /><span>暂无操作记录</span></p>}</fieldset>
-    </div>
-  </Modal>
+  const tabs=[
+    {id:'information',label:'活动信息',errors:shellErrors,content:<div className="form-grid">{shellFields.map(([key,label])=><label key={key}>{label}{key==='audience'?<select value={shell[key]} onChange={(event)=>setShell((current)=>({...current,[key]:event.target.value}))}>{['全部玩家','新用户（注册 7 日内）','活跃玩家','付费玩家','流失召回'].map((value)=><option key={value}>{value}</option>)}</select>:<input value={shell[key]} onChange={(event)=>setShell((current)=>({...current,[key]:event.target.value}))}/>}</label>)}<p className="full editor-hint">类型：{record.type} · 状态：{record.status} · 参与人数：{record.participants}。生命周期状态通过详情里的操作调整；活动元信息保存后立即更新。</p></div>},
+    {id:'region',label:'投放地区',errors:regionErrors,content:<div className="editor-preview"><RegionPicker value={regionDraft} onChange={setRegionDraft} label="投放地区"/><p>此地区只属于当前活动记录；修改后提交审核。同类型其他活动的地区不会一同改变。</p><p>当前生效地区：{displayFieldValue({type:'region'},store.live.activities.find((item)=>item.id===record.id)?.region)}</p></div>},
+  ]
+  const sharedNote=<p className="editor-hint">奖励配置与「{moduleLabels[moduleId]}」页面共享整个模块，不是当前活动独占。{moduleId&&publishNote(store,moduleId)}</p>
+  if(moduleId==='checkin')tabs.push({id:'rewards',label:'奖励梯度',errors:configErrors,content:<>{sharedNote}<CheckinLadderEditor days={config.checkinDays} onChange={(checkinDays)=>setConfig((current)=>({...current,checkinDays}))}/></>})
+  if(moduleId==='wheel') {
+    const change=({prizes,freeSpins})=>setConfig((current)=>({...current,wheelPrizes:prizes,wheelFreeSpins:freeSpins}))
+    tabs.push({id:'prizes',label:'奖项配置',errors:configErrors.filter((error)=>!error.includes('概率')&&!error.includes('免费')),content:<>{sharedNote}<WheelPrizeEditor section="prizes" prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} onChange={change}/></>},{id:'rules',label:'概率与次数',errors:configErrors.filter((error)=>error.includes('概率')||error.includes('免费')),content:<WheelPrizeEditor section="rules" prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins} onChange={change}/>})
+  }
+  if(moduleId==='missions') {
+    const change=(missions)=>setConfig((current)=>({...current,missions}))
+    tabs.push({id:'tasks',label:'任务信息',errors:configErrors.filter((error)=>!error.includes('奖励')),content:<>{sharedNote}<MissionListEditor section="details" missions={config.missions} removableIds={store.live.missions.map((m)=>m.id)} onChange={change}/></>},{id:'rewards',label:'奖励与状态',errors:configErrors.filter((error)=>error.includes('奖励')),content:<MissionListEditor section="rewards" missions={config.missions} removableIds={store.live.missions.map((m)=>m.id)} onChange={change}/>})
+  }
+  tabs.push({id:'preview',label:'效果与变更',content:<><ChangePreview before={initial.shell} after={shell} fields={shellFields.map(([key,label])=>({key,label}))}/>{regionChanged&&<ChangePreview before={{region:initial.region}} after={{region:regionDraft}} fields={[{key:'region',label:'投放地区',type:'region'}]}/>} {moduleId==='checkin'&&<CheckinPreview days={config.checkinDays}/>} {moduleId==='wheel'&&<WheelPreview prizes={config.wheelPrizes} freeSpins={config.wheelFreeSpins}/>} {moduleId==='missions'&&<MissionsPreview missions={config.missions}/>} {configChanged&&<DiffSection diff={snapshotDiff(moduleId,initial.config,config)}/>}</>})
+  const hasReview=regionChanged||configChanged
+  return <EditDialog title={`编辑活动 · ${record.name}`} eyebrow={`${record.type}活动`} subtitle="每个标签属于当前活动的不同配置类型；切换不会丢失修改。" tabs={tabs} errors={errors} dirty={dirty} onClose={onClose} onSave={save} saveLabel={hasReview?'保存并提交配置审核':'保存活动信息'} footNote={hasReview?`${shellChanged?'活动信息立即保存；':''}奖励或投放地区提交审核后生效。`:'仅活动信息保存后直接更新并记录日志。'}/>
 }
 
 function ActivitiesPage({ onOpen, store, update, journal, navigate, intent }) {
@@ -1290,27 +1136,31 @@ function ActivityTypeLegend() {
   return <div className="activity-legend">{Object.entries(activityTypeMeta).map(([type, meta]) => <div key={type}><strong>{type}类活动</strong><span>配置项：{meta.title}</span><small>{meta.note}</small></div>)}</div>
 }
 
+const packTagOptions = [['store.tagFirstBuy','首充'],['store.tagPopular','热门'],['store.tagRecommended','推荐'],['store.tagValue','超值'],['','不显示标签']]
+const packTagText = (value) => packTagOptions.find(([key])=>key===value)?.[1] || value || '—'
+
 const packFieldLabels = [['coins', '金币数'], ['discountPercent', '折扣'], ['gemBonus', '赠送宝石'], ['tag', '标签'], ['recommended', '推荐款']]
 
 function describeCoinPack(pack, store, { update, journal }) {
   return {
+    editSections: [{id:'pricing',label:'商品与定价',keys:['sku','coins','discountPercent','gemBonus']},{id:'display',label:'营销展示',keys:['tag','recommended']}],
     id: `coinpack-${pack.id}`, eyebrow: '金币礼包详情（草稿）', title: `${pack.coins.toLocaleString('en-US')} 金币礼包`, status: pack.status,
     history: store.audit.filter((a) => a.targetModule === 'store' && a.targetId === pack.id),
     fields: [
       { key: 'coins', label: '金币数', value: pack.coins, type: 'number', min: 1, step: 1000 },
       { key: 'discountPercent', label: '折扣 %', value: pack.discountPercent, type: 'number', min: 0, max: 90 },
       { key: 'gemBonus', label: '赠送宝石', value: pack.gemBonus, type: 'number', min: 0 },
-      { key: 'tag', label: '标签', value: pack.tag || '', type: 'select', options: [['首充', '首充'], ['热门', '热门'], ['推荐', '推荐'], ['超值', '超值'], ['', '不显示标签']] },
+      { key: 'tag', label: '标签', value: pack.tag || '', type: 'select', options: packTagOptions },
       { key: 'recommended', label: '设为推荐款 ★（唯一）', value: !!pack.recommended, type: 'toggle' },
       { key: 'sku', label: 'SKU', value: pack.id, readOnly: true },
     ],
     validate: validateCoinPack,
-    hint: (draft) => `售价按 1 USD = 10,000 金币自动计算，当前为 ${coinPackPriceUsd({ ...pack, ...draft })}；生效版本为 ${coinPackPriceUsd(store.live.coinPacks.find((p) => p.id === pack.id) || pack)}。`,
+    hint: (draft) => `售价按 1 USD = 10,000 金币自动计算，当前为 ${coinPackPriceUsd({ ...pack, ...draft })}；生效版本为 ${coinPackPriceUsd(store.live.coinPacks.find((p) => p.id === pack.id) || pack)}。${draft.recommended ? `设为推荐后，${store.coinPacks.filter((item)=>item.id!==pack.id&&item.recommended).map((item)=>`${item.coins}金币礼包`).join('、')||'没有其他推荐款'}${store.coinPacks.some((item)=>item.id!==pack.id&&item.recommended)?'将取消推荐。':''}` : ''}`,
     onSave: (draft) => {
       const nextList = store.coinPacks.map((p) => (p.id === pack.id ? { ...p, ...draft } : (draft.recommended ? { ...p, recommended: false } : p)))
       update('coinPacks', () => nextList)
       const label = `${Number(draft.coins).toLocaleString('en-US')} 金币礼包`
-      journal.logAudit({ action: '编辑金币礼包（草稿）', target: label, targetModule: 'store', targetId: pack.id, after: diffSummary(pack, { ...pack, ...draft }, packFieldLabels) })
+      journal.logAudit({ action: '编辑金币礼包（草稿）', target: label, targetModule: 'store', targetId: pack.id, after: diffSummary(pack, { ...pack, ...draft }, packFieldLabels) + (draft.recommended ? `；同步取消其他推荐款：${store.coinPacks.filter((item)=>item.id!==pack.id&&item.recommended).map((item)=>item.id).join('、')||'无'}` : '') })
       journal.queuePublish({ name: `${label}配置更新`, type: '商城配置', scope: '生产环境', sourceModule: 'coinPacks', sourceId: pack.id, snapshot: { coinPacks: nextList }, todoSource: '商城与经济' })
     },
     saveLabel: '保存草稿并提交审核',
@@ -1321,37 +1171,41 @@ function ProductsPage({ onOpen, store, update, journal }) {
   const packLabels = ['商品名称', 'SKU', '折扣', '售价', '赠送宝石', '标签', '状态']
   const [showChestForm, setShowChestForm] = useState(false)
   const [showPassForm, setShowPassForm] = useState(false)
-  const [chestDraft, setChestDraft] = useState(store.chestOffer)
-  const [passDraft, setPassDraft] = useState(store.monthlyPass)
-  const chestErrors = validateChestOffer(chestDraft)
-  const passErrors = validateMonthlyPass(passDraft)
-  const openChestForm = () => { setChestDraft({ ...store.chestOffer, note: '' }); setShowChestForm(true) }
-  const saveChestForm = () => {
+  const [preview, setPreview] = useState('live')
+  const [packEditing, setPackEditing] = useState(null)
+  const hasDraft = ['coinPacks','monthlyPass','chestOffer'].some((id) => draftDiffers(store,id))
+  const shown = preview === 'draft' && hasDraft ? store : store.live
+  const openChestForm = () => setShowChestForm(true)
+  const saveChestForm = (chestDraft) => {
+    if (validateChestOffer(chestDraft).length) return
     const version = chestDraft.version === store.live.chestOffer.version ? nextVersionTag(chestDraft.version) : chestDraft.version
     const next = { ...store.chestOffer, version, priceCoins: chestDraft.priceCoins, maxRewardCoins: chestDraft.maxRewardCoins }
     update('chestOffer', () => next)
     journal.logAudit({ action: '调整明日宝箱报价（草稿）', target: next.productId, targetModule: 'store', targetId: 'chest', before: `${store.live.chestOffer.version} · ${store.live.chestOffer.priceCoins} 金币 · 上限 ${store.live.chestOffer.maxRewardCoins}`, after: `${version} · ${next.priceCoins} 金币 · 上限 ${next.maxRewardCoins}`, result: chestDraft.note ? `成功 · 说明：${chestDraft.note}` : '成功' })
     journal.queuePublish({ name: `明日宝箱报价 ${version}`, type: '商城配置', scope: '生产环境', sourceModule: 'chestOffer', sourceId: 'chest', snapshot: { chestOffer: next }, note: chestDraft.note, todoSource: '商城与经济' })
-    setShowChestForm(false)
+    setShowChestForm(false); setPreview('draft')
   }
-  const openPassForm = () => { setPassDraft(store.monthlyPass); setShowPassForm(true) }
-  const savePassForm = () => {
+  const openPassForm = () => setShowPassForm(true)
+  const savePassForm = (passDraft) => {
+    if (validateMonthlyPass(passDraft).length) return
     update('monthlyPass', () => passDraft)
     journal.logAudit({ action: '编辑月度特权卡（草稿）', target: store.monthlyPass.title, targetModule: 'store', targetId: 'pass', after: diffSummary(store.monthlyPass, passDraft, [['priceUsdCents', '价格(美分)'], ['dailyCoins', '每日金币'], ['dailyGems', '每日宝石'], ['validDays', '有效天数']]) })
     journal.queuePublish({ name: '月度特权卡配置更新', type: '商城配置', scope: '生产环境', sourceModule: 'monthlyPass', sourceId: 'pass', snapshot: { monthlyPass: passDraft }, todoSource: '商城与经济' })
-    setShowPassForm(false)
+    setShowPassForm(false); setPreview('draft')
   }
-  const openPack = (p) => onOpen(describeCoinPack(p, store, { update, journal }))
+  const openPack = (p) => { const descriptor=describeCoinPack(p,store,{update,journal}); onOpen({...descriptor,onSave:undefined,actions:[{label:'编辑礼包',tone:'primary',run:()=>setPackEditing(p.id)}]}) }
   return <>
     <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes.store[0]}</span><small>{configurationNotes.store[1]}</small></div></div>
+    <PreviewVersionSwitch value={preview} onChange={setPreview} hasDraft={hasDraft} />
     <ConfigBadge store={store} moduleId="coinPacks" onDiscard={() => journal.discardDraft('coinPacks')} />
-    <section className="admin-card table-card"><div className="table-top"><div><strong>金币礼包（草稿）</strong><span>共 {store.coinPacks.length} 档 · 1 USD = 10,000 金币 · 点击行编辑</span></div></div><div className="table-wrap"><table><thead><tr>{packLabels.map((l) => <th key={l}>{l}</th>)}<th>操作</th></tr></thead><tbody>{store.coinPacks.map((p) => <tr key={p.id} onClick={() => openPack(p)}><td>{p.coins.toLocaleString('en-US')} 金币礼包{p.recommended ? ' ★' : ''}</td><td>{p.id}</td><td>{p.discountPercent}%</td><td>{coinPackPriceUsd(p)}</td><td>{p.gemBonus} 宝石</td><td>{p.tag || '—'}</td><td><Status>{p.status}</Status></td><td><button className="row-action" onClick={(event) => { event.stopPropagation(); openPack(p) }}>编辑</button></td></tr>)}</tbody></table></div></section>
+    <section className="admin-card table-card"><div className="table-top"><div><strong>金币礼包预览</strong><span>共 {shown.coinPacks.length} 档 · 1 USD = 10,000 金币 · 点击行查看，编辑使用操作按钮</span></div></div><div className="table-wrap"><table><thead><tr>{packLabels.map((l) => <th key={l}>{l}</th>)}<th>操作</th></tr></thead><tbody>{shown.coinPacks.map((p) => <tr key={p.id} onClick={() => openPack(p)}><td>{p.coins.toLocaleString('en-US')} 金币礼包{p.recommended ? ' ★' : ''}</td><td>{p.id}</td><td>{p.discountPercent}%</td><td>{coinPackPriceUsd(p)}</td><td>{p.gemBonus} 宝石</td><td>{packTagText(p.tag)}</td><td><Status>{p.status}</Status></td><td><button className="row-action" onClick={(event) => { event.stopPropagation(); setPackEditing(p.id) }}>编辑</button></td></tr>)}</tbody></table></div></section>
     <ConfigBadge store={store} moduleId="monthlyPass" onDiscard={() => journal.discardDraft('monthlyPass')} />
-    <section className="admin-card"><div className="card-heading"><div><h2>月度特权卡（草稿）</h2><p>{store.monthlyPass.title} · SKU monthly-pass · 生效版本 ${(store.live.monthlyPass.priceUsdCents / 100).toFixed(2)} / {store.live.monthlyPass.dailyCoins} 金币 / {store.live.monthlyPass.dailyGems} 宝石 / {store.live.monthlyPass.validDays} 天</p></div><button className="admin-btn primary" onClick={openPassForm}><Icon name="gear" />编辑</button></div><div className="summary-grid"><div><span>价格</span><strong>${(store.monthlyPass.priceUsdCents / 100).toFixed(2)}</strong><small>不自动续费</small></div><div><span>每日金币</span><strong>{store.monthlyPass.dailyCoins.toLocaleString('en-US')}</strong><small>需每日主动领取</small></div><div><span>每日宝石</span><strong>{store.monthlyPass.dailyGems}</strong><small>当日未领取不补发</small></div><div><span>有效天数</span><strong>{store.monthlyPass.validDays} 天</strong><small>状态：{store.monthlyPass.status}</small></div></div></section>
+    <section className="admin-card"><div className="card-heading"><div><h2>月度特权卡预览</h2><p>{shown.monthlyPass.title} · SKU monthly-pass · 生效版本 ${(store.live.monthlyPass.priceUsdCents / 100).toFixed(2)} / {store.live.monthlyPass.dailyCoins} 金币 / {store.live.monthlyPass.dailyGems} 宝石 / {store.live.monthlyPass.validDays} 天</p></div><button className="admin-btn primary" onClick={openPassForm}><Icon name="gear" />编辑</button></div><div className="summary-grid"><div><span>价格</span><strong>${(shown.monthlyPass.priceUsdCents / 100).toFixed(2)}</strong><small>不自动续费</small></div><div><span>每日金币</span><strong>{shown.monthlyPass.dailyCoins.toLocaleString('en-US')}</strong><small>需每日主动领取</small></div><div><span>每日宝石</span><strong>{shown.monthlyPass.dailyGems}</strong><small>当日未领取不补发</small></div><div><span>有效天数</span><strong>{shown.monthlyPass.validDays} 天</strong><small>状态：{shown.monthlyPass.status}</small></div></div></section>
     <ConfigBadge store={store} moduleId="chestOffer" versionText={store.live.chestOffer.version} onDiscard={() => journal.discardDraft('chestOffer')} />
-    <section className="admin-card"><div className="card-heading"><div><h2>明日宝箱 · 报价配置（草稿）</h2><p>{store.chestOffer.productId}</p></div><button className="admin-btn primary" onClick={openChestForm}><Icon name="gear" />调整报价</button></div><div className="summary-grid"><div><span>报价版本</span><strong>{store.chestOffer.version}</strong><small>版本号变更会使旧客户端报价失效（409）</small></div><div><span>购买价格</span><strong>{store.chestOffer.priceCoins} 金币</strong><small>每业务日限购 1 个</small></div><div><span>可能奖励上限</span><strong>{store.chestOffer.maxRewardCoins} 金币</strong><small>0 金币为合法开奖结果</small></div><div><span>解锁 / 截止</span><strong>次日 00:00</strong><small>Asia/Shanghai · 解锁后 24 小时截止（服务端固定规则）</small></div></div><div className="environment-note"><Icon name="shield" /><span><strong>购买资格与幂等键（服务端规则，只读）</strong><small>当日完成一局有效游戏后可购买；购买键为 chest-purchase-业务日；开启键为 chest-open-宝箱ID。开奖、钱包流水与状态变更需原子提交。</small></span></div></section>
-    {showChestForm && <Modal eyebrow="商品配置草稿" title="调整明日宝箱报价" onClose={() => setShowChestForm(false)} footer={<><button className="admin-btn subtle" onClick={() => setShowChestForm(false)}>取消</button><button className="admin-btn primary" disabled={chestErrors.length > 0} onClick={saveChestForm}>保存草稿并提交审核</button></>}><div className="form-grid"><label>报价版本号（与生效版本相同时自动递增为 {nextVersionTag(store.live.chestOffer.version)}）<input value={chestDraft.version} onChange={(event) => setChestDraft((d) => ({ ...d, version: event.target.value }))} /></label><label>购买价格（金币，&gt;0）<input type="number" min="1" value={chestDraft.priceCoins} onChange={(event) => setChestDraft((d) => ({ ...d, priceCoins: Number(event.target.value) || 0 }))} /></label><label>可能奖励上限（金币，&gt;0）<input type="number" min="1" value={chestDraft.maxRewardCoins} onChange={(event) => setChestDraft((d) => ({ ...d, maxRewardCoins: Number(event.target.value) || 0 }))} /></label><label className="full">变更说明（写入操作日志与发布任务）<textarea value={chestDraft.note || ''} placeholder="填写调整原因、生效时间与回滚计划" onChange={(event) => setChestDraft((d) => ({ ...d, note: event.target.value }))} /></label>{chestErrors.length > 0 && <div className="full admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{chestErrors.join('；')}</span></div></div>}</div></Modal>}
-    {showPassForm && <Modal eyebrow="商品配置草稿" title="编辑月度特权卡" onClose={() => setShowPassForm(false)} footer={<><button className="admin-btn subtle" onClick={() => setShowPassForm(false)}>取消</button><button className="admin-btn primary" disabled={passErrors.length > 0} onClick={savePassForm}>保存草稿并提交审核</button></>}><div className="form-grid"><label>价格（美分）<input type="number" min="1" value={passDraft.priceUsdCents} onChange={(event) => setPassDraft((d) => ({ ...d, priceUsdCents: Number(event.target.value) || 0 }))} /></label><label>每日金币<input type="number" min="1" value={passDraft.dailyCoins} onChange={(event) => setPassDraft((d) => ({ ...d, dailyCoins: Number(event.target.value) || 0 }))} /></label><label>每日宝石<input type="number" min="1" value={passDraft.dailyGems} onChange={(event) => setPassDraft((d) => ({ ...d, dailyGems: Number(event.target.value) || 0 }))} /></label><label>有效天数<input type="number" min="1" value={passDraft.validDays} onChange={(event) => setPassDraft((d) => ({ ...d, validDays: Number(event.target.value) || 0 }))} /></label>{passErrors.length > 0 && <div className="full admin-config-note danger"><Icon name="bolt" /><div><strong>无法保存</strong><span>{passErrors.join('；')}</span></div></div>}</div></Modal>}
+    <section className="admin-card"><div className="card-heading"><div><h2>明日宝箱 · 报价预览</h2><p>{shown.chestOffer.productId}</p></div><button className="admin-btn primary" onClick={openChestForm}><Icon name="gear" />调整报价</button></div><div className="summary-grid"><div><span>报价版本</span><strong>{shown.chestOffer.version}</strong><small>版本号变更会使旧客户端报价失效（409）</small></div><div><span>购买价格</span><strong>{shown.chestOffer.priceCoins} 金币</strong><small>每业务日限购 1 个</small></div><div><span>可能奖励上限</span><strong>{shown.chestOffer.maxRewardCoins} 金币</strong><small>0 金币为合法开奖结果</small></div><div><span>解锁 / 截止</span><strong>次日 00:00</strong><small>Asia/Shanghai · 解锁后 24 小时截止（服务端固定规则）</small></div></div><div className="environment-note"><Icon name="shield" /><span><strong>购买资格与幂等键（服务端规则，只读）</strong><small>当日完成一局有效游戏后可购买；购买键为 chest-purchase-业务日；开启键为 chest-open-宝箱ID。开奖、钱包流水与状态变更需原子提交。</small></span></div></section>
+    {packEditing && <DescriptorEditModal descriptor={describeCoinPack(store.coinPacks.find((pack)=>pack.id===packEditing),store,{update,journal})} onClose={()=>setPackEditing(null)} onSaved={()=>{setPackEditing(null);setPreview('draft')}} />}
+    {showChestForm && <ChestOfferEditDialog initial={store.chestOffer} live={store.live.chestOffer} onSave={saveChestForm} onClose={()=>setShowChestForm(false)} />}
+    {showPassForm && <MonthlyPassEditDialog initial={store.monthlyPass} live={store.live.monthlyPass} onSave={savePassForm} onClose={()=>setShowPassForm(false)} />}
   </>
 }
 
@@ -1385,6 +1239,7 @@ function describePlayer(record, store, { update, journal, navigate }) {
   )
   const entitlement = store.entitlements.find((e) => e.playerId === record.playerId)
   return {
+    editLabel: '编辑昵称', editSections: [{id:'profile',label:'昵称',keys:['playerId','name']}],
     id: `players-${record.id}`, eyebrow: '玩家详情', title: record.name, status: record.status, actions,
     history: store.audit.filter((a) => a.targetModule === 'players' && a.targetId === record.id),
     fields: [
@@ -1497,8 +1352,9 @@ function AdminApp() {
     else if (/^#?WL-/i.test(q)) navigate('ledger', { query: q })
     else navigate('players', { tab: 'players', query: q })
   }
-  const adjustValid = adjustForm.reason.trim() && Number(adjustForm.amount) !== 0
+  const adjustValid = adjustForm.reason.trim() && Number.isSafeInteger(Number(adjustForm.amount)) && Number(adjustForm.amount) !== 0 && store.players.some((player)=>player.name===adjustForm.player)
   const submitAdjust = () => {
+    if (!adjustValid) return
     const player = store.players.find((p) => p.name === adjustForm.player)
     const record = { id: nextLedgerId(store.ledger), player: adjustForm.player, playerId: player?.playerId || '—', currency: adjustForm.currency, amount: Number(adjustForm.amount), source: 'manual_adjust', status: 'processing', time: '刚刚', balanceBefore: null, balanceAfter: null, ref: '人工调整' }
     update('ledger', (list) => [record, ...list])
@@ -1512,7 +1368,7 @@ function AdminApp() {
     const common = { onOpen, store, update, journal, navigate }
     if (activePage === 'dashboard') return <Dashboard onNavigate={navigate} store={store} environment={environment} />
     if (activePage === 'todo') return <TodoPage key={pageKey} store={store} update={update} journal={journal} navigate={navigate} onOpen={onOpen} />
-    if (activePage === 'games') return <GameCatalogPage key={`${environment}-${intent?.stamp || ''}`} environment={environment} intent={intent} store={store} update={update} journal={journal} navigate={navigate} />
+    if (activePage === 'games') return <GameCatalogPage key={`${environment}-${intent?.stamp || ''}`} environment={environment} intent={intent} store={store} update={update} journal={journal} navigate={navigate} onOpen={onOpen} />
     if (activePage === 'versions') return <GameVersionCenterPage {...common} />
     if (activePage === 'publish') return <ReleaseCenterPage {...common} />
     if (activePage === 'adminUsers') return <AdminUsersPage {...common} />
@@ -1525,14 +1381,17 @@ function AdminApp() {
     if (activePage === 'store') return <ProductsPage {...common} />
     if (activePage === 'orders') return <GenericPage key={pageKey} page="orders" describe={describeOrder} {...common} intent={intent} />
     if (activePage === 'players') return <PlayersCenterPage key={pageKey} {...common} navigate={navigate} intent={intent} />
-    if (activePage === 'ledger') return <LedgerPage key={pageKey} {...common} onAdjust={() => setShowAdjust(true)} intent={intent} />
+    if (activePage === 'ledger') return <LedgerPage key={pageKey} {...common} onAdjust={() => { setAdjustForm({player:store.players[0]?.name||'',currency:'coins',amount:0,reason:''});setShowAdjust(true) }} intent={intent} />
     return <GenericPage key={pageKey} page={activePage} {...common} intent={intent} />
   }
   return <div className="admin-shell">
     <aside className={`admin-sidebar ${mobileNav ? 'is-open' : ''}`}><div className="admin-brand"><span className="admin-brand-mark">J</span><span><strong>Joyloop</strong><small>运营后台原型</small></span><button className="mobile-close icon-button" onClick={() => setMobileNav(false)}><Icon name="close" /></button></div><div className="env-chip"><span className="env-dot" />{environment === 'production' ? '生产环境' : '测试环境'} <small>v{appVersion}</small></div><nav>{navGroups.map((group) => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(([id, label, icon]) => <button key={id} className={activePage === id ? 'is-active' : ''} onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span><PhaseTag moduleId={id} />{id === 'todo' && <b>{store.todo.filter((t) => t.status !== '已解决').length}</b>}{id === 'publish' && store.publish.some((p) => p.status === '待审核') && <b>{store.publish.filter((p) => p.status === '待审核').length}</b>}</button>)}</div>)}</nav><a className="back-to-lobby" href="./index.html"><Icon name="chevronLeft" />返回大厅原型首页</a></aside>
     <div className="admin-main"><header className="admin-header"><button className="mobile-menu icon-button" onClick={() => setMobileNav(true)}><Icon name="flag" /></button><div className="crumb"><span>Joyloop 后台</span><Icon name="chevronRight" /><strong>{meta[0]}</strong></div><div className="header-actions"><label className="environment-select"><span>环境（当前只影响游戏目录）</span><select value={environment} onChange={(event) => setEnvironment(event.target.value)}><option value="test">测试环境</option><option value="production">生产环境</option></select></label><div className="global-search"><Icon name="eye" /><input value={globalQuery} onChange={(event) => setGlobalQuery(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && runGlobalSearch()} placeholder="搜索玩家 / 订单号 / 流水号，回车跳转" /></div><button className="header-icon" title="待处理事项" onClick={() => navigate('todo')}><Icon name="bell" />{store.todo.some((t) => t.status !== '已解决') && <i />}</button><button className="header-icon" title="权限与账号" onClick={() => navigate('adminUsers')}><Icon name="gear" /></button><span className="admin-avatar">OP</span><span className="operator-name">运营管理员</span></div></header><div className="admin-tabs"><button className="tab active">{meta[0]} {activePage !== 'dashboard' && <span onClick={() => navigate('dashboard')} title="关闭并返回概览"><Icon name="close" /></span>}</button>{activePage !== 'dashboard' && <button className="tab" onClick={() => navigate('dashboard')}>运营概览</button>}</div><main className="admin-content"><div className="page-title"><div><span className="eyebrow">{activePage === 'dashboard' ? 'OPERATIONS OVERVIEW' : 'JOYLOOP ADMIN CONSOLE'}</span><h1>{meta[0]}<PhaseTag moduleId={activePage} size="lg" /></h1><p>{meta[1]}</p>{phaseOf(activePage) > 1 && <p className="phase-note">{PHASES[phaseOf(activePage)].label}功能 · {PHASES[phaseOf(activePage)].name}：本页在原型里已经可以操作，但排期在{PHASES[phaseOf(activePage)].label}，一期不交付。{PHASES[phaseOf(activePage)].summary}</p>}</div></div>{renderContent()}</main></div>
     <RecordDrawer key={openRecord?.id || 'none'} descriptor={openRecord} onClose={() => setDrawerSource(null)} />
-    {showAdjust && <Modal eyebrow="钱包流水" title="人工调整流水（追加一条处理中流水）" onClose={() => setShowAdjust(false)} footer={<><button className="admin-btn subtle" onClick={() => setShowAdjust(false)}>取消</button><button className="admin-btn primary" disabled={!adjustValid} onClick={submitAdjust}>提交调整</button></>}><div className="form-grid"><label>玩家<select value={adjustForm.player} onChange={(event) => setAdjustForm((f) => ({ ...f, player: event.target.value }))}>{store.players.map((p) => <option key={p.id} value={p.name}>{p.name} · {p.playerId}</option>)}</select></label><label>币种<select value={adjustForm.currency} onChange={(event) => setAdjustForm((f) => ({ ...f, currency: event.target.value }))}><option value="coins">金币</option><option value="gems">宝石</option></select></label><label>金额（不能为 0，可为负数）<input type="number" value={adjustForm.amount} onChange={(event) => setAdjustForm((f) => ({ ...f, amount: Number(event.target.value) || 0 }))} /></label><label className="full">原因（必填）<textarea value={adjustForm.reason} onChange={(event) => setAdjustForm((f) => ({ ...f, reason: event.target.value }))} placeholder="填写调整原因，将写入操作日志并生成财务复核待办；财务确认入账后流水才变为成功" /></label></div></Modal>}
+    {showAdjust && <EditDialog eyebrow="钱包流水 · 操作确认" title="人工调整流水" dirty={Boolean(adjustForm.amount || adjustForm.reason || adjustForm.currency!=='coins' || adjustForm.player!==(store.players[0]?.name||''))} onClose={()=>{setShowAdjust(false);setAdjustForm({player:store.players[0]?.name||'',currency:'coins',amount:0,reason:''})}} onSave={submitAdjust} saveLabel="提交待复核流水" saveDisabled={!adjustValid} footNote="仅追加处理中流水并生成财务待办，不直接修改玩家余额。" tabs={[
+      {id:'amount',label:'对象与金额',content:<div className="form-grid"><label>玩家<select value={adjustForm.player} onChange={(event)=>setAdjustForm((current)=>({...current,player:event.target.value}))}>{store.players.map((player)=><option key={player.id} value={player.name}>{player.name} · {player.playerId}</option>)}</select></label><label>币种<select value={adjustForm.currency} onChange={(event)=>setAdjustForm((current)=>({...current,currency:event.target.value}))}><option value="coins">金币</option><option value="gems">宝石</option></select></label><label>调整金额（非零整数，可为负数）<input type="number" step="1" value={adjustForm.amount} onChange={(event)=>setAdjustForm((current)=>({...current,amount:event.target.value}))}/></label></div>},
+      {id:'review',label:'原因与复核',content:<><div className="editor-preview"><p>玩家：{adjustForm.player}</p><p>调整：{adjustForm.amount||0} {adjustForm.currency==='coins'?'金币':'宝石'}</p><p>状态：提交后为处理中，财务确认后才记为成功。</p></div><div className="form-grid"><label className="full">原因（必填）<textarea value={adjustForm.reason} onChange={(event)=>setAdjustForm((current)=>({...current,reason:event.target.value}))}/></label></div></>},
+    ]}/>}
   </div>
 }
 

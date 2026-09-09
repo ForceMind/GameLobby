@@ -3,10 +3,31 @@ import assert from 'node:assert/strict'
 import {
   validateWheel, wheelBalanced, validateCheckin, validateMissions, validateCoinPack, validateChestOffer,
   coinPackPriceUsd, nextVersionTag, nextLedgerId, diffSummary, validateNickname,
-  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations, validateGameGates, settledActivityRegion,
+  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations, validateGameGates, settledActivityRegion, applyActivityState,
 } from './adminRules.js'
 
 const prizes = (probabilities) => probabilities.map((probability, i) => ({ id: `p${i}`, kind: 'coins', amount: 100 + i, probability }))
+
+test('活动状态同步到生效记录，但不会提前发布地区草稿', () => {
+  const live = { id: 'a', name: '签到活动', period: '每日', audience: '全部玩家', budget: '1000金币', type: '签到', status: '待审核', region: { mode: 'custom', countries: ['CN'] } }
+  const draft = { ...live, region: { mode: 'custom', countries: ['US'] } }
+  const source = { activities: [draft], live: { activities: [live] } }
+  const result = applyActivityState(source, 'a', '进行中')
+  assert.equal(result.ok, true)
+  assert.equal(result.store.live.activities[0].status, '进行中')
+  assert.deepEqual(result.store.live.activities[0].region.countries, ['CN'])
+  assert.deepEqual(result.store.activities[0].region.countries, ['US'])
+  assert.equal(source.live.activities[0].status, '待审核')
+  const paused = applyActivityState(result.store, 'a', '已暂停')
+  assert.equal(paused.store.live.activities[0].status, '已暂停')
+  const second = { ...live, id: 'b', status: '进行中' }
+  const conflict = { activities: [draft, second], live: { activities: [live, second] } }
+  assert.equal(applyActivityState(conflict, 'a', '进行中').ok, false)
+  assert.equal(applyActivityState({ activities: [draft], live: { activities: [] } }, 'a', '进行中').ok, false)
+  const incomplete = { ...draft, period: '待定' }
+  assert.equal(applyActivityState({ activities: [incomplete], live: { activities: [live] } }, 'a', '待审核').ok, false)
+  assert.equal(applyActivityState({ activities: [incomplete], live: { activities: [live] } }, 'a', '进行中').ok, false)
+})
 
 test('转盘概率：负数、超出 100、非整数、总和不为 100、奖项数不为 8 都不能通过', () => {
   assert.equal(wheelBalanced(prizes([105, -5, 0, 0, 0, 0, 0, 0])), false)

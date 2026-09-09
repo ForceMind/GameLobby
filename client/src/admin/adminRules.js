@@ -4,6 +4,31 @@ import { isValidNickname } from '../demoModel.js'
 
 export const WHEEL_SLOTS = 8
 
+export function validateActivityInfo(record) {
+  const errors = []
+  for (const [key, label] of [['name','活动名称'],['period','活动周期'],['audience','适用人群'],['budget','奖励预算']]) {
+    const value = String(record?.[key] ?? '').trim()
+    if (!value || value === '待定' || value === '—') errors.push(`请填写有效的${label}`)
+  }
+  return errors
+}
+
+// Lifecycle changes must not publish a pending per-record region draft.
+export function applyActivityState(store, id, status) {
+  const record = store.activities.find((item) => item.id === id)
+  const live = store.live.activities.find((item) => item.id === id)
+  if (!record || !live) return { ok: false, error: '活动缺少有效基线，请核对活动记录', store }
+  if (status === '待审核' || status === '进行中') {
+    const errors = [...validateActivityInfo(record), ...validateRegion(live.region, '生效投放地区')]
+    if (errors.length) return { ok: false, error: errors.join('；'), store }
+  }
+  if (status === '进行中' && store.live.activities.some((item) => item.id !== id && item.type === record.type && item.status === '进行中')) {
+    return { ok: false, error: '同类型已有进行中活动，请先暂停该活动再发布新的活动', store }
+  }
+  const update = (list) => list.map((item) => item.id === id ? { ...item, status, time: '刚刚' } : item)
+  return { ok: true, store: { ...store, activities: update(store.activities), live: { ...store.live, activities: update(store.live.activities) } } }
+}
+
 export function parseReward(text) {
   const coinsMatch = String(text).match(/([\d,]+)\s*金币/)
   const gemsMatch = String(text).match(/([\d,]+)\s*宝石/)

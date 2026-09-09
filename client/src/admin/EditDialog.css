@@ -1,0 +1,38 @@
+.edit-dialog-overlay{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(31,41,55,.42)}
+.edit-dialog{position:relative;display:flex;flex-direction:column;width:min(820px,calc(100vw - 32px));max-height:min(760px,calc(100dvh - 32px));overflow:hidden;background:#fff;border-radius:8px;box-shadow:0 20px 60px rgba(16,31,67,.22);outline:0}
+.edit-dialog-head{display:flex;flex:0 0 auto;justify-content:space-between;gap:18px;padding:20px 22px 16px;border-bottom:1px solid var(--admin-border)}
+.edit-dialog-eyebrow{display:block;color:#9aa4b3;font-size:10px;letter-spacing:.12em}
+.edit-dialog-head h2{margin:7px 0 0;color:var(--admin-text);font-size:18px;line-height:1.35}
+.edit-dialog-head p{margin:6px 0 0;color:var(--admin-muted);font-size:12px;line-height:1.55}
+.edit-dialog-close{flex:0 0 auto}
+.edit-dialog-tabs{display:flex;flex:0 0 auto;gap:3px;overflow-x:auto;padding:10px 22px 0;border-bottom:1px solid var(--admin-border);scrollbar-width:thin}
+.edit-dialog-tab{position:relative;flex:0 0 auto;height:34px;border:0;border-bottom:2px solid transparent;background:transparent;color:#778397;padding:0 12px;cursor:pointer;font-size:12px;white-space:nowrap}
+.edit-dialog-tab:hover{color:#3e6fd7;background:#f8faff}
+.edit-dialog-tab:focus-visible,.edit-dialog-errors button:focus-visible{outline:2px solid #8bb0ff;outline-offset:-2px}
+.edit-dialog-tab.is-active{border-bottom-color:var(--admin-primary);color:var(--admin-primary);font-weight:650}
+.edit-dialog-tab b{display:inline-grid;min-width:16px;height:16px;margin-left:6px;padding:0 4px;place-items:center;border-radius:9px;background:#ffe9e5;color:#d34b3d;font-size:10px;font-weight:700}
+.edit-dialog-scroll{min-height:0;flex:1;overflow:auto;padding:20px 22px}
+.edit-dialog-panel[hidden]{display:none}
+.edit-dialog-empty{margin:0;color:var(--admin-muted);font-size:12px}
+.edit-dialog-errors{margin:0 0 18px;padding:12px 14px;border:1px solid #f2c7c0;border-radius:6px;background:#fff7f5;color:#9d3e35;font-size:12px}
+.edit-dialog-errors strong{display:block;margin-bottom:7px;font-size:12px}
+.edit-dialog-errors ul{margin:0;padding-left:17px}
+.edit-dialog-errors li+li{margin-top:5px}
+.edit-dialog-errors button{margin:0;padding:0;border:0;background:transparent;color:#b84237;cursor:pointer;font:inherit;text-align:left;text-decoration:underline;text-underline-offset:2px}
+.edit-dialog-foot{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:14px;padding:15px 22px;border-top:1px solid var(--admin-border);background:#fff}
+.edit-dialog-foot-note{min-width:0;color:#8b96a5;font-size:11px;line-height:1.5}
+.edit-dialog-foot-note span{display:block}
+.edit-dialog-actions{display:flex;flex:0 0 auto;align-items:center;justify-content:flex-end;gap:8px}
+.edit-dialog .admin-btn:disabled{cursor:not-allowed;opacity:.52}
+.edit-dialog-discard{position:absolute;inset:0;z-index:1;display:grid;place-items:center;padding:20px;background:rgba(255,255,255,.88)}
+.edit-dialog-discard-card{width:min(390px,100%);padding:22px;border:1px solid var(--admin-border);border-radius:8px;background:#fff;box-shadow:0 14px 38px rgba(16,31,67,.15)}
+.edit-dialog-discard-card h3{margin:7px 0 6px;color:var(--admin-text);font-size:16px}
+.edit-dialog-discard-card p{margin:0 0 18px;color:var(--admin-muted);font-size:12px;line-height:1.6}
+@media (max-width:760px){.edit-dialog-overlay{align-items:stretch;padding:0}.edit-dialog{width:100%;max-height:100dvh;border-radius:0}.edit-dialog-head{padding:17px 15px 13px}.edit-dialog-tabs{padding:9px 15px 0}.edit-dialog-scroll{padding:16px 15px}.edit-dialog-foot{align-items:flex-start;flex-direction:column;padding:13px 15px}.edit-dialog-actions{width:100%;flex-wrap:wrap}.edit-dialog-actions>.admin-btn{flex:1}.edit-dialog-foot-note:empty{display:none}.edit-dialog-discard{padding:15px}}
+.edit-dialog-panel{min-width:0}
+.edit-dialog-panel .game-form{padding:0;max-height:none;overflow:visible;gap:12px}
+.edit-dialog-panel .form-grid{padding:0}
+.edit-dialog-panel .editor-preview{padding:0}
+.edit-dialog .check-group{justify-content:flex-start;margin-top:8px;gap:14px}
+.edit-dialog .check-group label{display:inline-flex;align-items:center;gap:6px}
+.edit-dialog .check-group input{display:inline-block;width:14px;height:14px;margin:0;padding:0}
