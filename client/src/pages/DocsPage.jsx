@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Icon } from '../icons.jsx'
 import { appVersion } from '../version.js'
 import { PHASES, phaseOf } from '../data/phases.js'
 import './docs.css'
 
+const UiSpecifications = lazy(() => import('./UiSpecifications.jsx'))
+
 const toc = [
   ['overview', '文档说明'],
+  ['ui-spec', '游戏大厅 UI规范'],
   ['architecture', '系统结构与职责边界'],
   ['pages', '页面与功能地图'],
   ['global', '全局规范'],
@@ -28,13 +31,13 @@ const adminModules = [
   ['todo', '待处理事项', '认领、跳转到对象处理、填结论关闭、转交他人', '直接生效'],
   ['publish', '发布审核', '查看逐字段配置差异、通过 / 灰度 / 驳回 / 暂停 / 回滚、跳转来源配置', '决定生效版本'],
   ['audit', '操作日志', '全量操作留痕，含对象模块与变更前后值', '只读'],
-  ['games', '游戏管理', '目录排序、热门推荐、游戏配置弹窗（基础信息 / 运行状态 / 大厅展示 / 可用地区 / 进入门槛 / Slots 参数）', '运行状态、维护公告立即生效，其余走草稿审核；预下架待第三期'],
+  ['games', '游戏管理', '只读目录、固定编辑按钮、分组配置弹窗、独立排序推荐弹窗及运行操作', '运行状态、维护公告立即生效，其余走草稿审核；预下架待第三期'],
   ['wins', '赢家与动态', '只读核对今日赢家榜、最近中奖与宝箱幸运榜', '不可编辑，管理在风控与内容审核系统'],
   ['players', '玩家管理', '玩家列表、奖励领取记录、月卡权益、宝箱记录四个标签；状态处置需填原因', '直接生效，隐私偏好只读'],
   ['translations', '多语言内容', '按语言维护玩家侧全部文案与游戏说明，查看覆盖率与缺失清单，CSV 导入导出', '草稿审核'],
   ['adminUsers', '权限与账号', '后台账号与角色的菜单范围、操作权限、生产环境权限', '直接生效（权限拦截待接入）'],
   ['activities', '活动管理', '按活动类型打开不同的配置弹窗：转盘配奖项概率、签到配奖励梯度、任务配任务列表；共通字段含周期、人群、预算、投放地区', '活动信息立即生效，奖励配置与投放地区走草稿审核'],
-  ['checkin', '签到 / 转盘 / 任务', '默认打开玩家视角预览，点「编辑」才进入编辑态；与活动弹窗共用同一份草稿', '草稿审核'],
+  ['checkin', '签到 / 转盘 / 任务', '页面保持只读预览，点「编辑」打开分组标签弹窗；与活动弹窗共享奖励模块', '草稿审核'],
   ['store', '商品与权益', '金币礼包、月度特权卡、明日宝箱报价', '草稿审核'],
   ['orders', '订单管理', '查询与人工处置：取消、退款、标记异常、人工确认', '直接生效，需填原因'],
   ['ledger', '钱包流水', '查询、对账、导出；人工调整追加一条处理中流水待财务确认', '既有流水只读'],
@@ -87,7 +90,7 @@ export default function DocsPage() {
     const page = document.querySelector('.docs-page')
     const target = document.getElementById(id)
     if (!page || !target) return
-    const top = target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - 20
+    const top = target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - (page.querySelector('.docs-header')?.offsetHeight || 0) - 20
     page.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
     window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${id}`)
     setActiveSection(id)
@@ -108,7 +111,7 @@ export default function DocsPage() {
     const frame = window.requestAnimationFrame(() => {
       if (initialHash && toc.some(([id]) => id === initialHash)) {
         const target = document.getElementById(initialHash)
-        const top = target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - 20
+        const top = target.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - (page.querySelector('.docs-header')?.offsetHeight || 0) - 20
         page.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
         setActiveSection(initialHash)
       } else updateActiveSection()
@@ -142,7 +145,7 @@ export default function DocsPage() {
             <StatusChip>{appVersion} 当前基线</StatusChip>
             <h1>游戏大厅产品与技术说明</h1>
             <p>面向产品、前端、后端、测试和运营的同一份说明。每个功能先用自然语言讲清楚它是怎么运转的，再给出字段、状态和接口约定，前后端可以据此各自实现而不必互相猜。当前版本为 lobby-admin-lite-v1：前台五页（大厅、游戏、活动、商城、我的）加运营后台；赛事、直播、家族与派对不在本版本范围。</p>
-            <div className="docs-hero-meta"><span><Icon name="calendar" />更新于 2026-09-04</span><span><Icon name="users" />适用角色：产品 / 前端 / 后端 / 测试 / 运营</span><span><Icon name="shield" />当前形态：静态前端原型 + 后台原型</span></div>
+            <div className="docs-hero-meta"><span><Icon name="calendar" />更新于 2026-09-09</span><span><Icon name="users" />适用角色：UI / 产品 / 前端 / 后端 / 测试 / 运营</span><span><Icon name="shield" />当前形态：静态前端原型 + 后台原型</span></div>
           </section>
 
           <section className="docs-section">
@@ -154,6 +157,11 @@ export default function DocsPage() {
               <p>如果你是后端，重点看职责划分里服务端那一列、接口契约一节，以及每个功能中标注了「由服务端决定」的规则。凡是涉及钱、概率、资格和结算的判断，一律由服务端做，前端不参与计算，也不允许前端把「请求已发出」显示成「已经成功」。</p>
               <p>原型里所有数据都保存在浏览器内存或本地存储中，刷新即重置。这是刻意的：它用来对齐产品形态和交互，不承担任何真实资产。凡是文档里写着「服务端」的地方，都是需要真正实现的部分。</p>
             </Logic>
+          </section>
+
+          <section className="docs-section">
+            <SectionTitle id="ui-spec" eyebrow="UI · MODULE SPECIFICATIONS" title="游戏大厅 UI规范与功能说明" description="面向玩家界面，按五个业务模块交接设计与功能规则。" />
+            <Suspense fallback={<p>正在加载规范文件…</p>}><UiSpecifications /></Suspense>
           </section>
 
           <section className="docs-section">
@@ -484,10 +492,10 @@ export default function DocsPage() {
           <section className="docs-section">
             <SectionTitle id="admin-core" eyebrow="12 · ADMIN CORE" title="后台核心机制" description="草稿与生效版本、发布审核、待办工作台、操作留痕。" />
             <Logic title="草稿与生效版本 · 功能逻辑">
-              <p>后台里所有配置都存在两份：一份是运营正在编辑的草稿，一份是线上正在执行的生效版本。运营在页面上改数字，改的永远是草稿，线上完全不受影响。每个配置页顶部有一个明确的提示条，告诉你现在处于哪种情况：和生效版本一致、草稿有未保存的改动、还是已经提交等待审核。</p>
+              <p>后台将生效版本、已保存草稿和弹窗中尚未保存的编辑分开。页面和详情始终只读；点击明确的编辑按钮，才在带分类子标签的弹窗中修改。切换标签保留输入，取消不写入草稿；存在未保存修改时，关闭会要求确认放弃。页面可切换生效预览与明确标记的草稿预览，保存不等于上线。</p>
               <p>改完点保存，草稿会被打包成一个快照挂到一条发布审核任务上。审核人打开这条任务，能看到生效版本和这份快照的逐字段对比：哪一格的概率从 22% 改成了 25%，哪一天的签到奖励从 800 改成了 150，改动的行会高亮出来。审核人据此决定通过、灰度还是驳回。</p>
               <p>三种决定的后果不同。通过意味着用快照覆盖生效版本，同时把旧的生效版本压进回滚栈；驳回意味着丢弃来源模块的草稿，让它退回和生效版本一致；回滚意味着从回滚栈里取出上一个生效版本恢复回去。还有一个细节：通过的那一刻会再校验一次快照，如果这期间数据变得不合法，会拒绝发布并留下失败记录，而不是把坏配置推上线。</p>
-              <p>有一个例外需要说清楚：游戏的运行状态和维护公告不走这套流程，保存后立刻生效。因为线上游戏出问题时，运营需要能立刻把它切成维护中，等不了审核。这个例外在界面上有明确标注。</p>
+              <p>有一个例外需要说清楚：游戏的运行状态和维护公告不走这套流程，保存后立刻生效。因为线上游戏出问题时，运营需要能立刻把它切成维护中，等不了审核。这两项通过独立运行操作弹窗立即生效，不与普通配置保存混用。</p>
             </Logic>
             <div className="docs-flow">
               <div><b>1</b><strong>编辑草稿</strong><span>只改草稿，线上不受影响</span></div><i>→</i>
