@@ -41,3 +41,13 @@ translation_transfer（gpt-5.6-terra/high）独占 translationTransfer.js 与测
 ## 仓库同步与部署（用户后续授权）
 
 2026-09-09 用户明确要求「更新仓库、部署」。本次沿用 origin/lobby-admin-lite-v1，推送本批代码与文档；向已有 joyloop Pages 项目的同名分支预览部署，保留 main 生产环境。部署后核对远端提交、Pages记录、实际资源哈希/MIME/no-store/404和浏览器版本。状态：进行中。
+
+
+### 本次同步结果
+
+- 代码提交 `a1837123ef8ed3775b7818ca60d7c62ad43626cf` 已推送至 `origin/lobby-admin-lite-v1`，`git ls-remote` 回读一致。
+- 复用已通过117项测试的构建，再次check:dist和ZIP逐文件校验通过；manifest语言列表改为从24种语言注册表生成，打包脚本lint通过。
+- 部署包 `artifacts/joyloop-cf-pages-2026-09-09-a183712.zip`，19文件，SHA-256 `b98e91cb72ab9a03de79afb8659407dc8ea6b131e9a229d6bd5b059c924ec3c8`，入口 `start-v0.3.6-e30875f30b9c8712.html`。
+- manifest如实为dirty，仅因原有未跟踪HANDOFF文件；该文件未进入构建/上传目录。
+- 部署尚未执行：自动审批拒绝上传到Cloudflare Pages joyloop项目的lobby-admin-lite-v1分支，理由为本轮用户授权未明确指定此具体外部目的地。需要用户对该目标的明确授权后再继续；未尝试其他上传路径。
+- 部署前最新回读记录为 `e5a07981-9423-44cf-b016-8f2c9c57e569` / `2c63152` / Preview / lobby-admin-lite-v1。本次未改变线上部署。
