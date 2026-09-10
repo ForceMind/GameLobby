@@ -2,7 +2,7 @@
 
 顶部 Joyloop 品牌下方显示当前构建版本号 `v0.3.7`，入口页、业务页、文档和后台保持一致。
 
-2026-09-10 的 **v0.3.7** 已部署至 [Pages 分支预览](https://lobby-admin-lite-v1.joyloop.pages.dev/admin.html)，部署源码为 `e2a8119`；本轮后台修复和文档已更新。唯一地址、校验包与线上验证见 [部署记录](DEPLOY-CF-PAGES.md)。
+2026-09-10 的 **v0.3.7** 已部署至 [Pages 分支预览](https://lobby-admin-lite-v1.joyloop.pages.dev/admin.html)，最新部署源码为 `3a0386e`；后台修复及文档正文清理已更新。唯一地址、校验包与线上验证见 [部署记录](DEPLOY-CF-PAGES.md)。
 
 这是 Joyloop 游戏大厅的 React + Vite 静态前端，面向内置在 App 中的 H5，也可独立作为 Cloudflare Pages 静态站点预览。当前代码不连接真实数据库、鉴权、游戏引擎或支付服务；宿主接入方式见 [HOST-INTEGRATION.md](HOST-INTEGRATION.md)。
 

@@ -2,7 +2,17 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。
 
-## 最近部署：2026-09-10 · v0.3.7
+## 最近部署：2026-09-10 · v0.3.7 文档清理
+
+- 源码：`3a0386ee2cd8d366c9125ab0e4088919ffe7915d`，已推送 `origin/lobby-admin-lite-v1`。
+- 唯一部署：https://640aaaaf.joyloop.pages.dev
+- 文档：https://lobby-admin-lite-v1.joyloop.pages.dev/docs.html
+- 新入口：`start-v0.3.7-bc18379bd6602f37.html`。仅修改产品正文及玩家 UI 文档，不改业务逻辑或 main 生产。
+- 检查：定向 ESLint、构建、check:dist、ZIP 校验通过；线上文档页及两项正文 JS 均返回 200，哈希和 no-store 一致，已删除的措辞未出现在正文资源中。未重跑全量业务测试。
+- 包：`artifacts/joyloop-cf-pages-2026-09-10-3a0386e.zip`；证据：`artifacts/pages-v0.3.7-doc-cleanup-verification.json`。
+- 回退参考：https://0eebe6e8.joyloop.pages.dev 。后续 Markdown 发布记录不改变本次构建。
+
+## 历史部署：2026-09-10 · v0.3.7 后台修复
 
 - 部署源码：`e2a8119c5998e396f64c2422078f0c7938100289`，已推送至 `origin/lobby-admin-lite-v1` 并回读一致。
 - 项目/分支：`joyloop / lobby-admin-lite-v1`，Preview 环境；未修改 main 生产部署。
