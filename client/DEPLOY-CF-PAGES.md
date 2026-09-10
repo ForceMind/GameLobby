@@ -2,7 +2,22 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。
 
-## 最近部署：2026-09-09 · v0.3.6
+## 最近部署：2026-09-10 · v0.3.7
+
+- 部署源码：`e2a8119c5998e396f64c2422078f0c7938100289`，已推送至 `origin/lobby-admin-lite-v1` 并回读一致。
+- 项目/分支：`joyloop / lobby-admin-lite-v1`，Preview 环境；未修改 main 生产部署。
+- 唯一部署：https://0eebe6e8.joyloop.pages.dev
+- 后台：https://lobby-admin-lite-v1.joyloop.pages.dev/admin.html
+- 文档：https://lobby-admin-lite-v1.joyloop.pages.dev/docs.html
+- 新入口：https://lobby-admin-lite-v1.joyloop.pages.dev/start-v0.3.7-22c665cec25a1bff.html
+- ZIP：`artifacts/joyloop-cf-pages-2026-09-10-e2a8119.zip`；19 文件，SHA-256 `70ce9ca05239c2ec4816136349af05ff21a5012d48c0a63cd932b73b805c63df`。
+- 复用已通过验证的构建，仅重验 check:dist 和 ZIP 逐文件一致性，未重复全量测试。部署工具 Wrangler 4.130.0。
+- 线上 HTTP 验证：18 个静态文件哈希一致、no-store 和 JS/CSS MIME 正确；分支后台/文档另行回读一致，缺失脚本返回 404。证据：`artifacts/pages-v0.3.7-online-verification.json`。
+- 本轮未重复线上业务操作。后台依然是会话原型；部署静态站点不表示真实权限、支付、配置服务或游戏生产部署接入。
+- 回退参考：https://1907d137.joyloop.pages.dev （v0.3.6）。
+- manifest 的 dirty 如实保留，原未跟踪交接文件不进入提交或部署产物。后续提交仅补充 Markdown 发布记录和忽略本机 Wrangler 缓存，不改变部署源码标签或静态构建。
+
+## 历史部署：2026-09-09 · v0.3.6
 
 - 部署源码：`a1837123ef8ed3775b7818ca60d7c62ad43626cf`，已推送至 `origin/lobby-admin-lite-v1` 并回读一致。
 - 项目/分支：`joyloop / lobby-admin-lite-v1`，Preview 环境；未修改 main 生产环境。用户已明确授权该目的地。

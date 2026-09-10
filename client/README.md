@@ -1,8 +1,8 @@
 # Joyloop 内嵌 H5 Lite v1
 
-顶部 Joyloop 品牌下方显示当前本地构建版本号 `v0.3.7`，入口页、业务页、文档和后台保持一致。
+顶部 Joyloop 品牌下方显示当前构建版本号 `v0.3.7`，入口页、业务页、文档和后台保持一致。
 
-2026-09-09 的 **v0.3.6** 已部署至 [Pages 分支预览](https://lobby-admin-lite-v1.joyloop.pages.dev/admin.html)，部署源码为 `a183712`；多语言流程修正已上线。唯一地址、校验包与线上验证见 [部署记录](DEPLOY-CF-PAGES.md)。
+2026-09-10 的 **v0.3.7** 已部署至 [Pages 分支预览](https://lobby-admin-lite-v1.joyloop.pages.dev/admin.html)，部署源码为 `e2a8119`；本轮后台修复和文档已更新。唯一地址、校验包与线上验证见 [部署记录](DEPLOY-CF-PAGES.md)。
 
 这是 Joyloop 游戏大厅的 React + Vite 静态前端，面向内置在 App 中的 H5，也可独立作为 Cloudflare Pages 静态站点预览。当前代码不连接真实数据库、鉴权、游戏引擎或支付服务；宿主接入方式见 [HOST-INTEGRATION.md](HOST-INTEGRATION.md)。
 
@@ -103,6 +103,6 @@ Git 集成设置：Root directory=`client`，Build command=`npm run build`，Bui
 | 静态规则与单元测试 | `src/demoModel.js`、`src/*.test.js`             |
 | 构建、检查与打包   | `scripts/`                                      |
 
-## 多语言文案管理（v0.3.7，本地修订，未部署）
+## 多语言文案管理（v0.3.7，Pages 分支预览）
 
 进入后台「多语言内容」，选择语言与范围后导出 CSV；译者只改「操作」与「译文」，回传后逐条预览并确认写入会话草稿。原文变化会触发待复核。完整步骤、文件字段及冲突处理见 [翻译工作流程](../docs/translation-workflow.md)。当前保存、审核和发布均为后台会话内模拟：刷新重置，不会实时同步玩家端，也不代表真实部署。
