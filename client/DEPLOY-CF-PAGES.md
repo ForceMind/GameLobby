@@ -2,7 +2,20 @@
 
 本项目是静态 React/Vite 站点，不需要 Pages Functions 才能展示页面。
 
-## 最近部署：2026-09-10 · v0.3.7 文档清理
+## 最近部署：2026-09-10 · v0.3.8 分类与游戏说明
+
+- 源码：`125de8cd99e4b444cefbff50df62b097d5fbfd04`，已推送 `origin/lobby-admin-lite-v1`；main 生产未改动。
+- 唯一部署：https://cd3493ac.joyloop.pages.dev
+- 后台：https://lobby-admin-lite-v1.joyloop.pages.dev/admin.html
+- 文档：https://lobby-admin-lite-v1.joyloop.pages.dev/docs.html
+- 新入口：`start-v0.3.8-d9980a05649b6485.html`。
+- 新增游戏分类管理、独立游戏类型、按游戏维护多语言简介/玩法/规则；仅在明确开启的同浏览器目录预览中展示已审核内容，不涉及真实配置服务或资金操作。
+- 本地完整检查130项通过；补修后44项定向回归和持久化字段边界9项通过，最终lint/build/check:dist通过。行为与审查见 `QA.md`。
+- 线上18个静态文件SHA-256匹配，no-store与JS/CSS MIME正确；分支后台、文档入口另行回读一致，缺失脚本404。明细：`artifacts/pages-v0.3.8-online-verification.json`。
+- ZIP：`artifacts/joyloop-cf-pages-2026-09-10-125de8c.zip`；19文件，SHA-256 `cc6ee90077ae5396339a5b8b1a70f4468a832d1ac7cea0e968ef710216edc1f4`。浏览器测试分类和说明没有写入静态种子或部署包。
+- 回退参考：https://640aaaaf.joyloop.pages.dev 。后续提交只补充Markdown部署记录，不改变本次部署源码标签。
+
+## 历史部署：2026-09-10 · v0.3.7 文档清理
 
 - 源码：`3a0386ee2cd8d366c9125ab0e4088919ffe7915d`，已推送 `origin/lobby-admin-lite-v1`。
 - 唯一部署：https://640aaaaf.joyloop.pages.dev
