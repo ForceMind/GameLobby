@@ -431,5 +431,10 @@
   "wins.time": "{time}",
   "wins.title": "Today's winners",
   "wins.unranked": "No ranking yet today",
-  "wins.updated": "Updated {time}"
+  "wins.updated": "Updated {time}",
+  "games.instructionsTitle": "How to play",
+  "games.rulesTitle": "Game rules",
+  "games.catalogPreview": "Catalog preview · this browser only",
+  "games.exitCatalogPreview": "Exit preview",
+  "games.filterCategory": "Only {category}"
 }

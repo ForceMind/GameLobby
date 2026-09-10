@@ -1,3 +1,4 @@
+import { categoryText, validateCategories, validateGameCategories, validGameType, isCatalogModule } from '../catalogConfig.js'
 // Pure rules for the admin console prototype: validation, draft/live snapshots and release decisions.
 // No React and no data imports, so `node --test` can exercise it directly.
 import { needsTranslationReview, translationReviewErrors } from './translationReview.js'
@@ -160,6 +161,7 @@ export function diffSummary(before, after, fields) {
 // ---- draft/live snapshots -------------------------------------------------
 // moduleId: wheel | checkin | missions | coinPacks | monthlyPass | chestOffer | games:test | games:production
 export const moduleKeys = {
+  categories: ['categories'],
   translations: ['translations', 'translationReviews'],
   wheel: ['wheelPrizes', 'wheelFreeSpins', 'wheelVersion'],
   checkin: ['checkinDays'],
@@ -180,6 +182,7 @@ export const activityTypeMeta = {
 }
 
 export const moduleLabels = {
+  categories: '游戏分类',
   translations: '多语言内容',
   wheel: '幸运转盘', checkin: '签到奖励梯度', missions: '每日任务', coinPacks: '金币礼包', monthlyPass: '月度特权卡', chestOffer: '明日宝箱报价',
   'games:test': '游戏目录 · 测试环境', 'games:production': '游戏目录 · 生产环境',
@@ -282,6 +285,7 @@ export function validateGameGates(game) {
 
 export function validateGameConfig(game) {
   const errors = []
+  if (game.gameType !== undefined && !validGameType(game.gameType)) errors.push('游戏类型无效')
   if (!String(game?.name || '').trim()) errors.push('游戏名称不能为空')
   if (!Array.isArray(game?.tags) || game.tags.length === 0) errors.push('至少选择一个分类标签')
   const heat = Number(game?.heat)
@@ -290,7 +294,7 @@ export function validateGameConfig(game) {
   if (!(Number.isFinite(sortWeight) && sortWeight > 0)) errors.push('排序权重必须大于 0')
   if (game?.status === '维护中' && !String(game.maintenanceNote || '').trim()) errors.push('维护中状态必须填写维护公告文案')
   if (game?.status === '即将上线' && !String(game.launchAt || '').trim()) errors.push('即将上线状态必须填写预计上线时间')
-  if (game?.tags?.includes('slots') && game.winRangeMin !== '' && game.winRangeMax !== '') {
+  if (game?.winRangeMin != null && game.winRangeMax != null && game.winRangeMin !== '' && game.winRangeMax !== '') {
     const winRangeMin = Number(game.winRangeMin)
     const winRangeMax = Number(game.winRangeMax)
     if (!(Number.isFinite(winRangeMin) && winRangeMin >= 0) || !(Number.isFinite(winRangeMax) && winRangeMax >= 0)) errors.push('中奖金额范围不能为负数')
@@ -301,6 +305,7 @@ export function validateGameConfig(game) {
 }
 
 export function validateSnapshot(moduleId, slice) {
+  if (moduleId === 'categories') return validateCategories(slice.categories)
   if (moduleId === 'translations') return [...validateTranslations(slice.translations), ...translationReviewErrors(slice.translations, slice.translationReviews)]
   if (moduleId === 'wheel') return validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins })
   if (moduleId === 'checkin') return validateCheckin(slice.checkinDays)
@@ -355,6 +360,9 @@ export function releaseDecisionErrors(store, entry, decision) {
   const versionTask = isVersionRelease(current)
   const key = versionTask ? versionReleaseKey(store, current) : current.sourceModule
   const errors = []
+  const catalogTask = hasSnapshot && store.live.categories && isCatalogModule(current.sourceModule)
+  if (catalogTask && ['gray', 'pause', 'resume'].includes(decision)) errors.push('目录预览不支持灰度或暂停，请使用发布或回滚')
+  if (hasSnapshot && Object.hasOwn(current, 'baseReleaseId') && ['approve', 'gray'].includes(decision) && current.baseReleaseId !== (store.activeReleaseIds?.[current.sourceModule] ?? null)) errors.push('审核基线已变化，请保留当前草稿并重新提交审核')
   if (versionTask && !key) errors.push('来源版本记录不存在或缺少稳定游戏标识，不能执行审核')
   if (versionTask && ['approve', 'gray'].includes(decision)) {
     const activeReleaseId = store.activeReleaseIds?.[key] ?? null
@@ -364,6 +372,12 @@ export function releaseDecisionErrors(store, entry, decision) {
     }
   }
   if (['approve', 'gray'].includes(decision) && hasSnapshot) errors.push(...validateSnapshot(current.sourceModule, current.snapshot))
+  if (['approve', 'gray'].includes(decision) && current.sourceModule === 'categories') errors.push(...validateCategories(current.snapshot?.categories, [...Object.values(store.games || {}).flat(), ...Object.values(store.live.games || {}).flat()]))
+  if (['approve', 'gray', 'rollback'].includes(decision) && String(current.sourceModule).startsWith('games:') && store.live.categories) {
+    const candidate = decision === 'rollback' ? store.liveHistory[current.sourceModule]?.[0] : current.snapshot
+    if (candidate?.games) errors.push(...validateGameCategories(candidate.games, store.live.categories))
+  }
+  if (decision === 'rollback' && current.sourceModule === 'categories' && store.liveHistory.categories?.[0]) errors.push(...validateCategories(store.liveHistory.categories[0].categories, [...Object.values(store.games || {}).flat(), ...Object.values(store.live.games || {}).flat()]))
   if (['rollback', 'pause', 'resume'].includes(decision) && (hasSnapshot || versionTask)) {
     if (!key || store.activeReleaseIds?.[key] !== current.id) errors.push('仅当前生效发布任务可执行此操作；该任务已被后续版本替代或尚未生效')
   }
@@ -394,7 +408,7 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
   // A review may arrive after an editor has continued working on a newer draft.
   // The historical snapshot still becomes the live baseline, while that newer
   // draft and its independent review metadata must remain available for follow-up.
-  const hasNewerTranslationDraft = isTranslations && JSON.stringify(getSlice(store, moduleId)) !== JSON.stringify(entry.snapshot)
+  const hasNewerConfigDraft = hasSnapshot && (isTranslations || (isCatalogModule(moduleId) && draftDiffers(store, moduleId))) && JSON.stringify(getSlice(store, moduleId)) !== JSON.stringify(entry.snapshot)
   let next = store
   if ((decision === 'approve' || decision === 'gray') && hasSnapshot) {
     const errors = validateSnapshot(moduleId, entry.snapshot)
@@ -403,17 +417,17 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
       const previous = getSlice(store.live, moduleId)
       const applied = String(moduleId).startsWith('games:') ? mergeGameSnapshotWithLive(previous, entry.snapshot) : entry.snapshot
       next = { ...next, live: setSlice(store.live, moduleId, applied), liveHistory: { ...store.liveHistory, [moduleId]: [previous, ...(store.liveHistory[moduleId] || [])].slice(0, 10) } }
-      if (!hasNewerTranslationDraft) next = setSlice(next, moduleId, applied)
+      if (!hasNewerConfigDraft) next = setSlice(next, moduleId, applied)
     }
   }
-  if (decision === 'reject' && hasSnapshot && !hasNewerTranslationDraft) next = resetDraftToLive(next, moduleId)
+  if (decision === 'reject' && hasSnapshot && !hasNewerConfigDraft) next = resetDraftToLive(next, moduleId)
   if (decision === 'rollback' && hasSnapshot) {
     const history = store.liveHistory[moduleId] || []
     if (!history.length) return { ...store, audit: [audit({ after: entry.status, result: '失败 · 没有可回滚的历史版本' }), ...store.audit] }
     const [previous, ...rest] = history
     const restored = String(moduleId).startsWith('games:') ? mergeGameSnapshotWithLive(getSlice(next.live, moduleId), previous) : previous
     next = { ...next, live: setSlice(next.live, moduleId, restored), liveHistory: { ...next.liveHistory, [moduleId]: rest } }
-    const hasNewerDraftThanLive = isTranslations && JSON.stringify(getSlice(store, moduleId)) !== JSON.stringify(getSlice(store.live, moduleId))
+    const hasNewerDraftThanLive = (isTranslations || isCatalogModule(moduleId)) && JSON.stringify(getSlice(store, moduleId)) !== JSON.stringify(getSlice(store.live, moduleId))
     if (!hasNewerDraftThanLive) next = setSlice(next, moduleId, restored)
   }
   const versionTask = isVersionRelease(entry)
@@ -446,7 +460,7 @@ const gameDiffFields = [
   ['wealthLevel', '财富等级门槛'], ['charmLevel', '魅力等级门槛'], ['minBalance', '账户余额门槛'], ['playLevel', '可玩等级门槛'],
   ['genders', '允许性别', (value) => Array.isArray(value) ? (value.map((gender) => ({ male: '男', female: '女' })[gender] || gender).join(' / ') || '无') : '不限'],
   ['familyOnly', '家族专属', yesNo], ['promoTag', '运营标签', (value) => ({ none: '无标签', club: 'Club', hot: 'Hot', new: 'New' })[value] || '无标签'],
-  ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRangeMin', '中奖金额下限'], ['winRangeMax', '中奖金额上限'], ['maxMultiplier', '最大赔率'],
+  ['gameType', '游戏类型'], ['winRate', '中奖率'], ['rtp', 'RTP'], ['winRangeMin', '中奖金额下限'], ['winRangeMax', '中奖金额上限'], ['maxMultiplier', '最大赔率'],
   ['minBet', '最小投注'], ['paylines', '赔付线数'], ['volatility', '波动性'],
 ]
 
@@ -474,6 +488,7 @@ function snapshotRows(moduleId, slice) {
     return Object.entries(slice.translations).flatMap(([key, byLocale]) =>
       Object.entries(byLocale).map(([locale, text]) => [`${key}|${locale}`, `${key} · ${locale}`, cell(text) + (slice.translationReviews && locale !== 'zh-Hans' && String(text ?? '').trim() ? needsTranslationReview(byLocale, slice.translationReviews[key], locale) ? ' · 待复核' : ' · 已复核' : '')]))
   }
+  if (moduleId === 'categories') return slice.categories.flatMap((category) => [[`${category.id}.enabled`, `${category.id} · 启用`, yesNo(category.enabled)], [`${category.id}.sortWeight`, `${category.id} · 排序`, cell(category.sortWeight)], ...Object.keys(category.labels || {}).map((locale) => [`${category.id}.labels.${locale}`, `${category.id} · ${locale}`, categoryText({ ...category, labelKey: undefined, labels: { [locale]: category.labels[locale] } }, locale)])])
   if (String(moduleId).startsWith('activityRegion:')) return [['region', '投放地区', regionCell(slice.region)]]
   if (String(moduleId).startsWith('games:')) {
     const rows = [['order', '目录排序', slice.games.map((g) => g.name).join(' → ')]]

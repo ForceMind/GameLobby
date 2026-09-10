@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Icon } from './icons.jsx'
-import { gameCategories, games, recentGames } from './data.js'
+import { recentGames } from './data.js'
 import useGameDetails from './useGameDetails.jsx'
 import { GameArtwork, SectionHeader } from './ui.jsx'
 import { filterGames, gameGate, openInCountry } from './demoModel.js'
@@ -8,12 +8,30 @@ import { gameGateText } from './gameGateText.js'
 import { useLocale } from './useLocale.js'
 import { useH5 } from './h5/useH5.js'
 import { useCategoryLabel } from './useCategoryLabel.js'
+import { categoryText } from './catalogConfig.js'
+import { usePublishedCatalog } from './usePublishedCatalog.js'
 
-function GameCard({ game, openModal }) {
+const SYSTEM_CATEGORY_LABELS = {
+  all: 'games.categoryAll',
+  popular: 'lobby.filterPopular',
+}
+
+function readCategoryFromUrl(fallback) {
+  if (typeof window === 'undefined') return fallback
+  return new URLSearchParams(window.location.search).get('category') || fallback
+}
+
+function replaceCategoryInUrl(category) {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  url.searchParams.set('category', category)
+  window.history.replaceState(null, '', url)
+}
+
+function GameCard({ game, openModal, categoryLabel }) {
   const { t, format } = useLocale()
   const player = useH5()
   const gate = gameGate(game, player)
-  const categoryLabel = useCategoryLabel()
   const showGameDetails = useGameDetails(openModal)
   const badgeLabels = {
     HOT: 'games.badgeHot',
@@ -33,7 +51,7 @@ function GameCard({ game, openModal }) {
         <GameArtwork game={game} />
         <span className="badge-row">
           {game.promoTag && game.promoTag !== 'none' && <span className="pill game-promo-tag">{t(`games.promoTag.${game.promoTag}`)}</span>}
-          {game.badges.map((badge) => (
+          {(game.badges ?? []).map((badge) => (
             <span className="pill" key={badge}>
               {badge === 'HEAT'
                 ? t('games.popularityBadge', { value: game.heat })
@@ -74,9 +92,23 @@ export function RecentGames({ openModal, recentVisibility = true }) {
   const showGameDetails = useGameDetails(openModal)
   const player = useH5()
   const { country } = player
+  const { games = [] } = usePublishedCatalog()
+  const publishedById = useMemo(
+    () => new Map(games.map((game) => [game.id, game])),
+    [games],
+  )
+  const currentRecentGames = useMemo(
+    () => recentGames
+      .map((recentGame) => {
+        const publishedGame = publishedById.get(recentGame.id)
+        return publishedGame ? { ...recentGame, ...publishedGame, recent: recentGame.recent } : null
+      })
+      .filter(Boolean),
+    [publishedById],
+  )
   // Same rule as the main catalogue: a game outside the player's region does not
   // appear here either, recently played or not.
-  const visibleRecent = recentGames.filter((game) => openInCountry(game, country))
+  const visibleRecent = currentRecentGames.filter((game) => openInCountry(game, country))
   const onKeyDown = (event) => {
     if (
       event.target !== event.currentTarget ||
@@ -116,21 +148,21 @@ export function RecentGames({ openModal, recentVisibility = true }) {
         {visibleRecent.map((game) => {
           const gate = gameGate(game, player)
           return (
-          <button
-            className={`recent-card card${gate.ok ? '' : ' is-gate-locked'}`}
-            type="button"
-            key={game.id}
-            onClick={() => showGameDetails(game)}
-          >
-            <GameArtwork game={game} compact />
-            <span className="recent-copy">
-              <strong>{game.name}</strong>
-              <small>{categoryLabel(game)}</small>
-              <span>{t(game.recent)}</span>
-              {!gate.ok && <small className="game-gate-reason">{gameGateText(gate.reasons[0], t, format)}</small>}
-            </span>
-            <Icon name={gate.ok ? 'chevronRight' : 'lock'} />
-          </button>
+            <button
+              className={`recent-card card${gate.ok ? '' : ' is-gate-locked'}`}
+              type="button"
+              key={game.id}
+              onClick={() => showGameDetails(game)}
+            >
+              <GameArtwork game={game} compact />
+              <span className="recent-copy">
+                <strong>{game.name}</strong>
+                <small>{categoryLabel(game)}</small>
+                <span>{t(game.recent)}</span>
+                {!gate.ok && <small className="game-gate-reason">{gameGateText(gate.reasons[0], t, format)}</small>}
+              </span>
+              <Icon name={gate.ok ? 'chevronRight' : 'lock'} />
+            </button>
           )
         })}
       </div>
@@ -140,41 +172,70 @@ export function RecentGames({ openModal, recentVisibility = true }) {
 
 export function GameCatalog({ variant = 'library', openModal }) {
   const { country } = useH5()
-  const { t, href } = useLocale()
+  const { t, href, locale } = useLocale()
+  const categoryLabel = useCategoryLabel()
+  const { games = [], categories = [], previewEnabled = false } = usePublishedCatalog()
   const popular = variant === 'popular'
-  const [category, updateCategory] = useState(() => {
-    const requested = new URLSearchParams(window.location.search).get(
-      'category',
-    )
-    const allowed = popular
-      ? ['popular', 'slots', 'casual', 'realtime']
-      : ['all', 'slots', 'casual', 'realtime']
-    return allowed.includes(requested) ? requested : popular ? 'popular' : 'all'
+  const fallbackCategory = popular ? 'popular' : 'all'
+  const publishedCategories = useMemo(
+    () => categories.filter((category) => (
+      category?.enabled !== false
+      && category.id
+      && category.id !== 'all'
+      && category.id !== 'popular'
+    )),
+    [categories],
+  )
+  const categoryItems = useMemo(
+    () => [
+      { id: fallbackCategory, system: true },
+      ...publishedCategories,
+    ],
+    [fallbackCategory, publishedCategories],
+  )
+  const allowedCategoryIds = useMemo(
+    () => new Set(categoryItems.map((item) => item.id)),
+    [categoryItems],
+  )
+  const categoryIdsKey = useMemo(
+    () => categoryItems.map((item) => item.id).join('|'),
+    [categoryItems],
+  )
+  const [selectedCategory, updateSelectedCategory] = useState(() => {
+    const requested = readCategoryFromUrl(fallbackCategory)
+    return allowedCategoryIds.has(requested) ? requested : fallbackCategory
   })
-  const setCategory = (value) => {
-    updateCategory(value)
-    const url = new URL(window.location.href)
-    url.searchParams.set('category', value)
-    window.history.replaceState(null, '', url)
-  }
+  const category = allowedCategoryIds.has(selectedCategory)
+    ? selectedCategory
+    : fallbackCategory
   const [advanced, setAdvanced] = useState(false)
   const [onlyReady, setOnlyReady] = useState(false)
   const [onlyRealtime, setOnlyRealtime] = useState(false)
-  const categoryItems = popular
-    ? [
-        { id: 'popular', label: 'lobby.filterPopular' },
-        ...gameCategories.filter((item) => item.id !== 'all'),
-      ]
-    : gameCategories
+  const realtimeCategory = publishedCategories.find((item) => item.id === 'realtime')
+  const realtimeOnly = onlyRealtime && Boolean(realtimeCategory)
+
+  useEffect(() => {
+    const requested = readCategoryFromUrl(fallbackCategory)
+    if (requested !== category) replaceCategoryInUrl(category)
+  }, [category, categoryIdsKey, fallbackCategory])
+
+  const setCategory = (value) => {
+    const next = allowedCategoryIds.has(value) ? value : fallbackCategory
+    updateSelectedCategory(next)
+    replaceCategoryInUrl(next)
+  }
   const visibleGames = useMemo(() => {
-    const filtered = filterGames(games, category, onlyReady, onlyRealtime, country)
+    const filtered = filterGames(games, category, onlyReady, realtimeOnly, country)
     return popular && category === 'popular' ? filtered.slice(0, 4) : filtered
-  }, [category, onlyReady, onlyRealtime, popular, country])
+  }, [games, category, onlyReady, realtimeOnly, popular, country])
   const clearFilters = () => {
-    setCategory(popular ? 'popular' : 'all')
+    setCategory(fallbackCategory)
     setOnlyReady(false)
     setOnlyRealtime(false)
   }
+  const categoryName = (item) => item.system
+    ? t(SYSTEM_CATEGORY_LABELS[item.id])
+    : categoryText(item, locale, t)
 
   return (
     <section
@@ -209,6 +270,21 @@ export function GameCatalog({ variant = 'library', openModal }) {
           )
         }
       />
+      {previewEnabled && (
+        <p className="catalog-count" role="status">
+          <span className="pill">{t('games.catalogPreview')}</span>{' '}
+          <a
+            className="text-action"
+            href={href('games.html?catalogPreview=0')}
+            onClick={(event) => {
+              event.preventDefault()
+              window.location.assign(event.currentTarget.href)
+            }}
+          >
+            {t('games.exitCatalogPreview')}
+          </a>
+        </p>
+      )}
       <div className="catalog-filters">
         <div className="filter-row" role="group" aria-label={t('games.categoriesLabel')}>
           {categoryItems.map((item) => (
@@ -219,7 +295,7 @@ export function GameCatalog({ variant = 'library', openModal }) {
               aria-pressed={category === item.id}
               onClick={() => setCategory(item.id)}
             >
-              {t(item.label)}
+              {categoryName(item)}
             </button>
           ))}
         </div>
@@ -239,14 +315,14 @@ export function GameCatalog({ variant = 'library', openModal }) {
               />
               {t('games.filterAvailable')}
             </label>
-            <label>
+            {realtimeCategory && <label>
               <input
                 type="checkbox"
-                checked={onlyRealtime}
+                checked={realtimeOnly}
                 onChange={(event) => setOnlyRealtime(event.target.checked)}
               />
-              {t('games.filterLive')}
-            </label>
+              {t('games.filterCategory', { category: categoryText(realtimeCategory, locale, t) })}
+            </label>}
             <button
               className="text-action"
               type="button"
@@ -264,13 +340,18 @@ export function GameCatalog({ variant = 'library', openModal }) {
             total: games.length,
           })}
           {onlyReady && <> · {t('games.filterAvailable')}</>}
-          {onlyRealtime && <> · {t('games.filterLive')}</>}
+          {realtimeOnly && <> · {t('games.filterCategory', { category: categoryText(realtimeCategory, locale, t) })}</>}
         </p>
       )}
       {visibleGames.length ? (
         <div className="catalog-results game-grid">
           {visibleGames.map((game) => (
-            <GameCard game={game} key={game.id} openModal={openModal} />
+            <GameCard
+              game={game}
+              key={game.id}
+              openModal={openModal}
+              categoryLabel={categoryLabel}
+            />
           ))}
         </div>
       ) : (

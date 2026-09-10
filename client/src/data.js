@@ -1,3 +1,5 @@
+import { DEFAULT_CATEGORIES } from './catalogDefaults.js'
+
 // Static prototype content. Keep this module free of UI/runtime dependencies so it
 // can be reused by every route in the Pages build.
 
@@ -50,12 +52,7 @@ export const balances = {
   gemsLabel: '84',
 }
 
-export const gameCategories = [
-  { id: 'all', label: 'games.categoryAll' },
-  { id: 'slots', label: 'games.tagSlots' },
-  { id: 'casual', label: 'games.tagCasual' },
-  { id: 'realtime', label: 'games.tagLive' },
-]
+export const gameCategories = [{ id: 'all', label: 'games.categoryAll' }, ...DEFAULT_CATEGORIES.map((category) => ({ ...category, label: category.labelKey }))]
 
 const defaultGameEntryGate = {
   wealthLevel: 0,
@@ -71,6 +68,7 @@ export const games = [
   {
     ...defaultGameEntryGate,
     id: 'golden-pharaoh',
+    gameType: 'slots',
     name: 'Golden Pharaoh',
     category: 'slots realtime',
     tags: ['slots', 'realtime'],
@@ -87,6 +85,7 @@ export const games = [
   {
     ...defaultGameEntryGate,
     id: 'ocean-777',
+    gameType: 'slots',
     // 白名单：仅这些国家/地区的玩家能看到并进入（与后台「可用地区」对应）
     region: { mode: 'custom', countries: ['CN', 'HK', 'JP', 'KR', 'MY', 'SG', 'TH', 'TW', 'VN'] },
     name: 'Ocean 777',
@@ -103,6 +102,7 @@ export const games = [
   {
     ...defaultGameEntryGate,
     id: 'fruit-party',
+    gameType: 'slots',
     name: 'Fruit Party',
     category: 'slots',
     tags: ['slots'],
@@ -117,6 +117,7 @@ export const games = [
   {
     ...defaultGameEntryGate,
     id: 'wild-west-deluxe',
+    gameType: 'slots',
     name: 'Wild West Deluxe',
     category: 'slots',
     tags: ['slots'],
@@ -131,6 +132,7 @@ export const games = [
   {
     ...defaultGameEntryGate,
     id: 'fish-hunter',
+    gameType: 'fishing',
     name: 'Fish Hunter',
     category: 'casual realtime',
     tags: ['casual', 'realtime'],
@@ -147,6 +149,7 @@ export const games = [
   {
     ...defaultGameEntryGate,
     id: 'bubble-pop',
+    gameType: 'casual',
     name: 'Bubble Pop',
     category: 'casual',
     tags: ['casual'],
@@ -161,6 +164,7 @@ export const games = [
   {
     ...defaultGameEntryGate,
     id: 'dice-merge',
+    gameType: 'casual',
     name: 'Dice Merge',
     category: 'casual',
     tags: ['casual'],
@@ -175,6 +179,7 @@ export const games = [
   {
     ...defaultGameEntryGate,
     id: 'mini-golf-rush',
+    gameType: 'casual',
     name: 'Mini Golf Rush',
     category: 'casual',
     tags: ['casual'],

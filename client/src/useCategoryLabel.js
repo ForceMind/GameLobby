@@ -1,10 +1,19 @@
+import { useMemo } from 'react'
+import { categoryText } from './catalogConfig.js'
 import { useLocale } from './useLocale.js'
+import { usePublishedCatalog } from './usePublishedCatalog.js'
 
-// A game's category line is built from its tags rather than stored as one of nine
-// pre-joined strings, so a new language needs three words instead of nine phrases.
-const TAG_KEYS = { slots: 'games.tagSlots', casual: 'games.tagCasual', realtime: 'games.tagLive' }
-
+// Categories are operator-managed. Keep the game's tag IDs as the stable link
+// and resolve their player-facing labels from the currently published catalogue.
 export function useCategoryLabel() {
-  const { t } = useLocale()
-  return (game) => (game.tags ?? []).map((tag) => t(TAG_KEYS[tag] ?? tag)).join(' · ')
+  const { t, locale } = useLocale()
+  const { categories = [] } = usePublishedCatalog()
+  const categoryById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories],
+  )
+
+  return (game) => (game.tags ?? [])
+    .map((tag) => categoryText(categoryById.get(tag), locale, t) || tag)
+    .join(' · ')
 }

@@ -240,7 +240,7 @@ test('游戏门槛：草稿隔离、审核发布与回滚，并逐字段显示�
   assert.equal(store.live.games.test[0].wealthLevel, 0, '草稿门槛不能直接影响生效版本')
   const snapshot = getSlice(store, moduleId)
   const diff = snapshotDiff(moduleId, getSlice(store.live, moduleId), snapshot)
-  assert.equal(diff.length, 28, '目录排序 1 项 + 每游戏 27 个实际审核字段')
+  assert.equal(diff.length, 29, '目录排序 1 项 + 每游戏 28 个实际审核字段（含独立游戏类型）')
   assert.equal(diff.find((row) => row.label === '准入示例 · 允许性别').after, '男')
   assert.equal(diff.find((row) => row.label === '准入示例 · 家族专属').after, '是')
   assert.equal(diff.find((row) => row.label === '准入示例 · 运营标签').after, 'Hot')

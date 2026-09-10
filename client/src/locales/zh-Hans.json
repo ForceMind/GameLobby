@@ -431,5 +431,10 @@
   "wins.time": "{time}",
   "wins.title": "今日赢家榜",
   "wins.unranked": "今日暂无排名",
-  "wins.updated": "更新于 {time}"
+  "wins.updated": "更新于 {time}",
+  "games.instructionsTitle": "玩法说明",
+  "games.rulesTitle": "规则说明",
+  "games.catalogPreview": "目录预览 · 仅本浏览器",
+  "games.exitCatalogPreview": "退出预览",
+  "games.filterCategory": "仅{category}"
 }

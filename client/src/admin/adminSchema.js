@@ -1,3 +1,4 @@
+import { DEFAULT_CATEGORIES } from '../catalogDefaults.js'
 // Seed data, column definitions and status-transition tables for the admin console prototype.
 // Everything here is in-memory sample data: no persistence, no real service calls.
 import { games as gamesData, checkinDays as checkinDaysData, dailyMissions, coinPacks as coinPacksData } from '../data.js'
@@ -263,7 +264,8 @@ export function translationNamespace(key) {
 }
 
 function buildTranslations() {
-  const keys = Object.keys(messages[FALLBACK_LOCALE] ?? {}).sort()
+  const categoryKeys = new Set(DEFAULT_CATEGORIES.map((category) => category.labelKey))
+  const keys = Object.keys(messages[FALLBACK_LOCALE] ?? {}).filter((key) => !categoryKeys.has(key)).sort()
   return Object.fromEntries(keys.map((key) => [
     key,
     Object.fromEntries(translationLocales.map(({ code }) => [code, messages[code]?.[key] ?? ''])),
@@ -272,7 +274,7 @@ function buildTranslations() {
 
 export function createInitialStore() {
   const gameRecords = () => gamesData.map((g, index) => ({
-    id: g.id, name: g.name, gameId: g.id, categoryLabel: g.categoryLabel, tags: [...g.tags], badges: [...g.badges],
+    id: g.id, name: g.name, gameId: g.id, gameType: g.gameType, categoryLabel: g.categoryLabel, tags: [...g.tags], badges: [...g.badges],
     status: statusLabel[g.status] || g.status, players: g.players, heat: g.heat, popular: g.popular,
     // 白名单：默认全球开放；Ocean 777 作为示例限定在亚洲部分市场
     region: g.id === 'ocean-777' ? { mode: 'custom', countries: ['CN', 'HK', 'JP', 'KR', 'MY', 'SG', 'TH', 'TW', 'VN'] } : { mode: 'all', countries: [] },
@@ -291,6 +293,7 @@ export function createInitialStore() {
     genders: Array.isArray(g.genders) ? [...g.genders] : ['male', 'female'], familyOnly: g.familyOnly ?? false, promoTag: g.promoTag ?? 'none',
   }))
   const config = {
+    categories: DEFAULT_CATEGORIES.map((category) => ({ ...category, labels: Object.fromEntries(translationLocales.map(({ code }) => [code, messages[code]?.[category.labelKey] || category.labels[code] || ''])) })),
     games: { test: gameRecords(), production: gameRecords() },
     // 前台数据现在直接携带数值（W1 起不再是拼好的「800 金币」字符串）
     checkinDays: checkinDaysData.map((d) => ({ ...d, coins: Number(d.coins) || 0, gems: Number(d.gems) || 0, grand: !!d.grand })),

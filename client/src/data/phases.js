@@ -25,6 +25,7 @@ export const modulePhase = {
   dashboard: 1,
   audit: 1,
   games: 1,
+  categories: 1,
   wins: 1,
   players: 1,
   translations: 1,

@@ -1,0 +1,18 @@
+.game-content-editor,.game-content-preview{display:grid;gap:14px}
+.game-content-save-error{margin:0;padding:10px 12px;border:1px solid #f2c7c0;border-radius:6px;background:#fff7f5;color:#9d3e35;font-size:12px;line-height:1.5}
+.game-content-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.game-content-language{display:flex;align-items:center;gap:8px;color:var(--admin-muted);font-size:12px}
+.game-content-language select{min-width:190px;height:34px;padding:0 9px;border:1px solid var(--admin-border);border-radius:6px;background:#fff;color:var(--admin-text);font:inherit}
+.game-content-status{padding:5px 8px;border-radius:999px;background:#f1f5fb;color:#5d6c82;font-size:11px;line-height:1.25}
+.game-content-status.is-pending{background:#fff3dc;color:#945815}
+.game-content-reference{margin:0}
+.game-content-field{display:grid;gap:7px;color:var(--admin-text);font-size:12px;font-weight:600}
+.game-content-field textarea{min-height:142px;padding:10px 11px;border:1px solid var(--admin-border);border-radius:7px;background:#fff;color:var(--admin-text);font:inherit;font-weight:400;line-height:1.6;resize:vertical}
+.game-content-field textarea:focus,.game-content-language select:focus{border-color:#8bb0ff;outline:2px solid rgba(139,176,255,.35);outline-offset:0}
+.game-content-review-check{margin-left:0}
+.game-content-preview-card{padding:18px;border:1px solid var(--admin-border);border-radius:8px;background:#f8fafd}
+.game-content-preview-card h3{margin:0 0 16px;color:var(--admin-text);font-size:17px}
+.game-content-preview-section+.game-content-preview-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--admin-border)}
+.game-content-preview-section h4{margin:0 0 6px;color:var(--admin-primary);font-size:12px}
+.game-content-preview-section p{margin:0;color:var(--admin-text);font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:640px){.game-content-toolbar{align-items:stretch}.game-content-language{align-items:stretch;flex-direction:column;gap:5px}.game-content-language select{width:100%}.game-content-status{align-self:flex-start}.game-content-preview-card{padding:14px}}
