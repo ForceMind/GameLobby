@@ -4,6 +4,7 @@ import { games, gameCategories } from '../data.js'
 import liteContent from '../data/liteContent.json'
 import { appVersion } from '../version.js'
 import EditDialog from './EditDialog.jsx'
+import { canReviewAdjustment, reviewAdjustment, isVersionRelease, versionReleaseKey } from './workflowRules.js'
 import ActivityRewardDialog from './ActivityRewardDialog.jsx'
 import { CheckinLadderEditor, WheelPrizeEditor, MissionListEditor, CheckinPreview, WheelPreview, MissionsPreview } from './ActivityEditors.jsx'
 import { ChestOfferEditDialog, MonthlyPassEditDialog } from './ProductEditDialogs.jsx'
@@ -17,8 +18,8 @@ import { PHASES, phaseOf } from '../data/phases.js'
 import {
   coinPackPriceUsd, wheelBalanced, validateCoinPack,
   validateMonthlyPass, validateChestOffer, validateTranslations, nextVersionTag, validateNickname, nextLedgerId, diffSummary, moduleLabels, moduleLabel,
-  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, validateSnapshot, WHEEL_SLOTS,
-  normalizeRegion, regionByContinent, regionSummary, validateRegion, validateGameGates, REGION_ALL, REGION_CUSTOM, activityTypeMeta, settledActivityRegion, applyActivityState, validateActivityInfo,
+  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, isConfigModule, validateSnapshot, validateGameConfig, releaseDecisionErrors, WHEEL_SLOTS,
+  normalizeRegion, regionByContinent, regionSummary, validateRegion, REGION_ALL, REGION_CUSTOM, activityTypeMeta, settledActivityRegion, applyActivityState, validateActivityInfo,
 } from './adminRules.js'
 
 const navGroups = [
@@ -81,7 +82,7 @@ const configurationNotes = {
   missions: ['任务进度由服务端事件汇总；领取接口需使用幂等键，避免重复发放。', '任务结束后仅可查看记录，不能修改历史奖励或目标值；上下线同样走草稿与发布审核。'],
   store: ['金币礼包与月度特权卡通过宿主支付桥接完成购买；明日宝箱按次直接从钱包扣款，不生成订单记录。', '明日宝箱报价版本变更会使旧客户端报价失效（409 stale）；三类商品的变更都先进草稿，审核通过后才生效。'],
   orders: ['订单仅覆盖金币礼包与月度特权卡的宿主支付流程。', '状态链路：待支付 → 处理中 → 已支付/失败；已支付后可能进入退款处理中 → 已退款；异常订单需人工介入并写入操作日志。'],
-  ledger: ['流水来源与前台一致，固定为 chest_purchase / chest_reward / game_reward / game_cost / checkin / task 六类；后台人工调整使用 manual_adjust，前台流水枚举需在联调时补充该来源。', '既有流水不可编辑；人工调整以追加一条"处理中"流水的方式写入，财务确认入账后才变为成功。'],
+  ledger: ['流水来源与前台一致，固定为 chest_purchase / chest_reward / game_reward / game_cost / checkin / task 六类；后台人工调整使用 manual_adjust，前台流水枚举需在联调时补充该来源。', '系统生成流水只读；仅人工调整支持模拟确认/驳回，完成后自动关闭关联待办。模拟不修改余额，不代表真实入账。'],
   translations: ['这里维护玩家侧文案。简体中文是原文，英文是参考与兜底；其他语言缺失时使用英文。原文或英文变化后，相关已有译文必须复核。', '当前为内存原型：保存、导入和模拟审核只在本页会话中保留，刷新即重置，不会更新玩家端。请导出文件保留工作成果；玩家端仍使用随应用打包的语言文件。'],
   players: ['玩家资产、等级与最近战绩以宿主/服务端上下文为准；隐私偏好由玩家自己设置，后台只读展示默认值。', '账号状态变更（活动限制、封禁、待复核、解除）一律需要填写原因并写入操作日志。'],
 }
@@ -197,7 +198,7 @@ function DiffSection({ diff }) {
   const [showAll, setShowAll] = useState(diff.length <= 15)
   const visible = showAll ? diff : changed
   return <div className="drawer-section"><h3>配置差异 {diff.length > 0 && <small>{changed.length} 项改动 / 共 {diff.length} 项</small>}</h3>
-    {diff.length === 0 ? <p className="audit-item"><Icon name="eye" /><span>该任务没有附带配置快照，仅变更任务状态</span></p>
+    {diff.length === 0 ? <p className="audit-item"><Icon name="eye" /><span>该任务没有配置快照；历史示例仅变更状态，游戏版本任务同步来源记录与模拟生产视图，不执行真实部署</span></p>
       : <>
         {!changed.length && <p className="audit-item"><Icon name="eye" /><span>快照与当前生效版本一致，没有字段差异</span></p>}
         {visible.length > 0 && <div className="diff-table">{visible.map((row) => <div key={row.key} className={`diff-row ${row.changed ? 'is-changed' : ''}`}><span className="diff-label">{row.label}{row.added && <em className="diff-tag added">新增</em>}{row.removed && <em className="diff-tag removed">移除</em>}</span><span className="diff-before">{row.before}</span><span className="diff-arrow">→</span><span className="diff-after">{row.after}</span></div>)}</div>}
@@ -261,10 +262,11 @@ function makeJournal(setStore) {
   const queuePublish = (entry) => {
     const id = `publish-${stamp()}`
     setStore((store) => {
-      const superseded = store.publish.filter((p) => entry.sourceModule && p.sourceModule === entry.sourceModule && p.status === '待审核').map((p) => p.id)
+      const releaseBase = isVersionRelease(entry) ? { baseReleaseId: store.activeReleaseIds?.[versionReleaseKey(store, entry)] || null } : {}
+      const superseded = store.publish.filter((p) => entry.sourceModule && p.sourceModule === entry.sourceModule && (!isVersionRelease(entry) || p.sourceId === entry.sourceId) && p.status === '待审核').map((p) => p.id)
       return {
         ...store,
-        publish: [{ id, name: '', type: '', scope: '生产环境', status: '待审核', owner: '运营管理员', time: '刚刚', sourceModule: '', sourceId: '', snapshot: null, note: '', ...entry }, ...store.publish.map((p) => (superseded.includes(p.id) ? { ...p, status: '已作废', time: '刚刚' } : p))],
+        publish: [{ id, name: '', type: '', scope: '生产环境', status: '待审核', owner: '运营管理员', time: '刚刚', sourceModule: '', sourceId: '', snapshot: null, note: '', ...entry, ...releaseBase }, ...store.publish.map((p) => (superseded.includes(p.id) ? { ...p, status: '已作废', time: '刚刚' } : p))],
         todo: [{ id: `todo-${stamp()}`, title: `${entry.name} 等待发布审核`, source: entry.todoSource || '发布审核', priority: '中', status: '待审核', time: '刚刚', owner: '审核组', publishId: id, link: { page: 'publish', focusId: id, label: '打开发布审核任务' }, claimedBy: '', resolution: '' }, ...store.todo.map((t) => (superseded.includes(t.publishId) ? { ...t, status: '已解决', resolution: t.resolution || '关联配置已被新草稿取代，自动关闭' } : t))],
       }
     })
@@ -378,23 +380,6 @@ function gameFormSections(draft) {
   ]
 }
 
-function validateGameDraft(draft) {
-  const errors = []
-  if (!String(draft.name || '').trim()) errors.push('游戏名称不能为空')
-  if (!(draft.tags || []).length) errors.push('至少选择一个分类标签')
-  const heat = Number(draft.heat)
-  if (!(Number.isFinite(heat) && heat >= 0 && heat <= 100)) errors.push('热度值必须是 0–100 的数字')
-  if (!(Number(draft.sortWeight) > 0)) errors.push('排序权重必须大于 0')
-  if (draft.status === '维护中' && !String(draft.maintenanceNote || '').trim()) errors.push('维护中状态必须填写维护公告文案')
-  if (draft.status === '即将上线' && !String(draft.launchAt || '').trim()) errors.push('即将上线状态必须填写预计上线时间')
-  if ((draft.tags || []).includes('slots') && draft.winRangeMin !== '' && draft.winRangeMax !== '') {
-    if (!(Number(draft.winRangeMin) >= 0) || !(Number(draft.winRangeMax) >= 0)) errors.push('中奖金额范围不能为负数')
-    else if (Number(draft.winRangeMin) > Number(draft.winRangeMax)) errors.push('中奖金额下限不能大于上限')
-  }
-  errors.push(...validateRegion(draft.region), ...validateGameGates(draft))
-  return errors
-}
-
 // The description shown here is content, not config: it lives in the multilingual
 // catalogue (see TranslationsPage) so 24 languages share one source. This link jumps
 // there instead of duplicating a free-text field that would only ever hold Chinese.
@@ -414,7 +399,7 @@ function GameEditModal({ record, store, update, journal, environment, navigate, 
   const normalized = { ...draft, badges: String(draft.badges).split(',').map((x) => x.trim()).filter(Boolean), categoryLabel: categoryLabelFor(draft.tags), heat: Number(draft.heat), sortWeight: Number(draft.sortWeight) }
   for (const key of ['wealthLevel', 'charmLevel', 'minBalance', 'playLevel']) if (normalized[key] === '') normalized[key] = 0
   const dirty = gameDraftFields.some(([key]) => JSON.stringify(normalized[key]) !== JSON.stringify(initial[key]))
-  const errors = validateGameDraft(normalized)
+  const errors = validateGameConfig(normalized)
   const sections = gameFormSections(draft)
   const moduleId = `games:${environment}`
   const nextList = store.games[environment].map((g) => g.id === record.id ? { ...g, ...Object.fromEntries(gameDraftFields.map(([key]) => [key, normalized[key]])), categoryLabel: normalized.categoryLabel } : g)
@@ -542,15 +527,19 @@ const splitBundle = (bundle) => { const match = String(bundle).match(/^(.*)\s(v[
 function describeGeneric(page, record, store, { update, journal }) {
   const cols = columns[page]
   const label0 = record[cols[0][0]]
-  const pageTransitions = transitions[page]?.[record.status] || []
+  const pageTransitions = page === 'ledger' && !canReviewAdjustment(record) ? [] : transitions[page]?.[record.status] || []
   const history = store.audit.filter((a) => a.targetModule === page && a.targetId === record.id)
   const actions = pageTransitions.map(([label, nextStatus, opts = {}]) => ({
-    label: page === 'publish' && record.sourceModule === 'translations' ? `模拟 · ${label}` : label, confirm: true, tone: nextStatus && statusClass(nextStatus) === 'danger' ? 'danger' : opts.requireReason ? 'warning' : opts.decision === 'approve' ? 'primary' : 'subtle', requireReason: !!opts.requireReason,
+    label: page === 'publish' && (record.sourceModule === 'translations' || isVersionRelease(record)) ? `模拟 · ${label}` : label, confirm: true, tone: nextStatus && statusClass(nextStatus) === 'danger' ? 'danger' : opts.requireReason ? 'warning' : opts.decision === 'approve' ? 'primary' : 'subtle', requireReason: !!opts.requireReason,
     run: (reason) => {
+      if (page === 'ledger') {
+        const checked = reviewAdjustment(store, record.id, nextStatus, reason)
+        if (checked.error) return { error: checked.error }
+        journal.transform((current) => reviewAdjustment(current, record.id, nextStatus, reason).store)
+        return
+      }
       if (page === 'publish' && opts.decision) {
-        const hasSnapshot = isConfigModule(record.sourceModule) && !!record.snapshot
-        const errors = hasSnapshot && ['approve','gray'].includes(opts.decision) ? validateSnapshot(record.sourceModule,record.snapshot) : []
-        if (hasSnapshot && opts.decision==='rollback' && !store.liveHistory[record.sourceModule]?.length) errors.push('没有可回滚的历史版本')
+        const errors = releaseDecisionErrors(store, record, opts.decision)
         journal.transform((current)=>applyRelease(current,record,opts.decision,reason,{seq:Date.now()}))
         return errors.length ? {error:errors.join('；')} : undefined
       }
@@ -561,7 +550,7 @@ function describeGeneric(page, record, store, { update, journal }) {
       } else if (!opts.logOnly) update(page, (list) => list.map((r) => (r.id === record.id ? { ...r, status: nextStatus, ...(opts.metric ? { metric: opts.metric } : {}), time: '刚刚' } : r)))
       journal.logAudit({ action: label, target: label0, targetModule: page, targetId: record.id, before: record.status, after: opts.logOnly ? record.status : nextStatus, result: opts.resultLabel || (reason ? `成功 · 原因：${reason}` : '成功') })
       if (opts.effect === 'createVersion') {
-        const [game, version] = splitBundle(record.bundle)
+        const [game, version] = record.game && record.version ? [record.game, record.version] : splitBundle(record.bundle)
         update('versions', (list) => [{ id: `versions-${stamp()}`, game, version: `${version} · ${record.file}`, production: '—', status: '检查中', scope: '待定', time: '刚刚' }, ...list])
       }
       if (opts.effect === 'submitProduction') journal.queuePublish({ name: `${record.version || record.game} 生产发布`, type: '游戏版本', scope: '生产环境', sourceModule: page, sourceId: record.id, todoSource: '游戏运营' })
@@ -589,7 +578,7 @@ function GenericPage({ page, onOpen, store, update, journal, intent, describe, n
     const { label0, history, actions } = describeGeneric(page, record, store, { update, journal })
     const fields = cols.filter(([key]) => key !== 'status').map(([key, label]) => ({ key, label, value: record[key], readOnly: true }))
     if (page === 'audit') fields.push({ key: 'targetModule', label: '对象模块', value: moduleLabels[record.targetModule] || pageMeta[record.targetModule]?.[0] || record.targetModule || '—', readOnly: true }, { key: 'before', label: '变更前', value: record.before || '—', readOnly: true }, { key: 'after', label: '变更后', value: record.after || '—', readOnly: true })
-    if (page === 'publish') fields.push({ key: 'sourceModule', label: '来源模块', value: moduleLabel(record.sourceModule) || (record.sourceModule ? pageMeta[record.sourceModule]?.[0] : '') || '—', readOnly: true }, { key: 'snapshot', label: '配置快照', value: record.snapshot ? record.sourceModule === 'translations' ? '有 · 仅更新会话对照版本，不更新玩家端' : '有 · 审核通过后覆盖生效版本' : '无 · 仅变更任务状态', readOnly: true }, { key: 'note', label: '发布说明', value: record.note || '—', readOnly: true })
+    if (page === 'publish') fields.push({ key: 'sourceModule', label: '来源模块', value: moduleLabel(record.sourceModule) || (record.sourceModule ? pageMeta[record.sourceModule]?.[0] : '') || '—', readOnly: true }, { key: 'snapshot', label: '配置快照', value: record.snapshot ? record.sourceModule === 'translations' ? '有 · 仅更新会话对照版本，不更新玩家端' : '有 · 审核通过后覆盖生效版本' : isVersionRelease(record) ? '无 · 同步来源版本与模拟生产视图，不执行真实部署' : '无 · 仅变更任务状态', readOnly: true }, { key: 'note', label: '发布说明', value: record.note || '—', readOnly: true })
     const diff = page === 'publish' && record.snapshot && isConfigModule(record.sourceModule) ? snapshotDiff(record.sourceModule, getSlice(store.live, record.sourceModule), record.snapshot) : page === 'publish' ? [] : null
     const sourcePage = page === 'publish' ? moduleToPage(record.sourceModule) : null
     const sourceIntent = String(record.sourceModule).startsWith('activityRegion:') ? { focusId: activityRegionId(record.sourceModule) } : null
@@ -615,7 +604,7 @@ function GenericPage({ page, onOpen, store, update, journal, intent, describe, n
   return <>
     {configurationNotes[page] && <div className="admin-config-note"><Icon name="shield" /><div><strong>生产配置提示</strong><span>{configurationNotes[page][0]}</span><small>{configurationNotes[page][1]}</small></div></div>}
     <div className="admin-toolbar"><div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => { setQuery(event.target.value); setPageIndex(0) }} placeholder={`搜索${meta[0]}...`} /></div><select value={filter} onChange={(event) => { setFilter(event.target.value); setPageIndex(0) }}><option>全部状态</option>{statusOptions.map((option) => <option key={option}>{option}</option>)}</select>{action && <button className="admin-btn primary" onClick={() => { setFormValues({}); setShowForm(true) }}><Icon name={action.icon} />{action.label}</button>}</div>
-    <section className="admin-card table-card"><div className="table-top"><div><strong>{meta[0]}列表</strong><span>共 {filteredRows.length} 条</span></div><div className="table-actions"><button className="admin-btn subtle" onClick={() => exportCsv(meta[0], labels, filteredRows.map((row) => cols.map(([key]) => row[key])))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{labels.map((label) => <th key={label}>{label}</th>)}<th>操作</th></tr></thead><tbody>{visibleRows.map((row) => <tr key={row.id} onClick={() => openRow(row)}>{cols.map(([key]) => <td key={key}>{statusValues.includes(row[key]) ? <Status>{page === 'publish' && row.sourceModule === 'translations' && key === 'status' ? `模拟 · ${row[key]}` : row[key]}</Status> : <span>{row[key]}</span>}</td>)}<td><button className="row-action" onClick={(event) => { event.stopPropagation(); openRow(row) }}>查看详情</button></td></tr>)}</tbody></table>{!filteredRows.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配数据</strong><p>请调整搜索关键词或筛选条件。</p></div>}</div><Pager page={pageIndex} total={filteredRows.length} onChange={setPageIndex} /></section>
+    <section className="admin-card table-card"><div className="table-top"><div><strong>{meta[0]}列表</strong><span>共 {filteredRows.length} 条</span></div><div className="table-actions"><button className="admin-btn subtle" onClick={() => exportCsv(meta[0], labels, filteredRows.map((row) => cols.map(([key]) => row[key])))}>导出 CSV</button></div></div><div className="table-wrap"><table><thead><tr>{labels.map((label) => <th key={label}>{label}</th>)}<th>操作</th></tr></thead><tbody>{visibleRows.map((row) => <tr key={row.id} onClick={() => openRow(row)}>{cols.map(([key]) => <td key={key}>{statusValues.includes(row[key]) ? <Status>{page === 'publish' && (row.sourceModule === 'translations' || isVersionRelease(row)) && key === 'status' ? `模拟 · ${row[key]}` : row[key]}</Status> : <span>{row[key]}</span>}</td>)}<td><button className="row-action" onClick={(event) => { event.stopPropagation(); openRow(row) }}>查看详情</button></td></tr>)}</tbody></table>{!filteredRows.length && <div className="empty-state"><Icon name="eye" /><strong>没有匹配数据</strong><p>请调整搜索关键词或筛选条件。</p></div>}</div><Pager page={pageIndex} total={filteredRows.length} onChange={setPageIndex} /></section>
     {showForm && action && <EditDialog eyebrow="新建记录" title={action.title} onClose={() => setShowForm(false)} dirty={Object.values(formValues).some((value) => String(value).trim())} onSave={submitCreate} saveDisabled={!formComplete} saveLabel="保存记录" footNote={['activities','checkin','wheel'].includes(page)?'先建立活动记录；奖励配置仍在对应编辑窗口维护，不会自动创建新的奖励模块。':'保存记录并写入操作日志。'} tabs={[
       {id:'basic',label:'基本信息',content:<div className="form-grid">{action.fields.slice(0,2).map((field)=><label key={field}>{field}{field==='活动类型'?<select value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))}><option value="">请选择类型</option>{Object.keys(activityTypeMeta).map((type)=><option key={type}>{type}</option>)}</select>:<input value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))} placeholder={`请输入${field}（必填）`}/>}</label>)}</div>},
       {id:'configuration',label:page==='adminUsers'?'角色与范围':'配置内容',content:<div className="form-grid">{action.fields.slice(2).map((field)=><label key={field}>{field}{field==='活动类型'?<select value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))}><option value="">请选择类型</option>{Object.keys(activityTypeMeta).map((type)=><option key={type}>{type}</option>)}</select>:<input value={formValues[field]||''} onChange={(event)=>setFormValues((current)=>({...current,[field]:event.target.value}))} placeholder={`请输入${field}（必填）`}/>}</label>)}</div>},
@@ -695,7 +684,7 @@ function TodoPage({ store, update, journal, navigate, onOpen }) {
   const goHandle = (record) => record.link && navigate(record.link.page, { tab: record.link.tab, query: record.link.query, focusId: record.link.focusId })
   const open = (record) => onOpen((live) => { const fresh = live.todo.find((t) => t.id === record.id); return fresh ? describeTodo(fresh, live, { update, journal, navigate }) : null })
   return <>
-    <div className="admin-config-note"><Icon name="shield" /><div><strong>事项状态的含义</strong><span>待处理 = 尚无人认领；处理中 = 已认领，认领人显示在负责人列；已解决 = 已填写处理结论并关闭。</span><small>「去处理」跳转到该事项对应的对象（游戏、发布任务、订单或玩家）。关联发布任务被通过或驳回、游戏从维护中恢复运行时，对应事项会自动关闭，无需手动标记。</small></div></div>
+    <div className="admin-config-note"><Icon name="shield" /><div><strong>事项状态的含义</strong><span>待处理 = 尚无人认领；待审核 = 等待关联配置审核；处理中 = 已认领，认领人显示在负责人列；已解决 = 人工填写结论或关联流程自动完成。</span><small>「去处理」跳转到关联的游戏、发布任务、订单、玩家或人工调整流水。发布通过或驳回、游戏恢复运行、人工调整模拟复核完成时，对应事项会自动关闭。</small></div></div>
     <div className="todo-filter-bar">{todoFilters.map(([id, label]) => <button key={id} className={filter === id ? 'is-active' : ''} onClick={() => setFilter(id)}>{label}<b>{counts[id]}</b></button>)}</div>
     <div className="admin-toolbar"><div className="admin-search"><Icon name="eye" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索事项、来源模块或负责人..." /></div></div>
     <section className="admin-card table-card"><div className="table-top"><div><strong>事项列表</strong><span>共 {filtered.length} 条 · 按优先级排序</span></div><button className="admin-btn subtle" onClick={() => exportCsv('待处理事项', ['事项', '来源模块', '优先级', '状态', '负责人', '更新时间', '处理结论'], filtered.map((t) => [t.title, t.source, t.priority, t.status, t.owner, t.time, t.resolution || '']))}>导出 CSV</button></div>
@@ -709,7 +698,7 @@ function TodoPage({ store, update, journal, navigate, onOpen }) {
   </>
 }
 
-function VersionWorkflowPage({ page, onOpen, store, update, journal }) {
+function VersionWorkflowPage({ page, onOpen, store, update, journal, navigate }) {
   const rows = store[page] || []
   const [query, setQuery] = useState('')
   const [showUpload, setShowUpload] = useState(false)
@@ -721,9 +710,9 @@ function VersionWorkflowPage({ page, onOpen, store, update, journal }) {
   const formComplete = form.version.trim() && form.build.trim() && (!isUpload || form.fileName)
   const save = () => {
     const record = isUpload
-      ? { id: `uploads-${stamp()}`, recordId: `UP-${stamp().slice(0, 8)}`, bundle: `${form.game} ${form.version.trim()}`, file: form.fileName, status: '检查中', uploader: '运营管理员', time: '刚刚' }
+      ? { id: `uploads-${stamp()}`, recordId: `UP-${stamp().slice(0, 8)}`, game: form.game, version: form.version.trim(), bundle: `${form.game} ${form.version.trim()}`, file: form.fileName, status: '检查中', uploader: '运营管理员', time: '刚刚' }
       : page === 'versions' ? { id: `versions-${stamp()}`, game: form.game, version: `${form.version.trim()} · ${form.build.trim()}`, production: '—', status: '待审核', scope: '生产环境', time: '刚刚' }
-        : { id: `${page}-${stamp()}`, version: `${form.game} ${form.version.trim()}`, build: form.build.trim(), env: page === 'test' ? '测试环境' : '生产环境', status: page === 'test' ? '测试中' : '待审核', metric: page === 'test' ? '待 QA 验证' : '待审核', time: '刚刚' }
+        : { id: `${page}-${stamp()}`, game: form.game, version: `${form.game} ${form.version.trim()}`, build: form.build.trim(), env: page === 'test' ? '测试环境' : '生产环境', status: page === 'test' ? '测试中' : '待审核', metric: page === 'test' ? '待 QA 验证' : '待审核', time: '刚刚' }
     update(page, (list) => [record, ...list])
     journal.logAudit({ action: action.label, target: record.bundle || `${record.game || record.version}`, targetModule: page, targetId: record.id, after: `${form.game} ${form.version.trim()} / ${form.build.trim()}`, result: form.note ? `成功 · 发布说明：${form.note}` : '成功' })
     if (page === 'versions' || page === 'production') journal.queuePublish({ name: `${form.game} ${form.version.trim()} 生产发布`, type: '游戏版本', scope: '生产环境', sourceModule: page, sourceId: record.id, note: form.note, todoSource: '游戏运营' })
@@ -731,7 +720,10 @@ function VersionWorkflowPage({ page, onOpen, store, update, journal }) {
   }
   const openRow = (record) => {
     const { label0, history, actions } = describeGeneric(page, record, store, { update, journal })
-    onOpen({ id: `${page}-${record.id}`, eyebrow: `${pageMeta[page][0]}详情`, title: label0, status: record.status, history, actions, fields: columns[page].filter(([key]) => key !== 'status').map(([key, label]) => ({ key, label, value: record[key], readOnly: true })) })
+    const release = store.publish.find((item) => item.sourceModule === page && item.sourceId === record.id && item.status !== '已作废')
+    if (release) actions.push({ label: '查看统一发布审核', run: () => navigate('publish', { focusId: release.id }) })
+    else if (page === 'versions' && record.status === '待审核') actions.push({ label: '创建模拟审核任务', run: () => journal.queuePublish({ name: `${record.game} ${record.version} 生产发布（模拟）`, type: '游戏版本', scope: '原型会话', sourceModule: page, sourceId: record.id, todoSource: '游戏运营' }) })
+    onOpen({ id: `${page}-${record.id}`, eyebrow: `${pageMeta[page][0]}详情（模拟，未部署）`, title: label0, status: record.status, history, actions, fields: columns[page].filter(([key]) => key !== 'status').map(([key, label]) => ({ key, label, value: record[key], readOnly: true })) })
   }
   const filtered = rows.filter((row) => columns[page].some(([key]) => `${row[key]}`.toLowerCase().includes(query.toLowerCase())))
   const scopeIsEnv = page === 'test' || page === 'production'
@@ -751,16 +743,16 @@ function VersionWorkflowPage({ page, onOpen, store, update, journal }) {
   </>
 }
 
-function GameVersionCenterPage({ onOpen, store, update, journal }) {
+function GameVersionCenterPage({ onOpen, store, update, journal, navigate }) {
   const [tab, setTab] = useState('versions')
   const tabs = [['versions', '版本记录'], ['uploads', '上传记录'], ['test', '测试环境'], ['production', '生产环境']]
   return <>
     <div className="catalog-toolbar"><div className="view-toggle">{tabs.map(([id, label]) => <button key={id} className={tab === id ? 'is-active' : ''} onClick={() => setTab(id)}>{label}</button>)}</div></div>
-    <VersionWorkflowPage key={tab} page={tab} onOpen={onOpen} store={store} update={update} journal={journal} />
+    <p className="editor-hint">版本审核统一在发布审核中操作；本页仅同步原型状态，上传、部署和生产流量均未接入。</p><VersionWorkflowPage key={tab} page={tab} onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} />
   </>
 }
 
-function ReleaseCenterPage({ onOpen, store, update, journal, navigate }) {
+function ReleaseCenterPage({ onOpen, store, update, journal, navigate, intent }) {
   const pending = store.publish.filter((p) => p.status === '待审核').length
   const testing = store.test.filter((t) => t.status === '测试中').length
   const graying = store.publish.filter((p) => p.sourceModule !== 'translations' && (p.status === '灰度 20%' || p.status === '进行中')).length
@@ -768,7 +760,7 @@ function ReleaseCenterPage({ onOpen, store, update, journal, navigate }) {
   return <>
     <div className="release-metrics"><div><span>待审核</span><strong>{pending}</strong><small>需要人工判定</small></div><div><span>测试中</span><strong>{testing}</strong><small>需要 QA 验证</small></div><div><span>灰度发布</span><strong>{graying}</strong><small>不含文案模拟审核</small></div><div><span>生产发布</span><strong>{published}</strong><small>不含文案模拟审核</small></div></div>
     <section className="admin-card release-guide"><div className="card-heading"><div><h2>发布任务流程</h2><p>带快照的任务：通过 = 覆盖生效版本；驳回 = 丢弃来源草稿；回滚 = 恢复上一生效版本。</p></div><span className="release-safety"><Icon name="shield" />生产发布需审批</span></div><div className="release-guide-steps"><div className="is-done"><b>1</b><span>创建任务</span><small>模块保存草稿</small></div><i /><div className="is-done"><b>2</b><span>自动检查</span><small>通过时再次校验快照</small></div><i /><div className="is-active"><b>3</b><span>审核判定</span><small>通过 / 灰度 / 驳回</small></div><i /><div><b>4</b><span>已发布</span><small>可暂停或回滚</small></div></div></section>
-    <GenericPage page="publish" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} />
+    <GenericPage page="publish" onOpen={onOpen} store={store} update={update} journal={journal} navigate={navigate} intent={intent} />
     <section className="admin-card release-history"><div className="card-heading"><div><h2>版本健康度 <em className="sample-tag">示例数据</em></h2><p>发布后的实时质量观察，监控接口待联调</p></div><button className="admin-link" disabled title="监控平台待联调">查看监控（待联调）</button></div><div className="health-grid"><div><span>启动成功率</span><strong>99.6%</strong><em>↑ 0.8%</em></div><div><span>资源加载失败</span><strong>0.12%</strong><em>↓ 0.04%</em></div><div><span>累计回滚</span><strong>{store.publish.filter((p) => p.status === '已回滚').length}</strong><em>来自发布审核记录</em></div></div></section>
   </>
 }
@@ -1290,7 +1282,7 @@ function describePlayer(record, store, { update, journal, navigate }) {
 function describeLedgerEntry(record, store, { update, journal }) {
   const { actions } = describeGeneric('ledger', record, store, { update, journal })
   return {
-    id: `ledger-${record.id}`, eyebrow: '流水详情（只读）', title: record.id, status: ledgerStatusLabel[record.status] || record.status, actions,
+    id: `ledger-${record.id}`, eyebrow: record.source === 'manual_adjust' ? '人工调整复核（模拟）' : '流水详情（只读）', hint: record.source === 'manual_adjust' ? '确认或驳回仅更新后台会话状态并关闭关联待办，不改变余额，也不代表真实资产入账。' : undefined, title: record.id, status: ledgerStatusLabel[record.status] || record.status, actions,
     history: store.audit.filter((a) => a.targetModule === 'ledger' && a.targetId === record.id),
     fields: [
       { key: 'player', label: '玩家', value: `${record.player} · ${record.playerId || '—'}`, readOnly: true },
@@ -1345,6 +1337,11 @@ function LedgerPage({ onOpen, store, update, journal, onAdjust, intent }) {
     if (direction === 'expense' && row.amount >= 0) return false
     return true
   })
+  useEffect(() => {
+    const target = store.ledger.find((row) => row.id === intent?.focusId)
+    if (target) onOpen(describeLedgerEntry(target, store, { update, journal }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open the linked record once on navigation
+  }, [])
   const visibleRows = filtered.slice(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE)
   const amountText = (row) => `${row.amount > 0 ? '+' : ''}${row.amount.toLocaleString('en-US')} ${row.currency === 'coins' ? '金币' : '宝石'}`
   const headers = ['流水 ID', '玩家', '变动金额', '来源', '状态', '时间']
@@ -1386,7 +1383,7 @@ function AdminApp() {
     const record = { id: nextLedgerId(store.ledger), player: adjustForm.player, playerId: player?.playerId || '—', currency: adjustForm.currency, amount: Number(adjustForm.amount), source: 'manual_adjust', status: 'processing', time: '刚刚', balanceBefore: null, balanceAfter: null, ref: '人工调整' }
     update('ledger', (list) => [record, ...list])
     journal.logAudit({ action: '人工调整钱包流水', target: `${adjustForm.player} · ${record.amount > 0 ? '+' : ''}${record.amount} ${adjustForm.currency === 'coins' ? '金币' : '宝石'}`, targetModule: 'ledger', targetId: record.id, after: record.id, result: `处理中 · 原因：${adjustForm.reason.trim()}` })
-    journal.addTodo({ title: `${adjustForm.player} 人工调整流水 ${record.id} 待财务复核`, source: '商城与经济', priority: '中', owner: '财务组' })
+    journal.addTodo({ title: `${adjustForm.player} 人工调整流水 ${record.id} 待财务复核`, source: '商城与经济', priority: '中', owner: '财务组', link: { page: 'ledger', focusId: record.id, query: record.id, label: `复核人工调整 ${record.id}` } })
     setShowAdjust(false)
     setAdjustForm({ player: 'NovaPlayer', currency: 'coins', amount: 0, reason: '' })
   }
@@ -1397,7 +1394,7 @@ function AdminApp() {
     if (activePage === 'todo') return <TodoPage key={pageKey} store={store} update={update} journal={journal} navigate={navigate} onOpen={onOpen} />
     if (activePage === 'games') return <GameCatalogPage key={`${environment}-${intent?.stamp || ''}`} environment={environment} intent={intent} store={store} update={update} journal={journal} navigate={navigate} onOpen={onOpen} />
     if (activePage === 'versions') return <GameVersionCenterPage {...common} />
-    if (activePage === 'publish') return <ReleaseCenterPage {...common} />
+    if (activePage === 'publish') return <ReleaseCenterPage key={pageKey} {...common} intent={intent} />
     if (activePage === 'adminUsers') return <AdminUsersPage {...common} />
     if (activePage === 'wins') return <WinsPage store={store} />
     if (activePage === 'checkin') return <CheckinPage {...common} />

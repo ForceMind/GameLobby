@@ -2,6 +2,7 @@
 // No React and no data imports, so `node --test` can exercise it directly.
 import { needsTranslationReview, translationReviewErrors } from './translationReview.js'
 import { isValidNickname } from '../demoModel.js'
+import { isVersionRelease, versionReleaseKey, syncVersionRelease } from './workflowRules.js'
 
 export const WHEEL_SLOTS = 8
 
@@ -77,10 +78,20 @@ export function validateWheel({ prizes, freeSpins }) {
 
 export function validateCheckin(days) {
   const errors = []
-  days.forEach((d, i) => { if (!(Number(d.coins) >= 0) || !(Number(d.gems) >= 0)) errors.push(`第 ${i + 1} 天奖励不能为负数`) })
-  const grand = days.filter((d) => d.grand).length
-  if (grand !== 1) errors.push('必须且只能有一天标记为大奖')
-  else if (!days[days.length - 1].grand) errors.push('大奖应设置在最后一天')
+  if (!Array.isArray(days) || days.length !== 7) {
+    errors.push('签到必须包含 7 天奖励')
+    return errors
+  }
+  if (days.some((day, index) => day?.day !== `D${index + 1}`)) errors.push('签到天数必须按 D1–D7 顺序且不重复')
+  days.forEach((day, index) => {
+    for (const key of ['coins', 'gems']) {
+      const value = Number(day?.[key])
+      if (!(Number.isSafeInteger(value) && value >= 0)) {
+        errors.push(`第 ${index + 1} 天${key === 'coins' ? '金币' : '宝石'}奖励必须是非负安全整数`)
+      }
+    }
+  })
+  if (days.slice(0, -1).some((day) => day?.grand === true) || days[6]?.grand !== true) errors.push('最后且仅最后一天必须标记为大奖')
   return errors
 }
 
@@ -90,7 +101,7 @@ export function validateMissions(list) {
     const name = String(m.name || '').trim()
     if (!name) errors.push('任务名称不能为空')
     if (!(Number.isInteger(Number(m.target)) && Number(m.target) >= 1)) errors.push(`「${name || '未命名'}」目标值必须是 ≥1 的整数`)
-    if (!(Number(m.coinReward) >= 0) || !(Number(m.gemReward) >= 0)) errors.push(`「${name || '未命名'}」奖励不能为负数`)
+    if (!(Number.isFinite(Number(m.coinReward)) && Number(m.coinReward) >= 0) || !(Number.isFinite(Number(m.gemReward)) && Number(m.gemReward) >= 0)) errors.push(`「${name || '未命名'}」奖励必须是有限非负数`)
   })
   return errors
 }
@@ -98,15 +109,16 @@ export function validateMissions(list) {
 export function validateCoinPack(draft) {
   const errors = []
   if (!(Number.isInteger(Number(draft.coins)) && Number(draft.coins) > 0)) errors.push('金币数必须是正整数')
-  if (!(Number(draft.discountPercent) >= 0 && Number(draft.discountPercent) <= 90)) errors.push('折扣必须在 0–90% 之间')
-  if (!(Number(draft.gemBonus) >= 0)) errors.push('赠送宝石不能为负数')
+  if (!(Number.isFinite(Number(draft.discountPercent)) && Number(draft.discountPercent) >= 0 && Number(draft.discountPercent) <= 90)) errors.push('折扣必须在 0–90% 之间')
+  if (!(Number.isFinite(Number(draft.gemBonus)) && Number(draft.gemBonus) >= 0)) errors.push('赠送宝石必须是有限非负数')
   return errors
 }
 
 export function validateMonthlyPass(draft) {
   const errors = []
   ;[['priceUsdCents', '价格'], ['dailyCoins', '每日金币'], ['dailyGems', '每日宝石'], ['validDays', '有效天数']].forEach(([key, label]) => {
-    if (!(Number(draft[key]) > 0)) errors.push(`${label}必须大于 0`)
+    const value = Number(draft[key])
+    if (!(Number.isSafeInteger(value) && value > 0)) errors.push(`${label}必须是大于 0 的安全整数`)
   })
   return errors
 }
@@ -114,8 +126,8 @@ export function validateMonthlyPass(draft) {
 export function validateChestOffer(draft) {
   const errors = []
   if (!String(draft.version || '').trim()) errors.push('报价版本号不能为空')
-  if (!(Number(draft.priceCoins) > 0)) errors.push('购买价格必须大于 0')
-  if (!(Number(draft.maxRewardCoins) > 0)) errors.push('可能奖励上限必须大于 0')
+  if (!(Number.isFinite(Number(draft.priceCoins)) && Number(draft.priceCoins) > 0)) errors.push('购买价格必须是有限正数')
+  if (!(Number.isFinite(Number(draft.maxRewardCoins)) && Number(draft.maxRewardCoins) > 0)) errors.push('可能奖励上限必须是有限正数')
   return errors
 }
 
@@ -268,6 +280,26 @@ export function validateGameGates(game) {
   return errors
 }
 
+export function validateGameConfig(game) {
+  const errors = []
+  if (!String(game?.name || '').trim()) errors.push('游戏名称不能为空')
+  if (!Array.isArray(game?.tags) || game.tags.length === 0) errors.push('至少选择一个分类标签')
+  const heat = Number(game?.heat)
+  if (!(Number.isFinite(heat) && heat >= 0 && heat <= 100)) errors.push('热度值必须是 0–100 的数字')
+  const sortWeight = Number(game?.sortWeight)
+  if (!(Number.isFinite(sortWeight) && sortWeight > 0)) errors.push('排序权重必须大于 0')
+  if (game?.status === '维护中' && !String(game.maintenanceNote || '').trim()) errors.push('维护中状态必须填写维护公告文案')
+  if (game?.status === '即将上线' && !String(game.launchAt || '').trim()) errors.push('即将上线状态必须填写预计上线时间')
+  if (game?.tags?.includes('slots') && game.winRangeMin !== '' && game.winRangeMax !== '') {
+    const winRangeMin = Number(game.winRangeMin)
+    const winRangeMax = Number(game.winRangeMax)
+    if (!(Number.isFinite(winRangeMin) && winRangeMin >= 0) || !(Number.isFinite(winRangeMax) && winRangeMax >= 0)) errors.push('中奖金额范围不能为负数')
+    else if (winRangeMin > winRangeMax) errors.push('中奖金额下限不能大于上限')
+  }
+  errors.push(...validateRegion(game?.region), ...validateGameGates(game))
+  return errors
+}
+
 export function validateSnapshot(moduleId, slice) {
   if (moduleId === 'translations') return [...validateTranslations(slice.translations), ...translationReviewErrors(slice.translations, slice.translationReviews)]
   if (moduleId === 'wheel') return validateWheel({ prizes: slice.wheelPrizes, freeSpins: slice.wheelFreeSpins })
@@ -279,7 +311,7 @@ export function validateSnapshot(moduleId, slice) {
   if (String(moduleId).startsWith('activityRegion:')) return validateRegion(slice.region, '投放地区')
   if (String(moduleId).startsWith('games:')) {
     if (!Array.isArray(slice?.games)) return ['游戏目录快照无效']
-    return slice.games.flatMap(validateGameGates)
+    return slice.games.flatMap(validateGameConfig)
   }
   return []
 }
@@ -316,17 +348,46 @@ function mergeGameSnapshotWithLive(liveSlice, snapshot) {
   }
 }
 
+// Only the task owning the current session version may control or roll it back.
+export function releaseDecisionErrors(store, entry, decision) {
+  const current = store.publish.find((row) => row.id === entry.id) || entry
+  const hasSnapshot = isConfigModule(current.sourceModule) && !!current.snapshot
+  const versionTask = isVersionRelease(current)
+  const key = versionTask ? versionReleaseKey(store, current) : current.sourceModule
+  const errors = []
+  if (versionTask && !key) errors.push('来源版本记录不存在或缺少稳定游戏标识，不能执行审核')
+  if (versionTask && ['approve', 'gray'].includes(decision)) {
+    const activeReleaseId = store.activeReleaseIds?.[key] ?? null
+    const isExpandingCurrentGray = decision === 'approve' && current.status === '灰度 20%' && activeReleaseId === current.id
+    if (!isExpandingCurrentGray && current.baseReleaseId !== activeReleaseId) {
+      errors.push('发布任务基线已过期，当前生效版本已变化；请基于当前版本重新提交')
+    }
+  }
+  if (['approve', 'gray'].includes(decision) && hasSnapshot) errors.push(...validateSnapshot(current.sourceModule, current.snapshot))
+  if (['rollback', 'pause', 'resume'].includes(decision) && (hasSnapshot || versionTask)) {
+    if (!key || store.activeReleaseIds?.[key] !== current.id) errors.push('仅当前生效发布任务可执行此操作；该任务已被后续版本替代或尚未生效')
+  }
+  if (decision === 'rollback') {
+    if (hasSnapshot && !store.liveHistory[current.sourceModule]?.length) errors.push('没有可回滚的历史版本')
+    if (versionTask && !current.previousVersionState) errors.push('没有可回滚的来源版本记录')
+  }
+  return errors
+}
+
 // Applies a 发布审核 decision to the whole store. Pure: returns a new store.
 export function applyRelease(store, entry, decision, reason, meta = {}) {
   const spec = releaseDecisions[decision]
   if (!spec) return store
+  entry = store.publish.find((row) => row.id === entry.id) || entry
   const time = meta.time || '刚刚'
   const seq = meta.seq ?? 0
   const audit = (patch) => ({
     id: `audit-${seq}-${entry.id}-${decision}`, logId: `#${seq.toString(16).slice(-4).padStart(4, '0')}`, actor: meta.actor || '运营管理员', time,
-    targetModule: 'publish', targetId: entry.id, target: entry.name, action: entry.sourceModule === 'translations' ? `模拟 · ${spec.action}` : spec.action, before: entry.status, after: spec.status,
+    targetModule: 'publish', targetId: entry.id, target: entry.name, action: entry.sourceModule === 'translations' || isVersionRelease(entry) ? `模拟 · ${spec.action}` : spec.action, before: entry.status, after: spec.status,
     result: reason ? `成功 · 原因：${reason}` : '成功', ...patch,
   })
+  const errors = releaseDecisionErrors(store, entry, decision)
+  if (errors.length) return { ...store, audit: [audit({ after: entry.status, result: `失败 · ${errors.join('；')}` }), ...store.audit] }
   const moduleId = entry.sourceModule
   const hasSnapshot = isConfigModule(moduleId) && !!entry.snapshot
   const isTranslations = moduleId === 'translations'
@@ -355,6 +416,13 @@ export function applyRelease(store, entry, decision, reason, meta = {}) {
     const hasNewerDraftThanLive = isTranslations && JSON.stringify(getSlice(store, moduleId)) !== JSON.stringify(getSlice(store.live, moduleId))
     if (!hasNewerDraftThanLive) next = setSlice(next, moduleId, restored)
   }
+  const versionTask = isVersionRelease(entry)
+  const releaseKey = versionTask ? versionReleaseKey(store, entry) : moduleId
+  if ((hasSnapshot || versionTask) && ['approve', 'gray'].includes(decision) && store.activeReleaseIds?.[releaseKey] !== entry.id) {
+    next = { ...next, activeReleaseIds: { ...next.activeReleaseIds, [releaseKey]: entry.id }, publish: next.publish.map((p) => p.id === entry.id ? { ...p, previousReleaseId: store.activeReleaseIds?.[releaseKey] || null } : p) }
+  }
+  if ((hasSnapshot || versionTask) && decision === 'rollback') next = { ...next, activeReleaseIds: { ...next.activeReleaseIds, [releaseKey]: entry.previousReleaseId || null } }
+  if (versionTask) next = syncVersionRelease(next, entry, decision)
   next = { ...next, publish: next.publish.map((p) => (p.id === entry.id ? { ...p, status: spec.status, time } : p)) }
   if (['approve', 'reject', 'rollback'].includes(decision)) next = { ...next, todo: next.todo.map((t) => (t.publishId === entry.id ? { ...t, status: '已解决', time } : t)) }
   return { ...next, audit: [audit({}), ...next.audit] }

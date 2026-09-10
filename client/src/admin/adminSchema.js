@@ -3,6 +3,7 @@
 import { games as gamesData, checkinDays as checkinDaysData, dailyMissions, coinPacks as coinPacksData } from '../data.js'
 import liteContent from '../data/liteContent.json'
 import engagementPreview from '../data/engagementPreview.json' with { type: 'json' }
+import { ledgerTransitions } from './workflowRules.js'
 import { prizeLabel } from './adminRules.js'
 import messages from '../locales/index.js'
 import { createTranslationReviews } from './translationReview.js'
@@ -70,8 +71,9 @@ export const transitions = {
     '上传失败': [['重新上传', '检查中']],
     '检查中': [['标记检查通过', '测试通过']],
     '测试通过': [['提交生产发布', '待审核', { effect: 'submitProduction' }]],
-    '待审核': [['通过并发布', '已发布'], ['驳回', '测试通过', { requireReason: true }]],
-    '已发布': [['回滚到上一版本', '已回滚', { requireReason: true }]],
+    // Review and rollback are owned by the unified release task.
+    '待审核': [],
+    '已发布': [],
   },
   uploads: {
     '检查中': [['标记校验通过', '校验通过']],
@@ -87,9 +89,7 @@ export const transitions = {
     '维护中': [['恢复运行', '已发布', { metric: '运行正常' }]],
     '已发布': [['进入维护', '维护中', { requireReason: true, metric: '维护中，暂停对外服务' }]],
   },
-  ledger: {
-    '处理中': [['确认入账', '成功'], ['驳回调整', '失败', { requireReason: true }]],
-  },
+  ledger: ledgerTransitions,
 }
 
 export const columns = {
@@ -344,8 +344,9 @@ export function createInitialStore() {
     ledger: ledgerSeed(),
     versions: zip(rawRows.versions, 'versions'),
     uploads: zip(rawRows.uploads, 'uploads'),
-    test: zip(rawRows.test, 'test'),
-    production: zip(rawRows.production, 'production'),
+    // Resolve legacy display-only seeds once; release decisions use this explicit game field.
+    test: zip(rawRows.test, 'test').map((row) => ({ ...row, game: gamesData.find((game) => row.version.startsWith(`${game.name} `))?.name || '' })),
+    production: zip(rawRows.production, 'production').map((row) => ({ ...row, game: gamesData.find((game) => row.version.startsWith(`${game.name} `))?.name || '' })),
     adminUsers: zip(rawRows.adminUsers, 'adminUsers').map((r) => ({ ...r, mfa: r.status !== '待激活' })),
     roles: roleSeed.map((r) => ({ ...r })),
     // Read-only mirrors of the win-event service. There is deliberately no

@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  validateWheel, wheelBalanced, validateCheckin, validateMissions, validateCoinPack, validateChestOffer,
+  validateWheel, wheelBalanced, validateCheckin, validateMissions, validateCoinPack, validateMonthlyPass, validateChestOffer,
   coinPackPriceUsd, nextVersionTag, nextLedgerId, diffSummary, validateNickname,
-  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations, validateGameGates, settledActivityRegion, applyActivityState,
+  getSlice, setSlice, draftDiffers, resetDraftToLive, applyRelease, snapshotDiff, validateTranslations, validateGameConfig, validateGameGates, validateSnapshot, settledActivityRegion, applyActivityState,
 } from './adminRules.js'
 import { createTranslationReviews } from './translationReview.js'
 
@@ -39,12 +39,14 @@ test('转盘概率：负数、超出 100、非整数、总和不为 100、奖项
   assert.ok(validateWheel({ prizes: prizes([22, 15, 15, 10, 20, 6, 8, 4]), freeSpins: -1 }).some((e) => e.includes('免费次数')))
 })
 
-test('签到梯度：必须且只能最后一天为大奖，奖励不能为负', () => {
+test('签到梯度：必须是按 D1–D7 排列的七天，只有最后一天是大奖，奖励为非负安全整数', () => {
   const days = (grandIndex) => Array.from({ length: 7 }, (_, i) => ({ day: `D${i + 1}`, coins: 100, gems: 0, grand: i === grandIndex }))
   assert.deepEqual(validateCheckin(days(6)), [])
-  assert.ok(validateCheckin(days(2)).some((e) => e.includes('最后一天')))
-  assert.ok(validateCheckin(days(-1)).some((e) => e.includes('只能有一天')))
-  assert.ok(validateCheckin([{ day: 'D1', coins: -1, gems: 0, grand: true }]).some((e) => e.includes('负数')))
+  assert.ok(validateCheckin(days(2)).some((e) => e.includes('最后且仅最后一天')))
+  assert.ok(validateCheckin(days(-1)).some((e) => e.includes('最后且仅最后一天')))
+  assert.ok(validateCheckin(days(6).slice(0, 6)).some((e) => e.includes('7 天')))
+  assert.ok(validateCheckin(days(6).map((day, index) => index === 1 ? { ...day, day: 'D1' } : day)).some((e) => e.includes('D1–D7')))
+  assert.ok(validateCheckin(days(6).map((day, index) => index === 0 ? { ...day, coins: 1.5, gems: Infinity } : day)).filter((e) => e.includes('非负安全整数')).length === 2)
 })
 
 test('任务与礼包与宝箱报价的数值校验', () => {
@@ -52,7 +54,11 @@ test('任务与礼包与宝箱报价的数值校验', () => {
   assert.deepEqual(validateMissions([{ name: '完成 3 局', target: 3, coinReward: 500, gemReward: 1 }, { name: '过期', target: 0, expired: true }]), [])
   assert.ok(validateCoinPack({ coins: 6000, discountPercent: 120, gemBonus: 2 }).some((e) => e.includes('折扣')))
   assert.deepEqual(validateCoinPack({ coins: 6000, discountPercent: 8, gemBonus: 2 }), [])
+  assert.ok(validateCoinPack({ coins: 6000, discountPercent: Infinity, gemBonus: 2 }).some((e) => e.includes('折扣')))
   assert.ok(validateChestOffer({ version: 'v1', priceCoins: 0, maxRewardCoins: 7000 }).some((e) => e.includes('价格')))
+  assert.ok(validateChestOffer({ version: 'v1', priceCoins: 100, maxRewardCoins: Infinity }).some((e) => e.includes('可能奖励上限')))
+  assert.deepEqual(validateMonthlyPass({ priceUsdCents: 499, validDays: 30, dailyCoins: 500, dailyGems: 2 }), [])
+  assert.equal(validateMonthlyPass({ priceUsdCents: 499.5, validDays: 30, dailyCoins: Number.MAX_SAFE_INTEGER + 1, dailyGems: 0 }).length, 3)
 })
 
 test('礼包售价、版本递增、流水编号与昵称规则', () => {
@@ -188,6 +194,27 @@ const gameRecord = (overrides = {}) => ({
   heat: 50, sortWeight: 10, cover: 'demo.png', maintenanceNote: '', launchAt: '', region: { mode: 'all', countries: [] },
   wealthLevel: 0, charmLevel: 0, minBalance: 0, playLevel: 0, genders: ['male', 'female'], familyOnly: false, promoTag: 'none',
   winRate: '', rtp: '', winRangeMin: '', winRangeMax: '', maxMultiplier: '', minBet: '', paylines: '', volatility: '', ...overrides,
+})
+
+test('游戏目录：完整配置校验被快照复用，并兼容旧快照缺失准入字段', () => {
+  assert.deepEqual(validateGameConfig(gameRecord()), [])
+  const legacy = gameRecord()
+  for (const key of ['wealthLevel', 'charmLevel', 'minBalance', 'playLevel', 'genders', 'familyOnly', 'promoTag']) delete legacy[key]
+  assert.deepEqual(validateSnapshot('games:test', { games: [legacy] }), [])
+
+  const errors = validateSnapshot('games:test', { games: [gameRecord({
+    name: ' ', tags: [], heat: Infinity, sortWeight: 0, status: '维护中', maintenanceNote: '', region: { mode: 'custom', countries: [] },
+  })] })
+  assert.ok(errors.some((error) => error.includes('游戏名称')))
+  assert.ok(errors.some((error) => error.includes('分类标签')))
+  assert.ok(errors.some((error) => error.includes('热度值')))
+  assert.ok(errors.some((error) => error.includes('排序权重')))
+  assert.ok(errors.some((error) => error.includes('维护公告')))
+  assert.ok(errors.some((error) => error.includes('可用地区')))
+
+  const launchAndRange = validateGameConfig(gameRecord({ status: '即将上线', launchAt: '', winRangeMin: 10, winRangeMax: 5 }))
+  assert.ok(launchAndRange.some((error) => error.includes('预计上线时间')))
+  assert.ok(launchAndRange.some((error) => error.includes('中奖金额下限')))
 })
 
 test('游戏门槛：缺失字段兼容旧快照，非法门槛和空性别被拦截', () => {
